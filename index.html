@@ -203,10 +203,14 @@
         <div id="previewContainer" class="flex gap-4 overflow-x-auto pb-8 snap-x no-scrollbar border border-neutral-800 p-4 rounded-xl bg-neutral-900/50 min-h-[300px] items-center justify-start text-neutral-600 text-sm">
             Please confirm Master Crop to see results.
         </div>
-        <div class="flex justify-center mt-6">
+        
+        <div class="flex flex-col items-center justify-center mt-6">
             <button id="download" class="px-10 py-4 bg-rose-600 text-white font-bold rounded-xl hover:bg-rose-500 transition-all text-lg shadow-lg shadow-rose-900/50 hidden uppercase tracking-tighter">
                 Download High-Res Images
             </button>
+            <p id="mobileHint" class="text-xs text-rose-500/80 mt-3 hidden uppercase tracking-widest text-center">
+                📱 On Mobile? Long-press the images above to save.
+            </p>
         </div>
     </div>
 
@@ -224,7 +228,9 @@
         const savePresetBtn = document.getElementById('savePresetBtn');
         const fileNameDisplay = document.getElementById('fileNameDisplay');
         const cContainer = document.getElementById('cropperContainer');
+        const mobileHint = document.getElementById('mobileHint');
 
+        // Presets
         let savedPresets = JSON.parse(localStorage.getItem('carouselPresets')) || [
             "Antenna for the Vanished - Oaxaca, MX", "Shot on Lumix S5M2X | Sirui Saturn 1.6x"
         ];
@@ -291,7 +297,6 @@
             if(cBox.x + cBox.w > mw) cBox.x = mw - cBox.w; if(cBox.y + cBox.h > mh) cBox.y = mh - cBox.h;
         }
 
-        // 🌟 독립된 1단계: 마스터 크롭 박스 드래그 (완벽 분리 패치) 🌟
         let isMasterDragging = false; let masterLastX, masterLastY;
 
         function startMasterDrag(e) {
@@ -316,7 +321,6 @@
             cContainer.style.cursor = 'grab';
         }
 
-        // 컨테이너 아무 곳이나 잡아도 드래그 됨 (UX 개선)
         cContainer.addEventListener('mousedown', startMasterDrag);
         cContainer.addEventListener('touchstart', startMasterDrag, {passive: false});
         window.addEventListener('mousemove', moveMasterDrag, {passive: false});
@@ -332,8 +336,6 @@
             enforceBoxBounds(); renderCropBox(); 
         }, {passive: false});
 
-
-        // 🌟 1단계 확정 버튼 🌟
         applyCropBtn.addEventListener('click', () => {
             if(!rawDeSqueezedCanvas) return;
             masterFilmCanvas = document.createElement('canvas');
@@ -352,8 +354,6 @@
 
         function updateBtnUI() { slideBtns.forEach((b, i) => { if(i === currentEditIdx) b.classList.replace('bg-neutral-800', 'bg-rose-600'); else b.classList.replace('bg-rose-600', 'bg-neutral-800'); }); }
 
-
-        // 🌟 독립된 2단계: 디테일 에디터 드래그 (완벽 분리 패치) 🌟
         let isDetailDragging = false; let detailLastX, detailLastY;
 
         function startDetailDrag(e) {
@@ -398,7 +398,6 @@
 
         slideBtns.forEach(btn => { btn.addEventListener('click', (e) => { currentEditIdx = parseInt(e.target.dataset.idx); updateBtnUI(); renderDetailEditorPreview(); processFinalGallery(); }); });
 
-        // 🌟 갤러리 생성 🌟
         function processFinalGallery() {
             if (!masterFilmCanvas) return; generatedImages = []; previewContainer.innerHTML = ''; const [aw, ah] = document.getElementById('aspectRatio').value.split('/'); const tr = aw / ah;
             let mode = 'seamless'; document.getElementsByName('mode').forEach(r => { if(r.checked) mode = r.value; });
@@ -422,7 +421,10 @@
                 if(mode === 'detail') img.addEventListener('click', () => { currentEditIdx = i; updateBtnUI(); renderDetailEditorPreview(); processFinalGallery(); }); 
                 previewContainer.appendChild(img); 
             });
-            document.getElementById('previewCount').innerText = generatedImages.length; downloadBtn.classList.remove('hidden');
+            
+            // 🌟 확정 후 다운로드 버튼 노출 🌟
+            downloadBtn.classList.remove('hidden');
+            mobileHint.classList.remove('hidden');
         }
 
         // Draw & Text Logic
@@ -454,9 +456,33 @@
         document.getElementsByName('mode').forEach(r => r.addEventListener('change', processFinalGallery));
         document.getElementById('grainSlider').addEventListener('input', (e) => { document.getElementById('grainValueDisplay').textContent = `${e.target.value}%`; processFinalGallery(); });
 
+        // 🌟 수정된 다운로드 엔진: 브라우저 차단 우회 로직 🌟
         downloadBtn.addEventListener('click', () => {
-            if (generatedImages.length === 0) return; downloadBtn.innerText = "Processing... Check Browser Permission";
-            generatedImages.forEach((d, i) => { setTimeout(() => { const l = document.createElement('a'); l.download = `cineRoll_part${i + 1}.jpg`; l.href = d; document.body.appendChild(l); l.click(); document.body.removeChild(l); if (i === generatedImages.length - 1) downloadBtn.innerText = "✅ Download Complete!"; }, i * 800); });
+            if (generatedImages.length === 0) return;
+            
+            // 사용자가 버튼이 눌렸음을 인지하게 함
+            downloadBtn.innerText = "Processing... (Allow Popups)";
+            
+            let delay = 0;
+            generatedImages.forEach((imgData, index) => {
+                setTimeout(() => {
+                    const link = document.createElement('a');
+                    link.download = `cineRoll_part${index + 1}.jpg`;
+                    link.href = imgData;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    
+                    // 마지막 장이 다운로드 되면 버튼 문구 원상 복구
+                    if (index === generatedImages.length - 1) {
+                        downloadBtn.innerText = "✅ Download Complete!";
+                        setTimeout(() => {
+                            downloadBtn.innerText = "Download High-Res Images";
+                        }, 3000); // 3초 뒤에 원래 버튼 이름으로 돌아옴
+                    }
+                }, delay);
+                delay += 600; // 0.6초 간격으로 다운로드하여 스팸으로 인식되는 것을 방지
+            });
         });
     </script>
 </body>
