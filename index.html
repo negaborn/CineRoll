@@ -14,7 +14,7 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         input[type=range].accent-rose-500::-webkit-slider-thumb { background: #e11d48; }
-        #cropBox { box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7); cursor: move; }
+        #cropBox { box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7); cursor: move; touch-action: none; }
         .grid-lines {
             background-image: 
                 linear-gradient(to right, rgba(255,255,255,0.3) 1px, transparent 1px),
@@ -69,7 +69,7 @@
         <div id="visualCropPanel" class="col-span-full bg-neutral-950 p-4 rounded-xl border border-rose-900 hidden flex flex-col items-center">
             <div class="w-full flex justify-between items-center mb-3">
                 <label class="block text-sm font-bold text-rose-400 uppercase">🎯 Phase 1: Master Film Framing</label>
-                <span class="text-[10px] text-neutral-400 bg-neutral-800 px-2 py-1 rounded">Drag & Scroll to resize</span>
+                <span class="text-[10px] text-neutral-400 bg-neutral-800 px-2 py-1 rounded">Drag to move / Scroll to resize</span>
             </div>
             <div id="cropperContainer" class="relative w-full max-w-[600px] bg-black overflow-hidden select-none touch-none rounded-lg border border-neutral-700">
                 <img id="cropperImg" class="w-full block pointer-events-none" />
@@ -230,7 +230,7 @@
                 const wrapper = document.createElement('div'); wrapper.className = 'flex items-center bg-neutral-800 rounded-md overflow-hidden';
                 const applyBtn = document.createElement('button'); applyBtn.className = 'text-[10px] hover:bg-neutral-700 px-2 py-1 text-neutral-400 truncate max-w-[120px]';
                 applyBtn.innerText = text; applyBtn.onclick = () => { watermarkText.value = text; processFinalGallery(); };
-                const delBtn = document.createElement('button'); delBtn.className = 'text-[10px] bg-rose-950/20 hover:bg-rose-700 px-1.5 py-1 text-rose-300';
+                const delBtn = document.createElement('button'); delBtn.className = 'text-[10px] bg-rose-955/20 hover:bg-rose-700 px-1.5 py-1 text-rose-300';
                 delBtn.innerText = '✕'; delBtn.onclick = () => { savedPresets.splice(index, 1); localStorage.setItem('carouselPresets', JSON.stringify(savedPresets)); renderPresets(); };
                 wrapper.appendChild(applyBtn); wrapper.appendChild(delBtn); presetContainer.appendChild(wrapper);
             });
@@ -267,16 +267,33 @@
                 const cw = cropperImg.clientWidth; const ch = cropperImg.clientHeight;
                 if (cw / ch > targetFormatRatio) { cBox.h = ch * 0.9; cBox.w = cBox.h * targetFormatRatio; } 
                 else { cBox.w = cw * 0.9; cBox.h = cBox.w / targetFormatRatio; }
-                cBox.x = (cw - cBox.w) / 2; cBox.y = (ch - ch*0.9)/2; applyCropBtn.innerText = "Confirm Master Crop";
+                cBox.x = (cw - cBox.w) / 2; cBox.y = (ch - cBox.h) / 2; applyCropBtn.innerText = "Confirm Master Crop";
             }
             renderCropBox();
         }
         function renderCropBox() { cropBox.style.left = `${cBox.x}px`; cropBox.style.top = `${cBox.y}px`; cropBox.style.width = `${cBox.w}px`; cropBox.style.height = `${cBox.h}px`; }
 
+        // 🌟 수정된 드래그 엔진 (터치 및 마우스 지원) 🌟
         let isDraggingBox = false; let lastMouseX, lastMouseY;
-        cropBox.onmousedown = (e) => { if(targetFormatRatio === null) return; isDraggingBox = true; lastMouseX = e.clientX; lastMouseY = e.clientY; };
-        window.onmousemove = (e) => { if (!isDraggingBox) return; cBox.x += e.clientX - lastMouseX; cBox.y += e.clientY - lastMouseY; lastMouseX = e.clientX; lastMouseY = e.clientY; enforceBoxBounds(); renderCropBox(); };
-        window.onmouseup = () => isDraggingBox = false;
+        function startDrag(e) {
+            if(targetFormatRatio === null) return;
+            isDraggingBox = true;
+            lastMouseX = e.touches ? e.touches[0].clientX : e.clientX;
+            lastMouseY = e.touches ? e.touches[0].clientY : e.clientY;
+        }
+        function moveDrag(e) {
+            if (!isDraggingBox) return;
+            e.preventDefault();
+            const cx = e.touches ? e.touches[0].clientX : e.clientX;
+            const cy = e.touches ? e.touches[0].clientY : e.clientY;
+            cBox.x += cx - lastMouseX; cBox.y += cy - lastMouseY;
+            lastMouseX = cx; lastMouseY = cy;
+            enforceBoxBounds(); renderCropBox();
+        }
+        cropBox.onmousedown = startDrag; cropBox.ontouchstart = startDrag;
+        window.onmousemove = moveDrag; window.ontouchmove = moveDrag;
+        window.onmouseup = () => isDraggingBox = false; window.ontouchend = () => isDraggingBox = false;
+
         function enforceBoxBounds() {
             const mw = cropperImg.clientWidth; const mh = cropperImg.clientHeight;
             if(cBox.w > mw) { cBox.w = mw; cBox.h = mw / targetFormatRatio; }
@@ -296,23 +313,23 @@
                 masterFilmCanvas.getContext('2d').drawImage(rawDeSqueezedCanvas, cBox.x * sx, cBox.y * sy, masterFilmCanvas.width, masterFilmCanvas.height, 0, 0, masterFilmCanvas.width, masterFilmCanvas.height);
             }
             detailCrops = [{ z: 0.95, x: 50, y: 50 }, { z: 1.5, x: 0, y: 50 }, { z: 1.5, x: 50, y: 50 }, { z: 1.5, x: 100, y: 50 }];
-            currentEditIdx = 0;
-            updateBtnUI();
-            processFinalGallery();
+            currentEditIdx = 0; updateBtnUI(); processFinalGallery();
         };
 
-        function updateBtnUI() {
-            slideBtns.forEach((b, i) => {
-                if(i === currentEditIdx) b.classList.replace('bg-neutral-800', 'bg-rose-600');
-                else b.classList.replace('bg-rose-600', 'bg-neutral-800');
-            });
-        }
+        function updateBtnUI() { slideBtns.forEach((b, i) => { if(i === currentEditIdx) b.classList.replace('bg-neutral-800', 'bg-rose-600'); else b.classList.replace('bg-rose-600', 'bg-neutral-800'); }); }
 
         function attachDetailDrag() {
             let isD = false; let lx, ly;
             detailEditCanvas.onmousedown = (e) => { isD = true; lx = e.clientX; ly = e.clientY; };
-            window.onmouseup = () => { if(isD) { isD = false; processFinalGallery(); } };
-            window.onmousemove = (e) => { if (!isD) return; const s = detailCrops[currentEditIdx]; const sens = 0.3 / s.z; s.x = Math.max(0, Math.min(100, s.x - (e.clientX - lx) * sens)); s.y = Math.max(0, Math.min(100, s.y - (e.clientY - ly) * sens)); lx = e.clientX; ly = e.clientY; renderDetailEditorPreview(); };
+            detailEditCanvas.ontouchstart = (e) => { isD = true; lx = e.touches[0].clientX; ly = e.touches[0].clientY; };
+            window.onmouseup = window.ontouchend = () => { if(isD) { isD = false; processFinalGallery(); } };
+            window.onmousemove = window.ontouchmove = (e) => { 
+                if (!isD) return; 
+                if(e.touches) e.preventDefault();
+                const cx = e.touches ? e.touches[0].clientX : e.clientX;
+                const cy = e.touches ? e.touches[0].clientY : e.clientY;
+                const s = detailCrops[currentEditIdx]; const sens = 0.3 / s.z; s.x = Math.max(0, Math.min(100, s.x - (cx - lx) * sens)); s.y = Math.max(0, Math.min(100, s.y - (cy - ly) * sens)); lx = cx; ly = cy; renderDetailEditorPreview(); 
+            };
             detailEditCanvas.onwheel = (e) => { e.preventDefault(); const s = detailCrops[currentEditIdx]; s.z = Math.max(0.3, Math.min(4.0, s.z + (e.deltaY > 0 ? -0.05 : 0.05))); renderDetailEditorPreview(); clearTimeout(detailEditCanvas.wT); detailEditCanvas.wT = setTimeout(processFinalGallery, 400); };
         }
         attachDetailDrag();
@@ -322,15 +339,7 @@
             const ctx = detailEditCanvas.getContext('2d'); detailEditCanvas.width = 400 * tr; detailEditCanvas.height = 400;
             drawInstaFrame(ctx, detailEditCanvas.width, detailEditCanvas.height, detailCrops[currentEditIdx], masterFilmCanvas, tr);
         }
-
-        slideBtns.forEach(btn => { 
-            btn.onclick = (e) => { 
-                currentEditIdx = parseInt(e.target.dataset.idx); 
-                updateBtnUI(); 
-                renderDetailEditorPreview(); 
-                processFinalGallery(); // 🌟 에디터 클릭 시 갤러리 빨간 박스 즉시 업데이트 🌟
-            }; 
-        });
+        slideBtns.forEach(btn => { btn.onclick = (e) => { currentEditIdx = parseInt(e.target.dataset.idx); updateBtnUI(); renderDetailEditorPreview(); processFinalGallery(); }; });
 
         function processFinalGallery() {
             if (!masterFilmCanvas) return; generatedImages = []; previewContainer.innerHTML = ''; const [aw, ah] = document.getElementById('aspectRatio').value.split('/'); const tr = aw / ah;
@@ -348,21 +357,7 @@
             } else {
                 const c = document.createElement('canvas'); c.width = ew; c.height = eh; const ctx = c.getContext('2d'); const ib = drawLetterboxFrame(ctx, ew, eh, masterFilmCanvas, tr); applyGrainAndText(ctx, ew, eh, true, ib); generatedImages.push(c.toDataURL('image/jpeg', 0.95));
             }
-            
-            // 🌟 갤러리 생성 및 롤링 최적화 🌟
-            generatedImages.forEach((d, i) => { 
-                const img = document.createElement('img'); 
-                img.src = d; 
-                // flex-none을 넣어 이미지가 찌그러지지 않고 원래 가로세로비를 유지하며 롤링되게 함
-                img.className = `h-[250px] md:h-[350px] w-auto flex-none object-cover rounded shadow-2xl snap-center transition-all ${mode === 'detail' && i === currentEditIdx ? 'border-4 border-rose-500 scale-[1.03] z-10' : 'border border-neutral-800'}`; 
-                if(mode === 'detail') img.onclick = () => { 
-                    currentEditIdx = i; 
-                    updateBtnUI(); 
-                    renderDetailEditorPreview(); 
-                    processFinalGallery(); // 재귀 호출로 빨간 테두리 즉시 업데이트
-                }; 
-                previewContainer.appendChild(img); 
-            });
+            generatedImages.forEach((d, i) => { const img = document.createElement('img'); img.src = d; img.className = `h-[250px] md:h-[350px] w-auto flex-none object-cover rounded shadow-2xl snap-center transition-all ${mode === 'detail' && i === currentEditIdx ? 'border-4 border-rose-500 scale-[1.03] z-10' : 'border border-neutral-800'}`; if(mode === 'detail') img.onclick = () => { currentEditIdx = i; updateBtnUI(); renderDetailEditorPreview(); processFinalGallery(); }; previewContainer.appendChild(img); });
             document.getElementById('previewCount').innerText = generatedImages.length; downloadBtn.classList.remove('hidden');
         }
 
