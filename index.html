@@ -35,7 +35,7 @@
         <div class="col-span-full">
             <label class="block text-sm font-semibold mb-2 text-neutral-400 uppercase tracking-wider">1. Load Image</label>
             <div class="flex items-center gap-3">
-                <button onclick="document.getElementById('upload').click()" class="bg-rose-900 text-rose-200 px-5 py-2.5 rounded-lg text-sm font-bold hover:bg-rose-800 transition">Choose File</button>
+                <button onclick="document.getElementById('upload').click()" class="bg-rose-900 text-rose-200 px-5 py-2.5 rounded-lg text-sm font-bold hover:bg-rose-800 transition shadow-lg">Choose File</button>
                 <span id="fileNameDisplay" class="text-xs text-neutral-500 italic">No file chosen</span>
             </div>
             <input type="file" id="upload" accept="image/*" class="hidden"/>
@@ -69,7 +69,7 @@
         <div id="visualCropPanel" class="col-span-full bg-neutral-950 p-4 rounded-xl border border-rose-900 hidden flex flex-col items-center">
             <div class="w-full flex justify-between items-center mb-3">
                 <label class="block text-sm font-bold text-rose-400 uppercase">🎯 Phase 1: Master Film Framing</label>
-                <span class="text-[10px] text-neutral-400 bg-neutral-800 px-2 py-1 rounded">Drag image to move / Scroll to resize</span>
+                <span class="text-[10px] text-neutral-400 bg-neutral-800 px-2 py-1 rounded uppercase">Drag to Pan / Pinch to Zoom</span>
             </div>
             
             <div id="cropperContainer" class="relative w-full max-w-[600px] bg-black overflow-hidden select-none touch-none rounded-lg border border-neutral-700 grab-cursor">
@@ -83,7 +83,7 @@
             </div>
             
             <button id="applyCropBtn" class="mt-4 px-6 py-3 bg-rose-600 text-white font-bold rounded-lg w-full hover:bg-rose-500 transition-all uppercase tracking-tighter shadow-lg shadow-rose-900/50">
-                Set Master Film
+                Confirm Master Crop
             </button>
         </div>
 
@@ -184,17 +184,17 @@
 
     <div id="interactiveControlPanel" class="bg-neutral-900 p-5 md:p-6 rounded-2xl shadow-xl mb-8 w-full max-w-4xl border border-rose-900/50 hidden">
         <div class="flex justify-between items-center mb-4">
-            <h3 class="text-rose-400 font-bold uppercase tracking-widest text-xs">🎯 Phase 2: Insta Detail 조준</h3>
+            <h3 class="text-rose-400 font-bold uppercase tracking-widest text-xs">🎯 Phase 2: Insta Detail Framing</h3>
         </div>
         <div class="flex gap-2 mb-4 md:mb-6 overflow-x-auto pb-2">
-            <button class="slide-btn flex-1 min-w-[70px] py-2 bg-rose-600 text-white rounded-lg font-bold transition text-xs uppercase" data-idx="0">Slide 1</button>
+            <button class="slide-btn flex-1 min-w-[70px] py-2 bg-rose-600 text-white rounded-lg font-bold transition text-xs uppercase shadow-lg shadow-rose-900/50" data-idx="0">Slide 1</button>
             <button class="slide-btn flex-1 min-w-[70px] py-2 bg-neutral-800 text-neutral-400 rounded-lg hover:bg-neutral-700 transition text-xs uppercase" data-idx="1">Slide 2</button>
             <button class="slide-btn flex-1 min-w-[70px] py-2 bg-neutral-800 text-neutral-400 rounded-lg hover:bg-neutral-700 transition text-xs uppercase" data-idx="2">Slide 3</button>
             <button class="slide-btn flex-1 min-w-[70px] py-2 bg-neutral-800 text-neutral-400 rounded-lg hover:bg-neutral-700 transition text-xs uppercase" data-idx="3">Slide 4</button>
         </div>
         <div class="flex flex-col items-center bg-neutral-950 p-4 rounded-xl border border-neutral-800 relative w-full overflow-hidden">
             <canvas id="detailEditCanvas" class="shadow-2xl rounded border border-neutral-800 max-w-full touch-none grab-cursor" width="400" height="500"></canvas>
-            <p class="text-[10px] text-neutral-600 mt-2 uppercase" id="detailEditStatus">Scroll to Zoom / Drag to Pan</p>
+            <p class="text-[10px] text-neutral-500 mt-3 uppercase tracking-widest" id="detailEditStatus">Drag to Pan / Pinch to Zoom</p>
         </div>
     </div>
 
@@ -208,7 +208,7 @@
             <button id="download" class="px-10 py-4 bg-rose-600 text-white font-bold rounded-xl hover:bg-rose-500 transition-all text-lg shadow-lg shadow-rose-900/50 hidden uppercase tracking-tighter">
                 Download High-Res Images
             </button>
-            <p id="mobileHint" class="text-xs text-rose-500/80 mt-3 hidden uppercase tracking-widest text-center">
+            <p id="mobileHint" class="text-[10px] text-rose-500/80 mt-3 hidden uppercase tracking-widest text-center font-bold">
                 📱 On Mobile? Long-press the images above to save.
             </p>
         </div>
@@ -297,29 +297,49 @@
             if(cBox.x + cBox.w > mw) cBox.x = mw - cBox.w; if(cBox.y + cBox.h > mh) cBox.y = mh - cBox.h;
         }
 
+        // 🌟 1단계: 마스터 줌 & 드래그 엔진 (모바일 핀치 완벽 지원) 🌟
         let isMasterDragging = false; let masterLastX, masterLastY;
+        let masterInitialDistance = null;
+
+        function getDistance(touches) { return Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY); }
 
         function startMasterDrag(e) {
             if(targetFormatRatio === null) return;
-            isMasterDragging = true;
-            cContainer.style.cursor = 'grabbing';
+            if (e.touches && e.touches.length === 2) {
+                masterInitialDistance = getDistance(e.touches);
+                isMasterDragging = false; // 핀치 시작 시 드래그 취소
+                return;
+            }
+            isMasterDragging = true; cContainer.style.cursor = 'grabbing';
             masterLastX = e.touches ? e.touches[0].clientX : e.clientX;
             masterLastY = e.touches ? e.touches[0].clientY : e.clientY;
         }
+        
         function moveMasterDrag(e) {
+            // 모바일 핀치 투 줌 처리
+            if (e.touches && e.touches.length === 2 && masterInitialDistance !== null) {
+                e.preventDefault();
+                const currentDistance = getDistance(e.touches);
+                const sf = currentDistance > masterInitialDistance ? 1.02 : 0.98; // 확대 or 축소
+                const ow = cBox.w; const oh = cBox.h;
+                cBox.w *= sf; cBox.h *= sf; 
+                cBox.x -= (cBox.w - ow) / 2; cBox.y -= (cBox.h - oh) / 2; // 중심 유지
+                if(cBox.w < 50) { cBox.w = 50; cBox.h = 50 / targetFormatRatio; }
+                enforceBoxBounds(); renderCropBox();
+                masterInitialDistance = currentDistance;
+                return;
+            }
+            
+            // 일반 드래그 처리
             if (!isMasterDragging) return;
             if (e.touches) e.preventDefault(); 
             const cx = e.touches ? e.touches[0].clientX : e.clientX;
             const cy = e.touches ? e.touches[0].clientY : e.clientY;
-            cBox.x += (cx - masterLastX);
-            cBox.y += (cy - masterLastY);
+            cBox.x += (cx - masterLastX); cBox.y += (cy - masterLastY);
             masterLastX = cx; masterLastY = cy;
             enforceBoxBounds(); renderCropBox();
         }
-        function endMasterDrag() {
-            isMasterDragging = false;
-            cContainer.style.cursor = 'grab';
-        }
+        function endMasterDrag() { isMasterDragging = false; masterInitialDistance = null; cContainer.style.cursor = 'grab'; }
 
         cContainer.addEventListener('mousedown', startMasterDrag);
         cContainer.addEventListener('touchstart', startMasterDrag, {passive: false});
@@ -328,6 +348,7 @@
         window.addEventListener('mouseup', endMasterDrag);
         window.addEventListener('touchend', endMasterDrag);
 
+        // PC 마우스 휠 지원
         cContainer.addEventListener('wheel', (e) => { 
             if(targetFormatRatio === null) return; e.preventDefault(); 
             const sf = e.deltaY > 0 ? 0.95 : 1.05; const ow = cBox.w; const oh = cBox.h; 
@@ -352,17 +373,51 @@
             currentEditIdx = 0; updateBtnUI(); processFinalGallery();
         });
 
-        function updateBtnUI() { slideBtns.forEach((b, i) => { if(i === currentEditIdx) b.classList.replace('bg-neutral-800', 'bg-rose-600'); else b.classList.replace('bg-rose-600', 'bg-neutral-800'); }); }
+        function updateBtnUI() { 
+            slideBtns.forEach((b, i) => { 
+                if(i === currentEditIdx) {
+                    b.classList.replace('bg-neutral-800', 'bg-rose-600');
+                    b.classList.add('shadow-lg', 'shadow-rose-900/50');
+                } else {
+                    b.classList.replace('bg-rose-600', 'bg-neutral-800');
+                    b.classList.remove('shadow-lg', 'shadow-rose-900/50');
+                }
+            }); 
+        }
 
+        // 🌟 2단계: 디테일 에디터 줌 & 드래그 엔진 (모바일 핀치 완벽 지원) 🌟
         let isDetailDragging = false; let detailLastX, detailLastY;
+        let detailInitialDistance = null;
 
         function startDetailDrag(e) {
+            if (e.touches && e.touches.length === 2) {
+                detailInitialDistance = getDistance(e.touches);
+                isDetailDragging = false; // 핀치 시작 시 드래그 취소
+                return;
+            }
             isDetailDragging = true;
             detailLastX = e.touches ? e.touches[0].clientX : e.clientX;
             detailLastY = e.touches ? e.touches[0].clientY : e.clientY;
         }
+        
         function moveDetailDrag(e) {
-            if (!isDetailDragging || !masterFilmCanvas) return;
+            if (!masterFilmCanvas) return;
+            
+            // 모바일 핀치 투 줌 처리
+            if (e.touches && e.touches.length === 2 && detailInitialDistance !== null) {
+                e.preventDefault();
+                const currentDistance = getDistance(e.touches);
+                const s = detailCrops[currentEditIdx];
+                // 손가락이 벌어지면(current > initial) 줌인(z 증가)
+                s.z = Math.max(0.3, Math.min(4.0, s.z + (currentDistance > detailInitialDistance ? 0.04 : -0.04))); 
+                renderDetailEditorPreview();
+                detailInitialDistance = currentDistance;
+                clearTimeout(detailEditCanvas.wT); detailEditCanvas.wT = setTimeout(processFinalGallery, 400); 
+                return;
+            }
+
+            // 일반 드래그 처리
+            if (!isDetailDragging) return;
             if(e.touches) e.preventDefault();
             const cx = e.touches ? e.touches[0].clientX : e.clientX;
             const cy = e.touches ? e.touches[0].clientY : e.clientY;
@@ -373,6 +428,7 @@
             renderDetailEditorPreview();
         }
         function endDetailDrag() {
+            detailInitialDistance = null;
             if (isDetailDragging) { isDetailDragging = false; processFinalGallery(); }
         }
 
@@ -383,6 +439,7 @@
         window.addEventListener('mouseup', endDetailDrag);
         window.addEventListener('touchend', endDetailDrag);
 
+        // PC 마우스 휠 지원
         detailEditCanvas.addEventListener('wheel', (e) => { 
             e.preventDefault(); if(!masterFilmCanvas) return;
             const s = detailCrops[currentEditIdx]; s.z = Math.max(0.3, Math.min(4.0, s.z + (e.deltaY > 0 ? -0.05 : 0.05))); 
@@ -417,17 +474,15 @@
             
             generatedImages.forEach((d, i) => { 
                 const img = document.createElement('img'); img.src = d; 
-                img.className = `h-[250px] md:h-[350px] w-auto flex-none object-cover rounded shadow-2xl snap-center transition-all ${mode === 'detail' && i === currentEditIdx ? 'border-4 border-rose-500 scale-[1.03] z-10' : 'border border-neutral-800'}`; 
+                img.className = `h-[250px] md:h-[350px] w-auto flex-none object-cover rounded shadow-2xl snap-center transition-all cursor-pointer ${mode === 'detail' && i === currentEditIdx ? 'border-4 border-rose-500 scale-[1.03] z-10' : 'border border-neutral-800'}`; 
                 if(mode === 'detail') img.addEventListener('click', () => { currentEditIdx = i; updateBtnUI(); renderDetailEditorPreview(); processFinalGallery(); }); 
                 previewContainer.appendChild(img); 
             });
             
-            // 🌟 확정 후 다운로드 버튼 노출 🌟
             downloadBtn.classList.remove('hidden');
             mobileHint.classList.remove('hidden');
         }
 
-        // Draw & Text Logic
         function drawInstaFrame(ctx, w, h, s, src, tr) {
             ctx.fillStyle = document.getElementById('bgStyle').value; ctx.fillRect(0, 0, w, h); const z = s.z; const sr = src.width / src.height;
             const pr = (document.getElementById('frameStyle').value === 'margin') ? 0.85 : 1.0; const dw = w * pr, dh = h * pr; const dx = (w - dw) / 2, dy = (h - dh) / 2;
@@ -456,32 +511,20 @@
         document.getElementsByName('mode').forEach(r => r.addEventListener('change', processFinalGallery));
         document.getElementById('grainSlider').addEventListener('input', (e) => { document.getElementById('grainValueDisplay').textContent = `${e.target.value}%`; processFinalGallery(); });
 
-        // 🌟 수정된 다운로드 엔진: 브라우저 차단 우회 로직 🌟
         downloadBtn.addEventListener('click', () => {
             if (generatedImages.length === 0) return;
-            
-            // 사용자가 버튼이 눌렸음을 인지하게 함
             downloadBtn.innerText = "Processing... (Allow Popups)";
-            
             let delay = 0;
             generatedImages.forEach((imgData, index) => {
                 setTimeout(() => {
-                    const link = document.createElement('a');
-                    link.download = `cineRoll_part${index + 1}.jpg`;
-                    link.href = imgData;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    
-                    // 마지막 장이 다운로드 되면 버튼 문구 원상 복구
+                    const link = document.createElement('a'); link.download = `cineRoll_part${index + 1}.jpg`; link.href = imgData;
+                    document.body.appendChild(link); link.click(); document.body.removeChild(link);
                     if (index === generatedImages.length - 1) {
                         downloadBtn.innerText = "✅ Download Complete!";
-                        setTimeout(() => {
-                            downloadBtn.innerText = "Download High-Res Images";
-                        }, 3000); // 3초 뒤에 원래 버튼 이름으로 돌아옴
+                        setTimeout(() => { downloadBtn.innerText = "Download High-Res Images"; }, 3000);
                     }
                 }, delay);
-                delay += 600; // 0.6초 간격으로 다운로드하여 스팸으로 인식되는 것을 방지
+                delay += 600; 
             });
         });
     </script>
