@@ -211,6 +211,7 @@
     <script>
         let currentImg = null; let rawDeSqueezedCanvas = null; let masterFilmCanvas = null;    
         let generatedImages = []; let grainCanvas = null;
+        
         const upload = document.getElementById('upload'); const squeezeSelect = document.getElementById('squeeze');
         const filmFormatSelect = document.getElementById('filmFormat'); const visualCropPanel = document.getElementById('visualCropPanel');
         const cropperImg = document.getElementById('cropperImg'); const cropBox = document.getElementById('cropBox');
@@ -221,6 +222,7 @@
         const savePresetBtn = document.getElementById('savePresetBtn');
         const fileNameDisplay = document.getElementById('fileNameDisplay');
 
+        // Presets
         let savedPresets = JSON.parse(localStorage.getItem('carouselPresets')) || [
             "Antenna for the Vanished - Oaxaca, MX", "Shot on Lumix S5M2X | Sirui Saturn 1.6x"
         ];
@@ -230,7 +232,7 @@
                 const wrapper = document.createElement('div'); wrapper.className = 'flex items-center bg-neutral-800 rounded-md overflow-hidden';
                 const applyBtn = document.createElement('button'); applyBtn.className = 'text-[10px] hover:bg-neutral-700 px-2 py-1 text-neutral-400 truncate max-w-[120px]';
                 applyBtn.innerText = text; applyBtn.onclick = () => { watermarkText.value = text; processFinalGallery(); };
-                const delBtn = document.createElement('button'); delBtn.className = 'text-[10px] bg-rose-955/20 hover:bg-rose-700 px-1.5 py-1 text-rose-300';
+                const delBtn = document.createElement('button'); delBtn.className = 'text-[10px] bg-rose-950/20 hover:bg-rose-700 px-1.5 py-1 text-rose-300';
                 delBtn.innerText = '✕'; delBtn.onclick = () => { savedPresets.splice(index, 1); localStorage.setItem('carouselPresets', JSON.stringify(savedPresets)); renderPresets(); };
                 wrapper.appendChild(applyBtn); wrapper.appendChild(delBtn); presetContainer.appendChild(wrapper);
             });
@@ -238,17 +240,21 @@
         savePresetBtn.onclick = () => { const text = watermarkText.value.trim(); if (text && !savedPresets.includes(text)) { savedPresets.push(text); localStorage.setItem('carouselPresets', JSON.stringify(savedPresets)); renderPresets(); } };
         renderPresets();
 
+        // Data Models
         let cBox = { x: 0, y: 0, w: 100, h: 100 }; let targetFormatRatio = null;
         let currentEditIdx = 0; let detailCrops = [{ z: 0.95, x: 50, y: 50 }, { z: 1.5, x: 0, y: 50 }, { z: 1.5, x: 50, y: 50 }, { z: 1.5, x: 100, y: 50 }];
 
-        upload.onchange = (e) => {
+        // Upload Logic
+        upload.addEventListener('change', (e) => {
             const file = e.target.files[0]; if(!file) return;
             fileNameDisplay.innerText = file.name;
             const reader = new FileReader();
             reader.onload = (event) => { currentImg = new Image(); currentImg.onload = setupRawCanvas; currentImg.src = event.target.result; };
             reader.readAsDataURL(file);
-        };
-        squeezeSelect.onchange = setupRawCanvas;
+        });
+
+        squeezeSelect.addEventListener('change', setupRawCanvas);
+
         function setupRawCanvas() {
             if(!currentImg) return;
             const sf = parseFloat(squeezeSelect.value);
@@ -257,12 +263,15 @@
             cropperImg.src = rawDeSqueezedCanvas.toDataURL('image/jpeg', 0.8);
             cropperImg.onload = () => updateFormatAndResetBox();
         }
-        filmFormatSelect.onchange = updateFormatAndResetBox;
+
+        filmFormatSelect.addEventListener('change', updateFormatAndResetBox);
+
         function updateFormatAndResetBox() {
             if(!rawDeSqueezedCanvas) return;
             const format = filmFormatSelect.value; visualCropPanel.classList.remove('hidden');
-            if (format === 'original') { targetFormatRatio = null; cBox.x = 0; cBox.y = 0; cBox.w = cropperImg.clientWidth; cBox.h = cropperImg.clientHeight; applyCropBtn.innerText = "Confirm Original Ratio"; } 
-            else {
+            if (format === 'original') { 
+                targetFormatRatio = null; cBox.x = 0; cBox.y = 0; cBox.w = cropperImg.clientWidth; cBox.h = cropperImg.clientHeight; applyCropBtn.innerText = "Confirm Original Ratio"; 
+            } else {
                 const [w, h] = format.split('/'); targetFormatRatio = parseFloat(w) / parseFloat(h);
                 const cw = cropperImg.clientWidth; const ch = cropperImg.clientHeight;
                 if (cw / ch > targetFormatRatio) { cBox.h = ch * 0.9; cBox.w = cBox.h * targetFormatRatio; } 
@@ -271,29 +280,8 @@
             }
             renderCropBox();
         }
+
         function renderCropBox() { cropBox.style.left = `${cBox.x}px`; cropBox.style.top = `${cBox.y}px`; cropBox.style.width = `${cBox.w}px`; cropBox.style.height = `${cBox.h}px`; }
-
-        // 🌟 수정된 드래그 엔진 (터치 및 마우스 지원) 🌟
-        let isDraggingBox = false; let lastMouseX, lastMouseY;
-        function startDrag(e) {
-            if(targetFormatRatio === null) return;
-            isDraggingBox = true;
-            lastMouseX = e.touches ? e.touches[0].clientX : e.clientX;
-            lastMouseY = e.touches ? e.touches[0].clientY : e.clientY;
-        }
-        function moveDrag(e) {
-            if (!isDraggingBox) return;
-            e.preventDefault();
-            const cx = e.touches ? e.touches[0].clientX : e.clientX;
-            const cy = e.touches ? e.touches[0].clientY : e.clientY;
-            cBox.x += cx - lastMouseX; cBox.y += cy - lastMouseY;
-            lastMouseX = cx; lastMouseY = cy;
-            enforceBoxBounds(); renderCropBox();
-        }
-        cropBox.onmousedown = startDrag; cropBox.ontouchstart = startDrag;
-        window.onmousemove = moveDrag; window.ontouchmove = moveDrag;
-        window.onmouseup = () => isDraggingBox = false; window.ontouchend = () => isDraggingBox = false;
-
         function enforceBoxBounds() {
             const mw = cropperImg.clientWidth; const mh = cropperImg.clientHeight;
             if(cBox.w > mw) { cBox.w = mw; cBox.h = mw / targetFormatRatio; }
@@ -301,46 +289,108 @@
             if(cBox.x < 0) cBox.x = 0; if(cBox.y < 0) cBox.y = 0;
             if(cBox.x + cBox.w > mw) cBox.x = mw - cBox.w; if(cBox.y + cBox.h > mh) cBox.y = mh - cBox.h;
         }
-        document.getElementById('cropperContainer').onwheel = (e) => { if(targetFormatRatio === null) return; e.preventDefault(); const sf = e.deltaY > 0 ? 0.95 : 1.05; const ow = cBox.w; const oh = cBox.h; cBox.w *= sf; cBox.h *= sf; cBox.x -= (cBox.w - ow) / 2; cBox.y -= (cBox.h - oh) / 2; if(cBox.w < 50) { cBox.w = 50; cBox.h = 50 / targetFormatRatio; } enforceBoxBounds(); renderCropBox(); };
 
-        applyCropBtn.onclick = () => {
+        // 🌟 독립된 1단계: 마스터 크롭 박스 드래그 (버그 픽스 완료) 🌟
+        let isDraggingBox = false; let masterLastX, masterLastY;
+
+        function startBoxDrag(e) {
+            if(targetFormatRatio === null) return;
+            isDraggingBox = true;
+            masterLastX = e.touches ? e.touches[0].clientX : e.clientX;
+            masterLastY = e.touches ? e.touches[0].clientY : e.clientY;
+        }
+        function moveBoxDrag(e) {
+            if (!isDraggingBox) return;
+            e.preventDefault(); // 스크롤 방지
+            const cx = e.touches ? e.touches[0].clientX : e.clientX;
+            const cy = e.touches ? e.touches[0].clientY : e.clientY;
+            cBox.x += (cx - masterLastX);
+            cBox.y += (cy - masterLastY);
+            masterLastX = cx; masterLastY = cy;
+            enforceBoxBounds(); renderCropBox();
+        }
+        function endBoxDrag() { isDraggingBox = false; }
+
+        cropBox.addEventListener('mousedown', startBoxDrag);
+        cropBox.addEventListener('touchstart', startBoxDrag, {passive: false});
+        window.addEventListener('mousemove', moveBoxDrag, {passive: false});
+        window.addEventListener('touchmove', moveBoxDrag, {passive: false});
+        window.addEventListener('mouseup', endBoxDrag);
+        window.addEventListener('touchend', endBoxDrag);
+
+        document.getElementById('cropperContainer').addEventListener('wheel', (e) => { 
+            if(targetFormatRatio === null) return; e.preventDefault(); 
+            const sf = e.deltaY > 0 ? 0.95 : 1.05; const ow = cBox.w; const oh = cBox.h; 
+            cBox.w *= sf; cBox.h *= sf; cBox.x -= (cBox.w - ow) / 2; cBox.y -= (cBox.h - oh) / 2; 
+            if(cBox.w < 50) { cBox.w = 50; cBox.h = 50 / targetFormatRatio; } 
+            enforceBoxBounds(); renderCropBox(); 
+        }, {passive: false});
+
+        // 🌟 1단계 확정 버튼 🌟
+        applyCropBtn.addEventListener('click', () => {
             if(!rawDeSqueezedCanvas) return;
             masterFilmCanvas = document.createElement('canvas');
-            if (filmFormatSelect.value === 'original') { masterFilmCanvas.width = rawDeSqueezedCanvas.width; masterFilmCanvas.height = rawDeSqueezedCanvas.height; masterFilmCanvas.getContext('2d').drawImage(rawDeSqueezedCanvas, 0, 0); } 
-            else {
+            if (filmFormatSelect.value === 'original') { 
+                masterFilmCanvas.width = rawDeSqueezedCanvas.width; masterFilmCanvas.height = rawDeSqueezedCanvas.height; 
+                masterFilmCanvas.getContext('2d').drawImage(rawDeSqueezedCanvas, 0, 0); 
+            } else {
                 const sx = rawDeSqueezedCanvas.width / cropperImg.clientWidth; const sy = rawDeSqueezedCanvas.height / cropperImg.clientHeight;
                 masterFilmCanvas.width = cBox.w * sx; masterFilmCanvas.height = cBox.h * sy;
                 masterFilmCanvas.getContext('2d').drawImage(rawDeSqueezedCanvas, cBox.x * sx, cBox.y * sy, masterFilmCanvas.width, masterFilmCanvas.height, 0, 0, masterFilmCanvas.width, masterFilmCanvas.height);
             }
+            visualCropPanel.classList.add('border-green-500'); setTimeout(() => visualCropPanel.classList.remove('border-green-500'), 500);
             detailCrops = [{ z: 0.95, x: 50, y: 50 }, { z: 1.5, x: 0, y: 50 }, { z: 1.5, x: 50, y: 50 }, { z: 1.5, x: 100, y: 50 }];
             currentEditIdx = 0; updateBtnUI(); processFinalGallery();
-        };
+        });
 
         function updateBtnUI() { slideBtns.forEach((b, i) => { if(i === currentEditIdx) b.classList.replace('bg-neutral-800', 'bg-rose-600'); else b.classList.replace('bg-rose-600', 'bg-neutral-800'); }); }
 
-        function attachDetailDrag() {
-            let isD = false; let lx, ly;
-            detailEditCanvas.onmousedown = (e) => { isD = true; lx = e.clientX; ly = e.clientY; };
-            detailEditCanvas.ontouchstart = (e) => { isD = true; lx = e.touches[0].clientX; ly = e.touches[0].clientY; };
-            window.onmouseup = window.ontouchend = () => { if(isD) { isD = false; processFinalGallery(); } };
-            window.onmousemove = window.ontouchmove = (e) => { 
-                if (!isD) return; 
-                if(e.touches) e.preventDefault();
-                const cx = e.touches ? e.touches[0].clientX : e.clientX;
-                const cy = e.touches ? e.touches[0].clientY : e.clientY;
-                const s = detailCrops[currentEditIdx]; const sens = 0.3 / s.z; s.x = Math.max(0, Math.min(100, s.x - (cx - lx) * sens)); s.y = Math.max(0, Math.min(100, s.y - (cy - ly) * sens)); lx = cx; ly = cy; renderDetailEditorPreview(); 
-            };
-            detailEditCanvas.onwheel = (e) => { e.preventDefault(); const s = detailCrops[currentEditIdx]; s.z = Math.max(0.3, Math.min(4.0, s.z + (e.deltaY > 0 ? -0.05 : 0.05))); renderDetailEditorPreview(); clearTimeout(detailEditCanvas.wT); detailEditCanvas.wT = setTimeout(processFinalGallery, 400); };
+        // 🌟 독립된 2단계: 디테일 에디터 드래그 (버그 픽스 완료) 🌟
+        let isDetailDragging = false; let detailLastX, detailLastY;
+
+        function startDetailDrag(e) {
+            isDetailDragging = true;
+            detailLastX = e.touches ? e.touches[0].clientX : e.clientX;
+            detailLastY = e.touches ? e.touches[0].clientY : e.clientY;
         }
-        attachDetailDrag();
+        function moveDetailDrag(e) {
+            if (!isDetailDragging || !masterFilmCanvas) return;
+            if(e.touches) e.preventDefault();
+            const cx = e.touches ? e.touches[0].clientX : e.clientX;
+            const cy = e.touches ? e.touches[0].clientY : e.clientY;
+            const s = detailCrops[currentEditIdx]; const sens = 0.3 / s.z; 
+            s.x = Math.max(0, Math.min(100, s.x - (cx - detailLastX) * sens)); 
+            s.y = Math.max(0, Math.min(100, s.y - (cy - detailLastY) * sens)); 
+            detailLastX = cx; detailLastY = cy; 
+            renderDetailEditorPreview();
+        }
+        function endDetailDrag() {
+            if (isDetailDragging) { isDetailDragging = false; processFinalGallery(); }
+        }
+
+        detailEditCanvas.addEventListener('mousedown', startDetailDrag);
+        detailEditCanvas.addEventListener('touchstart', startDetailDrag, {passive: false});
+        window.addEventListener('mousemove', moveDetailDrag, {passive: false});
+        window.addEventListener('touchmove', moveDetailDrag, {passive: false});
+        window.addEventListener('mouseup', endDetailDrag);
+        window.addEventListener('touchend', endDetailDrag);
+
+        detailEditCanvas.addEventListener('wheel', (e) => { 
+            e.preventDefault(); if(!masterFilmCanvas) return;
+            const s = detailCrops[currentEditIdx]; s.z = Math.max(0.3, Math.min(4.0, s.z + (e.deltaY > 0 ? -0.05 : 0.05))); 
+            renderDetailEditorPreview(); 
+            clearTimeout(detailEditCanvas.wT); detailEditCanvas.wT = setTimeout(processFinalGallery, 400); 
+        }, {passive: false});
 
         function renderDetailEditorPreview() {
             if (!masterFilmCanvas) return; const [aw, ah] = document.getElementById('aspectRatio').value.split('/'); const tr = aw / ah;
             const ctx = detailEditCanvas.getContext('2d'); detailEditCanvas.width = 400 * tr; detailEditCanvas.height = 400;
             drawInstaFrame(ctx, detailEditCanvas.width, detailEditCanvas.height, detailCrops[currentEditIdx], masterFilmCanvas, tr);
         }
-        slideBtns.forEach(btn => { btn.onclick = (e) => { currentEditIdx = parseInt(e.target.dataset.idx); updateBtnUI(); renderDetailEditorPreview(); processFinalGallery(); }; });
 
+        slideBtns.forEach(btn => { btn.addEventListener('click', (e) => { currentEditIdx = parseInt(e.target.dataset.idx); updateBtnUI(); renderDetailEditorPreview(); processFinalGallery(); }); });
+
+        // 🌟 갤러리 생성 🌟
         function processFinalGallery() {
             if (!masterFilmCanvas) return; generatedImages = []; previewContainer.innerHTML = ''; const [aw, ah] = document.getElementById('aspectRatio').value.split('/'); const tr = aw / ah;
             let mode = 'seamless'; document.getElementsByName('mode').forEach(r => { if(r.checked) mode = r.value; });
@@ -357,19 +407,22 @@
             } else {
                 const c = document.createElement('canvas'); c.width = ew; c.height = eh; const ctx = c.getContext('2d'); const ib = drawLetterboxFrame(ctx, ew, eh, masterFilmCanvas, tr); applyGrainAndText(ctx, ew, eh, true, ib); generatedImages.push(c.toDataURL('image/jpeg', 0.95));
             }
-            generatedImages.forEach((d, i) => { const img = document.createElement('img'); img.src = d; img.className = `h-[250px] md:h-[350px] w-auto flex-none object-cover rounded shadow-2xl snap-center transition-all ${mode === 'detail' && i === currentEditIdx ? 'border-4 border-rose-500 scale-[1.03] z-10' : 'border border-neutral-800'}`; if(mode === 'detail') img.onclick = () => { currentEditIdx = i; updateBtnUI(); renderDetailEditorPreview(); processFinalGallery(); }; previewContainer.appendChild(img); });
+            
+            generatedImages.forEach((d, i) => { 
+                const img = document.createElement('img'); img.src = d; 
+                img.className = `h-[250px] md:h-[350px] w-auto flex-none object-cover rounded shadow-2xl snap-center transition-all ${mode === 'detail' && i === currentEditIdx ? 'border-4 border-rose-500 scale-[1.03] z-10' : 'border border-neutral-800'}`; 
+                if(mode === 'detail') img.addEventListener('click', () => { currentEditIdx = i; updateBtnUI(); renderDetailEditorPreview(); processFinalGallery(); }); 
+                previewContainer.appendChild(img); 
+            });
             document.getElementById('previewCount').innerText = generatedImages.length; downloadBtn.classList.remove('hidden');
         }
 
+        // Draw & Text Logic
         function drawInstaFrame(ctx, w, h, s, src, tr) {
             ctx.fillStyle = document.getElementById('bgStyle').value; ctx.fillRect(0, 0, w, h); const z = s.z; const sr = src.width / src.height;
             const pr = (document.getElementById('frameStyle').value === 'margin') ? 0.85 : 1.0; const dw = w * pr, dh = h * pr; const dx = (w - dw) / 2, dy = (h - dh) / 2;
-            if (z <= 1.0) {
-                let fw, fh; if (sr > tr) { fw = dw; fh = dw / sr; } else { fh = dh; fw = dh * sr; } const iw = fw * z, ih = fh * z; const ix = dx + (dw - iw) / 2, iy = dy + (dh - ih) / 2; ctx.drawImage(src, 0, 0, src.width, src.height, ix, iy, iw, ih); return {x:ix, y:iy, w:iw, h:ih};
-            } else {
-                let cw, ch; if (sr > tr) { ch = src.height; cw = src.height * tr; } else { cw = src.width; ch = src.width / tr; } const sw = cw / z, sh = ch / z;
-                ctx.drawImage(src, Math.max(0, src.width - sw) * (s.x / 100), Math.max(0, src.height - sh) * (s.y / 100), sw, sh, dx, dy, dw, dh); return {x:dx, y:dy, w:dw, h:dh};
-            }
+            if (z <= 1.0) { let fw, fh; if (sr > tr) { fw = dw; fh = dw / sr; } else { fh = dh; fw = dh * sr; } const iw = fw * z, ih = fh * z; const ix = dx + (dw - iw) / 2, iy = dy + (dh - ih) / 2; ctx.drawImage(src, 0, 0, src.width, src.height, ix, iy, iw, ih); return {x:ix, y:iy, w:iw, h:ih}; } 
+            else { let cw, ch; if (sr > tr) { ch = src.height; cw = src.height * tr; } else { cw = src.width; ch = src.width / tr; } const sw = cw / z, sh = ch / z; ctx.drawImage(src, Math.max(0, src.width - sw) * (s.x / 100), Math.max(0, src.height - sh) * (s.y / 100), sw, sh, dx, dy, dw, dh); return {x:dx, y:dy, w:dw, h:dh}; }
         }
         function drawLetterboxFrame(ctx, w, h, src, tr) {
             ctx.fillStyle = document.getElementById('bgStyle').value; ctx.fillRect(0, 0, w, h); const sr = src.width / src.height; const pr = (document.getElementById('frameStyle').value === 'margin') ? 0.85 : 1.0; const dw = w * pr, dh = h * pr;
@@ -377,10 +430,7 @@
         }
         function applyGrainAndText(ctx, w, h, isF, ib) {
             const gi = parseInt(document.getElementById('grainSlider').value);
-            if (gi > 0) {
-                if (!grainCanvas) { grainCanvas = document.createElement('canvas'); grainCanvas.width = 512; grainCanvas.height = 512; const gCtx = grainCanvas.getContext('2d'); const id = gCtx.createImageData(512, 512); for (let i = 0; i < id.data.length; i += 4) { const v = Math.random() < 0.5 ? 0 : 255; id.data[i] = id.data[i+1] = id.data[i+2] = v; id.data[i+3] = 255; } gCtx.putImageData(id, 0, 0); }
-                ctx.save(); ctx.globalAlpha = gi / 100; ctx.globalCompositeOperation = 'soft-light'; ctx.fillStyle = ctx.createPattern(grainCanvas, 'repeat'); ctx.fillRect(0, 0, w, h); ctx.restore();
-            }
+            if (gi > 0) { if (!grainCanvas) { grainCanvas = document.createElement('canvas'); grainCanvas.width = 512; grainCanvas.height = 512; const gCtx = grainCanvas.getContext('2d'); const id = gCtx.createImageData(512, 512); for (let i = 0; i < id.data.length; i += 4) { const v = Math.random() < 0.5 ? 0 : 255; id.data[i] = id.data[i+1] = id.data[i+2] = v; id.data[i+3] = 255; } gCtx.putImageData(id, 0, 0); } ctx.save(); ctx.globalAlpha = gi / 100; ctx.globalCompositeOperation = 'soft-light'; ctx.fillStyle = ctx.createPattern(grainCanvas, 'repeat'); ctx.fillRect(0, 0, w, h); ctx.restore(); }
             const txt = watermarkText.value.trim(); const target = document.getElementById('watermarkTarget').value;
             if (txt && (target === 'all' || (target === 'first' && isF))) {
                 const al = document.getElementById('watermarkAlign').value; const fs = document.getElementById('watermarkFont').value; const frs = document.getElementById('frameStyle').value; const bgs = document.getElementById('bgStyle').value;
@@ -392,14 +442,14 @@
             }
         }
 
-        [document.getElementById('aspectRatio'), document.getElementById('bgStyle'), document.getElementById('frameStyle'), watermarkText, document.getElementById('watermarkFont'), document.getElementById('watermarkAlign'), document.getElementById('watermarkTarget')].forEach(el => el.onchange = processFinalGallery);
-        document.getElementsByName('mode').forEach(r => r.onchange = processFinalGallery);
-        document.getElementById('grainSlider').oninput = (e) => { document.getElementById('grainValueDisplay').textContent = `${e.target.value}%`; processFinalGallery(); };
+        [document.getElementById('aspectRatio'), document.getElementById('bgStyle'), document.getElementById('frameStyle'), watermarkText, document.getElementById('watermarkFont'), document.getElementById('watermarkAlign'), document.getElementById('watermarkTarget')].forEach(el => el.addEventListener('change', processFinalGallery));
+        document.getElementsByName('mode').forEach(r => r.addEventListener('change', processFinalGallery));
+        document.getElementById('grainSlider').addEventListener('input', (e) => { document.getElementById('grainValueDisplay').textContent = `${e.target.value}%`; processFinalGallery(); });
 
-        downloadBtn.onclick = () => {
+        downloadBtn.addEventListener('click', () => {
             if (generatedImages.length === 0) return; downloadBtn.innerText = "Processing... Check Browser Permission";
             generatedImages.forEach((d, i) => { setTimeout(() => { const l = document.createElement('a'); l.download = `cineRoll_part${i + 1}.jpg`; l.href = d; document.body.appendChild(l); l.click(); document.body.removeChild(l); if (i === generatedImages.length - 1) downloadBtn.innerText = "✅ Download Complete!"; }, i * 800); });
-        };
+        });
     </script>
 </body>
 </html>
