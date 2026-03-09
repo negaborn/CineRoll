@@ -14,7 +14,7 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         input[type=range].accent-rose-500::-webkit-slider-thumb { background: #e11d48; }
-        #cropBox { box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7); cursor: move; touch-action: none; }
+        #cropBox { box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7); touch-action: none; pointer-events: none; }
         .grid-lines {
             background-image: 
                 linear-gradient(to right, rgba(255,255,255,0.3) 1px, transparent 1px),
@@ -69,9 +69,10 @@
         <div id="visualCropPanel" class="col-span-full bg-neutral-950 p-4 rounded-xl border border-rose-900 hidden flex flex-col items-center">
             <div class="w-full flex justify-between items-center mb-3">
                 <label class="block text-sm font-bold text-rose-400 uppercase">🎯 Phase 1: Master Film Framing</label>
-                <span class="text-[10px] text-neutral-400 bg-neutral-800 px-2 py-1 rounded">Drag to move / Scroll to resize</span>
+                <span class="text-[10px] text-neutral-400 bg-neutral-800 px-2 py-1 rounded">Drag image to move / Scroll to resize</span>
             </div>
-            <div id="cropperContainer" class="relative w-full max-w-[600px] bg-black overflow-hidden select-none touch-none rounded-lg border border-neutral-700">
+            
+            <div id="cropperContainer" class="relative w-full max-w-[600px] bg-black overflow-hidden select-none touch-none rounded-lg border border-neutral-700 grab-cursor">
                 <img id="cropperImg" class="w-full block pointer-events-none" />
                 <div id="cropBox" class="absolute border border-rose-500 grid-lines flex items-center justify-center">
                     <div class="absolute w-3 h-3 border-t-2 border-l-2 border-rose-500 -top-1 -left-1"></div>
@@ -80,7 +81,8 @@
                     <div class="absolute w-3 h-3 border-b-2 border-r-2 border-rose-500 -bottom-1 -right-1"></div>
                 </div>
             </div>
-            <button id="applyCropBtn" class="mt-4 px-6 py-3 bg-rose-600 text-white font-bold rounded-lg w-full hover:bg-rose-500 transition-all uppercase tracking-tighter">
+            
+            <button id="applyCropBtn" class="mt-4 px-6 py-3 bg-rose-600 text-white font-bold rounded-lg w-full hover:bg-rose-500 transition-all uppercase tracking-tighter shadow-lg shadow-rose-900/50">
                 Set Master Film
             </button>
         </div>
@@ -221,8 +223,8 @@
         const watermarkText = document.getElementById('watermarkText'); const presetContainer = document.getElementById('presetContainer');
         const savePresetBtn = document.getElementById('savePresetBtn');
         const fileNameDisplay = document.getElementById('fileNameDisplay');
+        const cContainer = document.getElementById('cropperContainer');
 
-        // Presets
         let savedPresets = JSON.parse(localStorage.getItem('carouselPresets')) || [
             "Antenna for the Vanished - Oaxaca, MX", "Shot on Lumix S5M2X | Sirui Saturn 1.6x"
         ];
@@ -240,11 +242,9 @@
         savePresetBtn.onclick = () => { const text = watermarkText.value.trim(); if (text && !savedPresets.includes(text)) { savedPresets.push(text); localStorage.setItem('carouselPresets', JSON.stringify(savedPresets)); renderPresets(); } };
         renderPresets();
 
-        // Data Models
         let cBox = { x: 0, y: 0, w: 100, h: 100 }; let targetFormatRatio = null;
         let currentEditIdx = 0; let detailCrops = [{ z: 0.95, x: 50, y: 50 }, { z: 1.5, x: 0, y: 50 }, { z: 1.5, x: 50, y: 50 }, { z: 1.5, x: 100, y: 50 }];
 
-        // Upload Logic
         upload.addEventListener('change', (e) => {
             const file = e.target.files[0]; if(!file) return;
             fileNameDisplay.innerText = file.name;
@@ -282,6 +282,7 @@
         }
 
         function renderCropBox() { cropBox.style.left = `${cBox.x}px`; cropBox.style.top = `${cBox.y}px`; cropBox.style.width = `${cBox.w}px`; cropBox.style.height = `${cBox.h}px`; }
+        
         function enforceBoxBounds() {
             const mw = cropperImg.clientWidth; const mh = cropperImg.clientHeight;
             if(cBox.w > mw) { cBox.w = mw; cBox.h = mw / targetFormatRatio; }
@@ -290,18 +291,19 @@
             if(cBox.x + cBox.w > mw) cBox.x = mw - cBox.w; if(cBox.y + cBox.h > mh) cBox.y = mh - cBox.h;
         }
 
-        // 🌟 독립된 1단계: 마스터 크롭 박스 드래그 (버그 픽스 완료) 🌟
-        let isDraggingBox = false; let masterLastX, masterLastY;
+        // 🌟 독립된 1단계: 마스터 크롭 박스 드래그 (완벽 분리 패치) 🌟
+        let isMasterDragging = false; let masterLastX, masterLastY;
 
-        function startBoxDrag(e) {
+        function startMasterDrag(e) {
             if(targetFormatRatio === null) return;
-            isDraggingBox = true;
+            isMasterDragging = true;
+            cContainer.style.cursor = 'grabbing';
             masterLastX = e.touches ? e.touches[0].clientX : e.clientX;
             masterLastY = e.touches ? e.touches[0].clientY : e.clientY;
         }
-        function moveBoxDrag(e) {
-            if (!isDraggingBox) return;
-            e.preventDefault(); // 스크롤 방지
+        function moveMasterDrag(e) {
+            if (!isMasterDragging) return;
+            if (e.touches) e.preventDefault(); 
             const cx = e.touches ? e.touches[0].clientX : e.clientX;
             const cy = e.touches ? e.touches[0].clientY : e.clientY;
             cBox.x += (cx - masterLastX);
@@ -309,22 +311,27 @@
             masterLastX = cx; masterLastY = cy;
             enforceBoxBounds(); renderCropBox();
         }
-        function endBoxDrag() { isDraggingBox = false; }
+        function endMasterDrag() {
+            isMasterDragging = false;
+            cContainer.style.cursor = 'grab';
+        }
 
-        cropBox.addEventListener('mousedown', startBoxDrag);
-        cropBox.addEventListener('touchstart', startBoxDrag, {passive: false});
-        window.addEventListener('mousemove', moveBoxDrag, {passive: false});
-        window.addEventListener('touchmove', moveBoxDrag, {passive: false});
-        window.addEventListener('mouseup', endBoxDrag);
-        window.addEventListener('touchend', endBoxDrag);
+        // 컨테이너 아무 곳이나 잡아도 드래그 됨 (UX 개선)
+        cContainer.addEventListener('mousedown', startMasterDrag);
+        cContainer.addEventListener('touchstart', startMasterDrag, {passive: false});
+        window.addEventListener('mousemove', moveMasterDrag, {passive: false});
+        window.addEventListener('touchmove', moveMasterDrag, {passive: false});
+        window.addEventListener('mouseup', endMasterDrag);
+        window.addEventListener('touchend', endMasterDrag);
 
-        document.getElementById('cropperContainer').addEventListener('wheel', (e) => { 
+        cContainer.addEventListener('wheel', (e) => { 
             if(targetFormatRatio === null) return; e.preventDefault(); 
             const sf = e.deltaY > 0 ? 0.95 : 1.05; const ow = cBox.w; const oh = cBox.h; 
             cBox.w *= sf; cBox.h *= sf; cBox.x -= (cBox.w - ow) / 2; cBox.y -= (cBox.h - oh) / 2; 
             if(cBox.w < 50) { cBox.w = 50; cBox.h = 50 / targetFormatRatio; } 
             enforceBoxBounds(); renderCropBox(); 
         }, {passive: false});
+
 
         // 🌟 1단계 확정 버튼 🌟
         applyCropBtn.addEventListener('click', () => {
@@ -345,7 +352,8 @@
 
         function updateBtnUI() { slideBtns.forEach((b, i) => { if(i === currentEditIdx) b.classList.replace('bg-neutral-800', 'bg-rose-600'); else b.classList.replace('bg-rose-600', 'bg-neutral-800'); }); }
 
-        // 🌟 독립된 2단계: 디테일 에디터 드래그 (버그 픽스 완료) 🌟
+
+        // 🌟 독립된 2단계: 디테일 에디터 드래그 (완벽 분리 패치) 🌟
         let isDetailDragging = false; let detailLastX, detailLastY;
 
         function startDetailDrag(e) {
