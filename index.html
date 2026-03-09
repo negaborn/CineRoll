@@ -21,6 +21,11 @@
                 linear-gradient(to bottom, rgba(255,255,255,0.3) 1px, transparent 1px);
             background-size: 33.33% 33.33%;
         }
+        /* iOS 꾹 누르기 저장 메뉴 강제 활성화 */
+        .saveable-img {
+            -webkit-touch-callout: default !important;
+            -webkit-user-select: auto !important;
+        }
     </style>
 </head>
 <body class="bg-neutral-950 text-neutral-300 p-4 md:p-6 flex flex-col items-center min-h-screen font-sans">
@@ -200,17 +205,15 @@
 
     <div class="w-full max-w-5xl mb-12">
         <h2 class="text-lg font-bold mb-4 text-neutral-300 uppercase tracking-widest text-center">Preview Results</h2>
+        
         <div id="previewContainer" class="flex gap-4 overflow-x-auto pb-8 snap-x no-scrollbar border border-neutral-800 p-4 rounded-xl bg-neutral-900/50 min-h-[300px] items-center justify-start text-neutral-600 text-sm">
             Please confirm Master Crop to see results.
         </div>
         
         <div class="flex flex-col items-center justify-center mt-6">
-            <button id="download" class="px-10 py-4 bg-rose-600 text-white font-bold rounded-xl hover:bg-rose-500 transition-all text-lg shadow-lg shadow-rose-900/50 hidden uppercase tracking-tighter">
-                Download High-Res Images
+            <button id="download" class="px-10 py-4 bg-rose-600 text-white font-bold rounded-xl hover:bg-rose-500 transition-all text-sm md:text-lg shadow-lg shadow-rose-900/50 hidden uppercase tracking-tighter">
+                Download All (PC/Mac)
             </button>
-            <p id="mobileHint" class="text-[10px] text-rose-500/80 mt-3 hidden uppercase tracking-widest text-center font-bold">
-                📱 On Mobile? Long-press the images above to save.
-            </p>
         </div>
     </div>
 
@@ -228,9 +231,7 @@
         const savePresetBtn = document.getElementById('savePresetBtn');
         const fileNameDisplay = document.getElementById('fileNameDisplay');
         const cContainer = document.getElementById('cropperContainer');
-        const mobileHint = document.getElementById('mobileHint');
 
-        // Presets
         let savedPresets = JSON.parse(localStorage.getItem('carouselPresets')) || [
             "Antenna for the Vanished - Oaxaca, MX", "Shot on Lumix S5M2X | Sirui Saturn 1.6x"
         ];
@@ -297,7 +298,6 @@
             if(cBox.x + cBox.w > mw) cBox.x = mw - cBox.w; if(cBox.y + cBox.h > mh) cBox.y = mh - cBox.h;
         }
 
-        // 🌟 1단계: 마스터 줌 & 드래그 엔진 (모바일 핀치 완벽 지원) 🌟
         let isMasterDragging = false; let masterLastX, masterLastY;
         let masterInitialDistance = null;
 
@@ -307,8 +307,7 @@
             if(targetFormatRatio === null) return;
             if (e.touches && e.touches.length === 2) {
                 masterInitialDistance = getDistance(e.touches);
-                isMasterDragging = false; // 핀치 시작 시 드래그 취소
-                return;
+                isMasterDragging = false; return;
             }
             isMasterDragging = true; cContainer.style.cursor = 'grabbing';
             masterLastX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -316,21 +315,17 @@
         }
         
         function moveMasterDrag(e) {
-            // 모바일 핀치 투 줌 처리
             if (e.touches && e.touches.length === 2 && masterInitialDistance !== null) {
                 e.preventDefault();
                 const currentDistance = getDistance(e.touches);
-                const sf = currentDistance > masterInitialDistance ? 1.02 : 0.98; // 확대 or 축소
+                const sf = currentDistance > masterInitialDistance ? 1.02 : 0.98;
                 const ow = cBox.w; const oh = cBox.h;
                 cBox.w *= sf; cBox.h *= sf; 
-                cBox.x -= (cBox.w - ow) / 2; cBox.y -= (cBox.h - oh) / 2; // 중심 유지
+                cBox.x -= (cBox.w - ow) / 2; cBox.y -= (cBox.h - oh) / 2; 
                 if(cBox.w < 50) { cBox.w = 50; cBox.h = 50 / targetFormatRatio; }
                 enforceBoxBounds(); renderCropBox();
-                masterInitialDistance = currentDistance;
-                return;
+                masterInitialDistance = currentDistance; return;
             }
-            
-            // 일반 드래그 처리
             if (!isMasterDragging) return;
             if (e.touches) e.preventDefault(); 
             const cx = e.touches ? e.touches[0].clientX : e.clientX;
@@ -341,14 +336,10 @@
         }
         function endMasterDrag() { isMasterDragging = false; masterInitialDistance = null; cContainer.style.cursor = 'grab'; }
 
-        cContainer.addEventListener('mousedown', startMasterDrag);
-        cContainer.addEventListener('touchstart', startMasterDrag, {passive: false});
-        window.addEventListener('mousemove', moveMasterDrag, {passive: false});
-        window.addEventListener('touchmove', moveMasterDrag, {passive: false});
-        window.addEventListener('mouseup', endMasterDrag);
-        window.addEventListener('touchend', endMasterDrag);
+        cContainer.addEventListener('mousedown', startMasterDrag); cContainer.addEventListener('touchstart', startMasterDrag, {passive: false});
+        window.addEventListener('mousemove', moveMasterDrag, {passive: false}); window.addEventListener('touchmove', moveMasterDrag, {passive: false});
+        window.addEventListener('mouseup', endMasterDrag); window.addEventListener('touchend', endMasterDrag);
 
-        // PC 마우스 휠 지원
         cContainer.addEventListener('wheel', (e) => { 
             if(targetFormatRatio === null) return; e.preventDefault(); 
             const sf = e.deltaY > 0 ? 0.95 : 1.05; const ow = cBox.w; const oh = cBox.h; 
@@ -373,78 +364,40 @@
             currentEditIdx = 0; updateBtnUI(); processFinalGallery();
         });
 
-        function updateBtnUI() { 
-            slideBtns.forEach((b, i) => { 
-                if(i === currentEditIdx) {
-                    b.classList.replace('bg-neutral-800', 'bg-rose-600');
-                    b.classList.add('shadow-lg', 'shadow-rose-900/50');
-                } else {
-                    b.classList.replace('bg-rose-600', 'bg-neutral-800');
-                    b.classList.remove('shadow-lg', 'shadow-rose-900/50');
-                }
-            }); 
-        }
+        function updateBtnUI() { slideBtns.forEach((b, i) => { if(i === currentEditIdx) { b.classList.replace('bg-neutral-800', 'bg-rose-600'); b.classList.add('shadow-lg', 'shadow-rose-900/50'); } else { b.classList.replace('bg-rose-600', 'bg-neutral-800'); b.classList.remove('shadow-lg', 'shadow-rose-900/50'); } }); }
 
-        // 🌟 2단계: 디테일 에디터 줌 & 드래그 엔진 (모바일 핀치 완벽 지원) 🌟
-        let isDetailDragging = false; let detailLastX, detailLastY;
-        let detailInitialDistance = null;
+        let isDetailDragging = false; let detailLastX, detailLastY; let detailInitialDistance = null;
 
         function startDetailDrag(e) {
-            if (e.touches && e.touches.length === 2) {
-                detailInitialDistance = getDistance(e.touches);
-                isDetailDragging = false; // 핀치 시작 시 드래그 취소
-                return;
-            }
-            isDetailDragging = true;
-            detailLastX = e.touches ? e.touches[0].clientX : e.clientX;
-            detailLastY = e.touches ? e.touches[0].clientY : e.clientY;
+            if (e.touches && e.touches.length === 2) { detailInitialDistance = getDistance(e.touches); isDetailDragging = false; return; }
+            isDetailDragging = true; detailLastX = e.touches ? e.touches[0].clientX : e.clientX; detailLastY = e.touches ? e.touches[0].clientY : e.clientY;
         }
         
         function moveDetailDrag(e) {
             if (!masterFilmCanvas) return;
-            
-            // 모바일 핀치 투 줌 처리
             if (e.touches && e.touches.length === 2 && detailInitialDistance !== null) {
-                e.preventDefault();
-                const currentDistance = getDistance(e.touches);
-                const s = detailCrops[currentEditIdx];
-                // 손가락이 벌어지면(current > initial) 줌인(z 증가)
+                e.preventDefault(); const currentDistance = getDistance(e.touches); const s = detailCrops[currentEditIdx];
                 s.z = Math.max(0.3, Math.min(4.0, s.z + (currentDistance > detailInitialDistance ? 0.04 : -0.04))); 
-                renderDetailEditorPreview();
-                detailInitialDistance = currentDistance;
-                clearTimeout(detailEditCanvas.wT); detailEditCanvas.wT = setTimeout(processFinalGallery, 400); 
-                return;
+                renderDetailEditorPreview(); detailInitialDistance = currentDistance;
+                clearTimeout(detailEditCanvas.wT); detailEditCanvas.wT = setTimeout(processFinalGallery, 400); return;
             }
-
-            // 일반 드래그 처리
             if (!isDetailDragging) return;
             if(e.touches) e.preventDefault();
-            const cx = e.touches ? e.touches[0].clientX : e.clientX;
-            const cy = e.touches ? e.touches[0].clientY : e.clientY;
+            const cx = e.touches ? e.touches[0].clientX : e.clientX; const cy = e.touches ? e.touches[0].clientY : e.clientY;
             const s = detailCrops[currentEditIdx]; const sens = 0.3 / s.z; 
-            s.x = Math.max(0, Math.min(100, s.x - (cx - detailLastX) * sens)); 
-            s.y = Math.max(0, Math.min(100, s.y - (cy - detailLastY) * sens)); 
-            detailLastX = cx; detailLastY = cy; 
-            renderDetailEditorPreview();
+            s.x = Math.max(0, Math.min(100, s.x - (cx - detailLastX) * sens)); s.y = Math.max(0, Math.min(100, s.y - (cy - detailLastY) * sens)); 
+            detailLastX = cx; detailLastY = cy; renderDetailEditorPreview();
         }
-        function endDetailDrag() {
-            detailInitialDistance = null;
-            if (isDetailDragging) { isDetailDragging = false; processFinalGallery(); }
-        }
+        function endDetailDrag() { detailInitialDistance = null; if (isDetailDragging) { isDetailDragging = false; processFinalGallery(); } }
 
-        detailEditCanvas.addEventListener('mousedown', startDetailDrag);
-        detailEditCanvas.addEventListener('touchstart', startDetailDrag, {passive: false});
-        window.addEventListener('mousemove', moveDetailDrag, {passive: false});
-        window.addEventListener('touchmove', moveDetailDrag, {passive: false});
-        window.addEventListener('mouseup', endDetailDrag);
-        window.addEventListener('touchend', endDetailDrag);
+        detailEditCanvas.addEventListener('mousedown', startDetailDrag); detailEditCanvas.addEventListener('touchstart', startDetailDrag, {passive: false});
+        window.addEventListener('mousemove', moveDetailDrag, {passive: false}); window.addEventListener('touchmove', moveDetailDrag, {passive: false});
+        window.addEventListener('mouseup', endDetailDrag); window.addEventListener('touchend', endDetailDrag);
 
-        // PC 마우스 휠 지원
         detailEditCanvas.addEventListener('wheel', (e) => { 
             e.preventDefault(); if(!masterFilmCanvas) return;
             const s = detailCrops[currentEditIdx]; s.z = Math.max(0.3, Math.min(4.0, s.z + (e.deltaY > 0 ? -0.05 : 0.05))); 
-            renderDetailEditorPreview(); 
-            clearTimeout(detailEditCanvas.wT); detailEditCanvas.wT = setTimeout(processFinalGallery, 400); 
+            renderDetailEditorPreview(); clearTimeout(detailEditCanvas.wT); detailEditCanvas.wT = setTimeout(processFinalGallery, 400); 
         }, {passive: false});
 
         function renderDetailEditorPreview() {
@@ -455,11 +408,13 @@
 
         slideBtns.forEach(btn => { btn.addEventListener('click', (e) => { currentEditIdx = parseInt(e.target.dataset.idx); updateBtnUI(); renderDetailEditorPreview(); processFinalGallery(); }); });
 
+        // 🌟 수정된 갤러리 렌더링 (사진과 개별 다운로드 버튼 그룹화) 🌟
         function processFinalGallery() {
             if (!masterFilmCanvas) return; generatedImages = []; previewContainer.innerHTML = ''; const [aw, ah] = document.getElementById('aspectRatio').value.split('/'); const tr = aw / ah;
             let mode = 'seamless'; document.getElementsByName('mode').forEach(r => { if(r.checked) mode = r.value; });
             interactiveControlPanel.classList.toggle('hidden', mode !== 'detail'); if(mode === 'detail') renderDetailEditorPreview();
             let eh = 1500; let ew = eh * tr;
+            
             if (mode === 'seamless') {
                 const ns = Math.round((masterFilmCanvas.width / masterFilmCanvas.height) / tr) || 1; const sw = masterFilmCanvas.width / ns;
                 for (let i = 0; i < ns; i++) {
@@ -472,17 +427,37 @@
                 const c = document.createElement('canvas'); c.width = ew; c.height = eh; const ctx = c.getContext('2d'); const ib = drawLetterboxFrame(ctx, ew, eh, masterFilmCanvas, tr); applyGrainAndText(ctx, ew, eh, true, ib); generatedImages.push(c.toDataURL('image/jpeg', 0.95));
             }
             
-            generatedImages.forEach((d, i) => { 
-                const img = document.createElement('img'); img.src = d; 
-                img.className = `h-[250px] md:h-[350px] w-auto flex-none object-cover rounded shadow-2xl snap-center transition-all cursor-pointer ${mode === 'detail' && i === currentEditIdx ? 'border-4 border-rose-500 scale-[1.03] z-10' : 'border border-neutral-800'}`; 
-                if(mode === 'detail') img.addEventListener('click', () => { currentEditIdx = i; updateBtnUI(); renderDetailEditorPreview(); processFinalGallery(); }); 
-                previewContainer.appendChild(img); 
+            generatedImages.forEach((dataUrl, i) => { 
+                // 1. 개별 이미지를 감싸는 컨테이너 생성
+                const wrapper = document.createElement('div');
+                wrapper.className = 'flex flex-col items-center gap-3 snap-center shrink-0 mb-4';
+
+                // 2. 이미지 태그 생성
+                const img = document.createElement('img'); 
+                img.src = dataUrl; 
+                img.className = `h-[250px] md:h-[350px] w-auto object-cover rounded shadow-2xl transition-all saveable-img ${mode === 'detail' && i === currentEditIdx ? 'border-4 border-rose-500 scale-[1.03] z-10' : 'border border-neutral-800'}`; 
+                if(mode === 'detail') {
+                    img.addEventListener('click', () => { currentEditIdx = i; updateBtnUI(); renderDetailEditorPreview(); processFinalGallery(); }); 
+                    img.style.cursor = 'pointer';
+                }
+                
+                // 3. 개별 다운로드 앵커(a) 버튼 생성
+                const singleDownload = document.createElement('a');
+                singleDownload.href = dataUrl;
+                singleDownload.download = `cineRoll_${mode}_part${i + 1}.jpg`;
+                singleDownload.innerHTML = '⬇️ Save';
+                singleDownload.className = 'text-[11px] md:text-xs bg-neutral-800 hover:bg-rose-600 text-neutral-300 hover:text-white px-5 py-2 rounded-full transition font-bold uppercase tracking-wider shadow-lg border border-neutral-700';
+
+                // 4. 컨테이너에 조립
+                wrapper.appendChild(img);
+                wrapper.appendChild(singleDownload);
+                previewContainer.appendChild(wrapper); 
             });
             
             downloadBtn.classList.remove('hidden');
-            mobileHint.classList.remove('hidden');
         }
 
+        // Draw & Text Logic
         function drawInstaFrame(ctx, w, h, s, src, tr) {
             ctx.fillStyle = document.getElementById('bgStyle').value; ctx.fillRect(0, 0, w, h); const z = s.z; const sr = src.width / src.height;
             const pr = (document.getElementById('frameStyle').value === 'margin') ? 0.85 : 1.0; const dw = w * pr, dh = h * pr; const dx = (w - dw) / 2, dy = (h - dh) / 2;
@@ -521,7 +496,7 @@
                     document.body.appendChild(link); link.click(); document.body.removeChild(link);
                     if (index === generatedImages.length - 1) {
                         downloadBtn.innerText = "✅ Download Complete!";
-                        setTimeout(() => { downloadBtn.innerText = "Download High-Res Images"; }, 3000);
+                        setTimeout(() => { downloadBtn.innerText = "Download All (PC/Mac)"; }, 3000);
                     }
                 }, delay);
                 delay += 600; 
