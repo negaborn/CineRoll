@@ -34,7 +34,11 @@
         
         <div class="col-span-full">
             <label class="block text-sm font-semibold mb-2 text-neutral-400 uppercase tracking-wider">1. Load Image</label>
-            <input type="file" id="upload" accept="image/*" class="w-full text-sm text-neutral-500 file:mr-4 file:py-2.5 file:px-5 file:rounded-lg file:border-0 file:text-sm file:font-bold file:bg-rose-900 file:text-rose-200 hover:file:bg-rose-800 cursor-pointer transition"/>
+            <div class="flex items-center gap-3">
+                <button onclick="document.getElementById('upload').click()" class="bg-rose-900 text-rose-200 px-5 py-2.5 rounded-lg text-sm font-bold hover:bg-rose-800 transition">Choose File</button>
+                <span id="fileNameDisplay" class="text-xs text-neutral-500 italic">No file chosen</span>
+            </div>
+            <input type="file" id="upload" accept="image/*" class="hidden"/>
         </div>
 
         <div>
@@ -194,7 +198,7 @@
 
     <div class="w-full max-w-5xl mb-12">
         <h2 class="text-lg font-bold mb-4 text-neutral-300 uppercase tracking-widest text-center">Preview Results</h2>
-        <div id="previewContainer" class="flex gap-4 overflow-x-auto pb-8 snap-x no-scrollbar border border-neutral-800 p-4 rounded-xl bg-neutral-900/50 min-h-[300px] items-center justify-center text-neutral-600 text-sm">
+        <div id="previewContainer" class="flex gap-4 overflow-x-auto pb-8 snap-x no-scrollbar border border-neutral-800 p-4 rounded-xl bg-neutral-900/50 min-h-[300px] items-center justify-start text-neutral-600 text-sm">
             Please confirm Master Crop to see results.
         </div>
         <div class="flex justify-center mt-6">
@@ -215,6 +219,7 @@
         const previewContainer = document.getElementById('previewContainer'); const downloadBtn = document.getElementById('download');
         const watermarkText = document.getElementById('watermarkText'); const presetContainer = document.getElementById('presetContainer');
         const savePresetBtn = document.getElementById('savePresetBtn');
+        const fileNameDisplay = document.getElementById('fileNameDisplay');
 
         let savedPresets = JSON.parse(localStorage.getItem('carouselPresets')) || [
             "Antenna for the Vanished - Oaxaca, MX", "Shot on Lumix S5M2X | Sirui Saturn 1.6x"
@@ -237,9 +242,11 @@
         let currentEditIdx = 0; let detailCrops = [{ z: 0.95, x: 50, y: 50 }, { z: 1.5, x: 0, y: 50 }, { z: 1.5, x: 50, y: 50 }, { z: 1.5, x: 100, y: 50 }];
 
         upload.onchange = (e) => {
-            const file = e.target.files[0]; const reader = new FileReader();
+            const file = e.target.files[0]; if(!file) return;
+            fileNameDisplay.innerText = file.name;
+            const reader = new FileReader();
             reader.onload = (event) => { currentImg = new Image(); currentImg.onload = setupRawCanvas; currentImg.src = event.target.result; };
-            if(file) reader.readAsDataURL(file);
+            reader.readAsDataURL(file);
         };
         squeezeSelect.onchange = setupRawCanvas;
         function setupRawCanvas() {
@@ -260,7 +267,7 @@
                 const cw = cropperImg.clientWidth; const ch = cropperImg.clientHeight;
                 if (cw / ch > targetFormatRatio) { cBox.h = ch * 0.9; cBox.w = cBox.h * targetFormatRatio; } 
                 else { cBox.w = cw * 0.9; cBox.h = cBox.w / targetFormatRatio; }
-                cBox.x = (cw - cBox.w) / 2; cBox.y = (ch - cBox.h) / 2; applyCropBtn.innerText = "Confirm Master Crop";
+                cBox.x = (cw - cBox.w) / 2; cBox.y = (ch - ch*0.9)/2; applyCropBtn.innerText = "Confirm Master Crop";
             }
             renderCropBox();
         }
@@ -289,9 +296,17 @@
                 masterFilmCanvas.getContext('2d').drawImage(rawDeSqueezedCanvas, cBox.x * sx, cBox.y * sy, masterFilmCanvas.width, masterFilmCanvas.height, 0, 0, masterFilmCanvas.width, masterFilmCanvas.height);
             }
             detailCrops = [{ z: 0.95, x: 50, y: 50 }, { z: 1.5, x: 0, y: 50 }, { z: 1.5, x: 50, y: 50 }, { z: 1.5, x: 100, y: 50 }];
-            currentEditIdx = 0; slideBtns.forEach(b => b.classList.replace('bg-rose-600', 'bg-neutral-800')); slideBtns[0].classList.replace('bg-neutral-800', 'bg-rose-600');
+            currentEditIdx = 0;
+            updateBtnUI();
             processFinalGallery();
         };
+
+        function updateBtnUI() {
+            slideBtns.forEach((b, i) => {
+                if(i === currentEditIdx) b.classList.replace('bg-neutral-800', 'bg-rose-600');
+                else b.classList.replace('bg-rose-600', 'bg-neutral-800');
+            });
+        }
 
         function attachDetailDrag() {
             let isD = false; let lx, ly;
@@ -307,7 +322,15 @@
             const ctx = detailEditCanvas.getContext('2d'); detailEditCanvas.width = 400 * tr; detailEditCanvas.height = 400;
             drawInstaFrame(ctx, detailEditCanvas.width, detailEditCanvas.height, detailCrops[currentEditIdx], masterFilmCanvas, tr);
         }
-        slideBtns.forEach(btn => { btn.onclick = (e) => { slideBtns.forEach(b => b.classList.replace('bg-rose-600', 'bg-neutral-800')); e.target.classList.replace('bg-neutral-800', 'bg-rose-600'); currentEditIdx = parseInt(e.target.dataset.idx); renderDetailEditorPreview(); }; });
+
+        slideBtns.forEach(btn => { 
+            btn.onclick = (e) => { 
+                currentEditIdx = parseInt(e.target.dataset.idx); 
+                updateBtnUI(); 
+                renderDetailEditorPreview(); 
+                processFinalGallery(); // 🌟 에디터 클릭 시 갤러리 빨간 박스 즉시 업데이트 🌟
+            }; 
+        });
 
         function processFinalGallery() {
             if (!masterFilmCanvas) return; generatedImages = []; previewContainer.innerHTML = ''; const [aw, ah] = document.getElementById('aspectRatio').value.split('/'); const tr = aw / ah;
@@ -325,7 +348,21 @@
             } else {
                 const c = document.createElement('canvas'); c.width = ew; c.height = eh; const ctx = c.getContext('2d'); const ib = drawLetterboxFrame(ctx, ew, eh, masterFilmCanvas, tr); applyGrainAndText(ctx, ew, eh, true, ib); generatedImages.push(c.toDataURL('image/jpeg', 0.95));
             }
-            generatedImages.forEach((d, i) => { const img = document.createElement('img'); img.src = d; img.className = `h-[250px] md:h-[350px] w-auto object-cover rounded shadow-2xl snap-center ${mode === 'detail' && i === currentEditIdx ? 'border-4 border-rose-500' : 'border border-neutral-800'}`; if(mode === 'detail') img.onclick = () => slideBtns[i].click(); previewContainer.appendChild(img); });
+            
+            // 🌟 갤러리 생성 및 롤링 최적화 🌟
+            generatedImages.forEach((d, i) => { 
+                const img = document.createElement('img'); 
+                img.src = d; 
+                // flex-none을 넣어 이미지가 찌그러지지 않고 원래 가로세로비를 유지하며 롤링되게 함
+                img.className = `h-[250px] md:h-[350px] w-auto flex-none object-cover rounded shadow-2xl snap-center transition-all ${mode === 'detail' && i === currentEditIdx ? 'border-4 border-rose-500 scale-[1.03] z-10' : 'border border-neutral-800'}`; 
+                if(mode === 'detail') img.onclick = () => { 
+                    currentEditIdx = i; 
+                    updateBtnUI(); 
+                    renderDetailEditorPreview(); 
+                    processFinalGallery(); // 재귀 호출로 빨간 테두리 즉시 업데이트
+                }; 
+                previewContainer.appendChild(img); 
+            });
             document.getElementById('previewCount').innerText = generatedImages.length; downloadBtn.classList.remove('hidden');
         }
 
