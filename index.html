@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>cineRoll | Ultimate Instagram Carousel Creator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat&family=Cinzel:wght@500;700&family=Cormorant+Garamond:ital,wght@0,400;1,400&family=Inter:wght@300;500&family=Lato:ital,wght@0,400;1,400&family=Lora:ital,wght@0,400;1,400&family=Montserrat:ital,wght@0,400;1,400&family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Roboto+Mono&family=Space+Mono&display=swap" rel="stylesheet">
+    <style>
+        .grab-cursor { cursor: grab; }
+        .grab-cursor:active { cursor: grabbing; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        input[type=range].accent-rose-500::-webkit-slider-thumb { background: #e11d48; }
+        #cropBox { box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7); cursor: move; }
+        .grid-lines {
+            background-image: 
+                linear-gradient(to right, rgba(255,255,255,0.3) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.3) 1px, transparent 1px);
+            background-size: 33.33% 33.33%;
+        }
+    </style>
+</head>
+<body class="bg-neutral-950 text-neutral-300 p-4 md:p-6 flex flex-col items-center min-h-screen font-sans">
+    
+    <header class="text-center mb-8">
+        <h1 class="text-4xl font-bold mb-2 text-rose-500 tracking-tighter italic">cineRoll</h1>
+        <p class="text-neutral-500 text-sm md:text-base font-light tracking-wide uppercase">Cinematic Format & Carousel Engine</p>
+    </header>
+    
+    <div class="bg-neutral-900 p-5 md:p-6 rounded-2xl shadow-2xl mb-6 w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-6 border border-neutral-800">
+        
+        <div class="col-span-full">
+            <label class="block text-sm font-semibold mb-2 text-neutral-400 uppercase tracking-wider">1. Load Image</label>
+            <input type="file" id="upload" accept="image/*" class="w-full text-sm text-neutral-500 file:mr-4 file:py-2.5 file:px-5 file:rounded-lg file:border-0 file:text-sm file:font-bold file:bg-rose-900 file:text-rose-200 hover:file:bg-rose-800 cursor-pointer transition"/>
+        </div>
+
+        <div>
+            <label class="block text-sm font-semibold mb-2 text-neutral-400 uppercase tracking-wider">2. Lens De-squeeze</label>
+            <select id="squeeze" class="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-rose-500 text-white transition">
+                <option value="1" selected>Standard (1.0x)</option>
+                <option value="1.33">1.33x Anamorphic</option>
+                <option value="1.5">1.5x Anamorphic</option>
+                <option value="1.6">1.6x Anamorphic (Sirui)</option>
+                <option value="1.8">1.8x Anamorphic</option>
+                <option value="2.0">2.0x Anamorphic</option>
+            </select>
+        </div>
+
+        <div>
+            <label class="block text-sm font-semibold mb-2 text-rose-400 uppercase tracking-wider">3. Master Format</label>
+            <select id="filmFormat" class="w-full bg-neutral-950 border border-rose-900/50 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-rose-500 text-white transition font-bold">
+                <option value="original" selected>Original Ratio</option>
+                <option value="1/1">1:1 (6x6 Medium Format)</option>
+                <option value="1.16/1">1:1.16 (6x7 Medium Format)</option>
+                <option value="1.5/1">1:1.5 (6x9 Panorama)</option>
+                <option value="2/1">1:2 (6x12 Panorama)</option>
+                <option value="2.35/1">2.35:1 (Cinemascope)</option>
+                <option value="2.76/1">2.76:1 (70mm Ultra Panavision)</option>
+            </select>
+        </div>
+
+        <div id="visualCropPanel" class="col-span-full bg-neutral-950 p-4 rounded-xl border border-rose-900 hidden flex flex-col items-center">
+            <div class="w-full flex justify-between items-center mb-3">
+                <label class="block text-sm font-bold text-rose-400 uppercase">🎯 Phase 1: Master Film Framing</label>
+                <span class="text-[10px] text-neutral-400 bg-neutral-800 px-2 py-1 rounded">Drag & Scroll to resize</span>
+            </div>
+            <div id="cropperContainer" class="relative w-full max-w-[600px] bg-black overflow-hidden select-none touch-none rounded-lg border border-neutral-700">
+                <img id="cropperImg" class="w-full block pointer-events-none" />
+                <div id="cropBox" class="absolute border border-rose-500 grid-lines flex items-center justify-center">
+                    <div class="absolute w-3 h-3 border-t-2 border-l-2 border-rose-500 -top-1 -left-1"></div>
+                    <div class="absolute w-3 h-3 border-t-2 border-r-2 border-rose-500 -top-1 -right-1"></div>
+                    <div class="absolute w-3 h-3 border-b-2 border-l-2 border-rose-500 -bottom-1 -left-1"></div>
+                    <div class="absolute w-3 h-3 border-b-2 border-r-2 border-rose-500 -bottom-1 -right-1"></div>
+                </div>
+            </div>
+            <button id="applyCropBtn" class="mt-4 px-6 py-3 bg-rose-600 text-white font-bold rounded-lg w-full hover:bg-rose-500 transition-all uppercase tracking-tighter">
+                Set Master Film
+            </button>
+        </div>
+
+        <div class="col-span-full border-t border-neutral-800 my-2"></div>
+
+        <div>
+            <label class="block text-sm font-semibold mb-2 text-neutral-400 uppercase tracking-wider">4. Insta Canvas</label>
+            <select id="aspectRatio" class="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-rose-500 text-white transition">
+                <option value="4/5" selected>4:5 Vertical (High-Impact)</option>
+                <option value="1/1">1:1 Square (Classic)</option>
+            </select>
+        </div>
+
+        <div>
+            <label class="block text-sm font-semibold mb-2 text-neutral-400 uppercase tracking-wider">5. Margin & Background</label>
+            <div class="grid grid-cols-2 gap-2">
+                <select id="bgStyle" class="bg-neutral-950 border border-neutral-800 rounded-lg px-2 py-3 outline-none focus:ring-2 focus:ring-rose-500 text-white text-xs">
+                    <option value="#000000" selected>Deep Black</option>
+                    <option value="#FFFFFF">Gallery White</option>
+                </select>
+                <select id="frameStyle" class="bg-neutral-950 border border-neutral-800 rounded-lg px-2 py-3 outline-none focus:ring-2 focus:ring-rose-500 text-white text-xs">
+                    <option value="fit" selected>Edge-to-Edge</option>
+                    <option value="margin">Classic Frame</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="col-span-full">
+            <label class="block text-sm font-semibold mb-2 text-neutral-400 uppercase tracking-wider">6. Output Strategy</label>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <label class="relative flex items-center justify-center p-4 border border-neutral-700 rounded-xl cursor-pointer hover:bg-neutral-800 transition peer-checked:border-rose-500">
+                    <input type="radio" name="mode" value="seamless" checked class="hidden peer">
+                    <div class="text-center peer-checked:text-rose-400">
+                        <div class="font-bold mb-1">Seamless</div>
+                        <div class="text-[10px] text-neutral-500 uppercase">Panorama Slice</div>
+                    </div>
+                </label>
+                <label class="relative flex items-center justify-center p-4 border border-neutral-700 rounded-xl cursor-pointer hover:bg-neutral-800 transition peer-checked:border-rose-500">
+                    <input type="radio" name="mode" value="detail" class="hidden peer">
+                    <div class="text-center peer-checked:text-rose-400">
+                        <div class="font-bold mb-1">Grid (4)</div>
+                        <div class="text-[10px] text-neutral-500 uppercase">Multi-Zoom</div>
+                    </div>
+                </label>
+                <label class="relative flex items-center justify-center p-4 border border-neutral-700 rounded-xl cursor-pointer hover:bg-neutral-800 transition peer-checked:border-rose-500">
+                    <input type="radio" name="mode" value="single" class="hidden peer">
+                    <div class="text-center peer-checked:text-rose-400">
+                        <div class="font-bold mb-1">Single</div>
+                        <div class="text-[10px] text-neutral-500 uppercase">Classic Shot</div>
+                    </div>
+                </label>
+            </div>
+        </div>
+
+        <div class="col-span-full bg-neutral-950 p-4 rounded-xl border border-neutral-800">
+            <div class="flex justify-between items-center mb-3">
+                <label class="block text-sm font-semibold text-rose-400 uppercase tracking-wider">7. Typography (Auto-Align)</label>
+                <button id="savePresetBtn" class="text-[10px] bg-rose-600 hover:bg-rose-500 text-white px-2 py-1 rounded transition font-bold uppercase">Save Preset</button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+                <input type="text" id="watermarkText" placeholder="Photo caption or gear data..." class="col-span-full md:col-span-4 bg-neutral-900 border border-neutral-700 rounded-lg px-4 py-2 outline-none focus:ring-2 focus:ring-rose-500 text-white placeholder-neutral-600 transition text-sm">
+                <select id="watermarkFont" class="col-span-full md:col-span-2 bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-rose-500 text-xs text-neutral-300">
+                    <optgroup label="Editorial Serif">
+                        <option value="'Playfair Display', serif" selected>Playfair (Vogue Style)</option>
+                        <option value="'Cinzel', serif">Cinzel (Movie Poster)</option>
+                        <option value="'Cormorant Garamond', serif">Garamond (Elegant)</option>
+                    </optgroup>
+                    <optgroup label="Modern Sans">
+                        <option value="'Inter', sans-serif">Inter (Minimal)</option>
+                        <option value="'Montserrat', sans-serif">Montserrat (Geometric)</option>
+                    </optgroup>
+                    <optgroup label="Technical">
+                        <option value="'Space Mono', monospace">Space Mono (Gear Data)</option>
+                        <option value="'Caveat', cursive">Caveat (Signature)</option>
+                    </optgroup>
+                </select>
+                <select id="watermarkAlign" class="bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-rose-500 text-xs text-neutral-300">
+                    <option value="left" selected>Align Left</option>
+                    <option value="center">Align Center</option>
+                    <option value="right">Align Right</option>
+                </select>
+                <select id="watermarkTarget" class="bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-rose-500 text-xs text-neutral-300">
+                    <option value="first">Cover Only</option>
+                    <option value="all">All Slides</option>
+                </select>
+            </div>
+            <div id="presetContainer" class="flex gap-2 flex-wrap"></div>
+        </div>
+
+        <div class="col-span-full bg-neutral-950 p-4 rounded-xl border border-neutral-800">
+            <label class="block text-sm font-semibold mb-3 text-rose-400 uppercase tracking-wider">8. Film Grain</label>
+            <div class="flex items-center gap-4">
+                <input type="range" id="grainSlider" min="0" max="100" value="15" class="w-full h-2 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-rose-500">
+                <span id="grainValueDisplay" class="text-sm font-mono text-neutral-400 w-12 text-right">15%</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="interactiveControlPanel" class="bg-neutral-900 p-5 md:p-6 rounded-2xl shadow-xl mb-8 w-full max-w-4xl border border-rose-900/50 hidden">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-rose-400 font-bold uppercase tracking-widest text-xs">🎯 Phase 2: Insta Detail 조준</h3>
+        </div>
+        <div class="flex gap-2 mb-4 md:mb-6 overflow-x-auto pb-2">
+            <button class="slide-btn flex-1 min-w-[70px] py-2 bg-rose-600 text-white rounded-lg font-bold transition text-xs uppercase" data-idx="0">Slide 1</button>
+            <button class="slide-btn flex-1 min-w-[70px] py-2 bg-neutral-800 text-neutral-400 rounded-lg hover:bg-neutral-700 transition text-xs uppercase" data-idx="1">Slide 2</button>
+            <button class="slide-btn flex-1 min-w-[70px] py-2 bg-neutral-800 text-neutral-400 rounded-lg hover:bg-neutral-700 transition text-xs uppercase" data-idx="2">Slide 3</button>
+            <button class="slide-btn flex-1 min-w-[70px] py-2 bg-neutral-800 text-neutral-400 rounded-lg hover:bg-neutral-700 transition text-xs uppercase" data-idx="3">Slide 4</button>
+        </div>
+        <div class="flex flex-col items-center bg-neutral-950 p-4 rounded-xl border border-neutral-800 relative w-full overflow-hidden">
+            <canvas id="detailEditCanvas" class="shadow-2xl rounded border border-neutral-800 max-w-full touch-none grab-cursor" width="400" height="500"></canvas>
+            <p class="text-[10px] text-neutral-600 mt-2 uppercase" id="detailEditStatus">Scroll to Zoom / Drag to Pan</p>
+        </div>
+    </div>
+
+    <div class="w-full max-w-5xl mb-12">
+        <h2 class="text-lg font-bold mb-4 text-neutral-300 uppercase tracking-widest text-center">Preview Results</h2>
+        <div id="previewContainer" class="flex gap-4 overflow-x-auto pb-8 snap-x no-scrollbar border border-neutral-800 p-4 rounded-xl bg-neutral-900/50 min-h-[300px] items-center justify-center text-neutral-600 text-sm">
+            Please confirm Master Crop to see results.
+        </div>
+        <div class="flex justify-center mt-6">
+            <button id="download" class="px-10 py-4 bg-rose-600 text-white font-bold rounded-xl hover:bg-rose-500 transition-all text-lg shadow-lg shadow-rose-900/50 hidden uppercase tracking-tighter">
+                Download High-Res Images
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let currentImg = null; let rawDeSqueezedCanvas = null; let masterFilmCanvas = null;    
+        let generatedImages = []; let grainCanvas = null;
+        const upload = document.getElementById('upload'); const squeezeSelect = document.getElementById('squeeze');
+        const filmFormatSelect = document.getElementById('filmFormat'); const visualCropPanel = document.getElementById('visualCropPanel');
+        const cropperImg = document.getElementById('cropperImg'); const cropBox = document.getElementById('cropBox');
+        const applyCropBtn = document.getElementById('applyCropBtn'); const interactiveControlPanel = document.getElementById('interactiveControlPanel');
+        const slideBtns = document.querySelectorAll('.slide-btn'); const detailEditCanvas = document.getElementById('detailEditCanvas');
+        const previewContainer = document.getElementById('previewContainer'); const downloadBtn = document.getElementById('download');
+        const watermarkText = document.getElementById('watermarkText'); const presetContainer = document.getElementById('presetContainer');
+        const savePresetBtn = document.getElementById('savePresetBtn');
+
+        let savedPresets = JSON.parse(localStorage.getItem('carouselPresets')) || [
+            "Antenna for the Vanished - Oaxaca, MX", "Shot on Lumix S5M2X | Sirui Saturn 1.6x"
+        ];
+        function renderPresets() {
+            presetContainer.innerHTML = '';
+            savedPresets.forEach((text, index) => {
+                const wrapper = document.createElement('div'); wrapper.className = 'flex items-center bg-neutral-800 rounded-md overflow-hidden';
+                const applyBtn = document.createElement('button'); applyBtn.className = 'text-[10px] hover:bg-neutral-700 px-2 py-1 text-neutral-400 truncate max-w-[120px]';
+                applyBtn.innerText = text; applyBtn.onclick = () => { watermarkText.value = text; processFinalGallery(); };
+                const delBtn = document.createElement('button'); delBtn.className = 'text-[10px] bg-rose-950/20 hover:bg-rose-700 px-1.5 py-1 text-rose-300';
+                delBtn.innerText = '✕'; delBtn.onclick = () => { savedPresets.splice(index, 1); localStorage.setItem('carouselPresets', JSON.stringify(savedPresets)); renderPresets(); };
+                wrapper.appendChild(applyBtn); wrapper.appendChild(delBtn); presetContainer.appendChild(wrapper);
+            });
+        }
+        savePresetBtn.onclick = () => { const text = watermarkText.value.trim(); if (text && !savedPresets.includes(text)) { savedPresets.push(text); localStorage.setItem('carouselPresets', JSON.stringify(savedPresets)); renderPresets(); } };
+        renderPresets();
+
+        let cBox = { x: 0, y: 0, w: 100, h: 100 }; let targetFormatRatio = null;
+        let currentEditIdx = 0; let detailCrops = [{ z: 0.95, x: 50, y: 50 }, { z: 1.5, x: 0, y: 50 }, { z: 1.5, x: 50, y: 50 }, { z: 1.5, x: 100, y: 50 }];
+
+        upload.onchange = (e) => {
+            const file = e.target.files[0]; const reader = new FileReader();
+            reader.onload = (event) => { currentImg = new Image(); currentImg.onload = setupRawCanvas; currentImg.src = event.target.result; };
+            if(file) reader.readAsDataURL(file);
+        };
+        squeezeSelect.onchange = setupRawCanvas;
+        function setupRawCanvas() {
+            if(!currentImg) return;
+            const sf = parseFloat(squeezeSelect.value);
+            rawDeSqueezedCanvas = document.createElement('canvas'); rawDeSqueezedCanvas.width = currentImg.width * sf; rawDeSqueezedCanvas.height = currentImg.height;
+            rawDeSqueezedCanvas.getContext('2d').drawImage(currentImg, 0, 0, currentImg.width, currentImg.height, 0, 0, rawDeSqueezedCanvas.width, rawDeSqueezedCanvas.height);
+            cropperImg.src = rawDeSqueezedCanvas.toDataURL('image/jpeg', 0.8);
+            cropperImg.onload = () => updateFormatAndResetBox();
+        }
+        filmFormatSelect.onchange = updateFormatAndResetBox;
+        function updateFormatAndResetBox() {
+            if(!rawDeSqueezedCanvas) return;
+            const format = filmFormatSelect.value; visualCropPanel.classList.remove('hidden');
+            if (format === 'original') { targetFormatRatio = null; cBox.x = 0; cBox.y = 0; cBox.w = cropperImg.clientWidth; cBox.h = cropperImg.clientHeight; applyCropBtn.innerText = "Confirm Original Ratio"; } 
+            else {
+                const [w, h] = format.split('/'); targetFormatRatio = parseFloat(w) / parseFloat(h);
+                const cw = cropperImg.clientWidth; const ch = cropperImg.clientHeight;
+                if (cw / ch > targetFormatRatio) { cBox.h = ch * 0.9; cBox.w = cBox.h * targetFormatRatio; } 
+                else { cBox.w = cw * 0.9; cBox.h = cBox.w / targetFormatRatio; }
+                cBox.x = (cw - cBox.w) / 2; cBox.y = (ch - cBox.h) / 2; applyCropBtn.innerText = "Confirm Master Crop";
+            }
+            renderCropBox();
+        }
+        function renderCropBox() { cropBox.style.left = `${cBox.x}px`; cropBox.style.top = `${cBox.y}px`; cropBox.style.width = `${cBox.w}px`; cropBox.style.height = `${cBox.h}px`; }
+
+        let isDraggingBox = false; let lastMouseX, lastMouseY;
+        cropBox.onmousedown = (e) => { if(targetFormatRatio === null) return; isDraggingBox = true; lastMouseX = e.clientX; lastMouseY = e.clientY; };
+        window.onmousemove = (e) => { if (!isDraggingBox) return; cBox.x += e.clientX - lastMouseX; cBox.y += e.clientY - lastMouseY; lastMouseX = e.clientX; lastMouseY = e.clientY; enforceBoxBounds(); renderCropBox(); };
+        window.onmouseup = () => isDraggingBox = false;
+        function enforceBoxBounds() {
+            const mw = cropperImg.clientWidth; const mh = cropperImg.clientHeight;
+            if(cBox.w > mw) { cBox.w = mw; cBox.h = mw / targetFormatRatio; }
+            if(cBox.h > mh) { cBox.h = mh; cBox.w = mh * targetFormatRatio; }
+            if(cBox.x < 0) cBox.x = 0; if(cBox.y < 0) cBox.y = 0;
+            if(cBox.x + cBox.w > mw) cBox.x = mw - cBox.w; if(cBox.y + cBox.h > mh) cBox.y = mh - cBox.h;
+        }
+        document.getElementById('cropperContainer').onwheel = (e) => { if(targetFormatRatio === null) return; e.preventDefault(); const sf = e.deltaY > 0 ? 0.95 : 1.05; const ow = cBox.w; const oh = cBox.h; cBox.w *= sf; cBox.h *= sf; cBox.x -= (cBox.w - ow) / 2; cBox.y -= (cBox.h - oh) / 2; if(cBox.w < 50) { cBox.w = 50; cBox.h = 50 / targetFormatRatio; } enforceBoxBounds(); renderCropBox(); };
+
+        applyCropBtn.onclick = () => {
+            if(!rawDeSqueezedCanvas) return;
+            masterFilmCanvas = document.createElement('canvas');
+            if (filmFormatSelect.value === 'original') { masterFilmCanvas.width = rawDeSqueezedCanvas.width; masterFilmCanvas.height = rawDeSqueezedCanvas.height; masterFilmCanvas.getContext('2d').drawImage(rawDeSqueezedCanvas, 0, 0); } 
+            else {
+                const sx = rawDeSqueezedCanvas.width / cropperImg.clientWidth; const sy = rawDeSqueezedCanvas.height / cropperImg.clientHeight;
+                masterFilmCanvas.width = cBox.w * sx; masterFilmCanvas.height = cBox.h * sy;
+                masterFilmCanvas.getContext('2d').drawImage(rawDeSqueezedCanvas, cBox.x * sx, cBox.y * sy, masterFilmCanvas.width, masterFilmCanvas.height, 0, 0, masterFilmCanvas.width, masterFilmCanvas.height);
+            }
+            detailCrops = [{ z: 0.95, x: 50, y: 50 }, { z: 1.5, x: 0, y: 50 }, { z: 1.5, x: 50, y: 50 }, { z: 1.5, x: 100, y: 50 }];
+            currentEditIdx = 0; slideBtns.forEach(b => b.classList.replace('bg-rose-600', 'bg-neutral-800')); slideBtns[0].classList.replace('bg-neutral-800', 'bg-rose-600');
+            processFinalGallery();
+        };
+
+        function attachDetailDrag() {
+            let isD = false; let lx, ly;
+            detailEditCanvas.onmousedown = (e) => { isD = true; lx = e.clientX; ly = e.clientY; };
+            window.onmouseup = () => { if(isD) { isD = false; processFinalGallery(); } };
+            window.onmousemove = (e) => { if (!isD) return; const s = detailCrops[currentEditIdx]; const sens = 0.3 / s.z; s.x = Math.max(0, Math.min(100, s.x - (e.clientX - lx) * sens)); s.y = Math.max(0, Math.min(100, s.y - (e.clientY - ly) * sens)); lx = e.clientX; ly = e.clientY; renderDetailEditorPreview(); };
+            detailEditCanvas.onwheel = (e) => { e.preventDefault(); const s = detailCrops[currentEditIdx]; s.z = Math.max(0.3, Math.min(4.0, s.z + (e.deltaY > 0 ? -0.05 : 0.05))); renderDetailEditorPreview(); clearTimeout(detailEditCanvas.wT); detailEditCanvas.wT = setTimeout(processFinalGallery, 400); };
+        }
+        attachDetailDrag();
+
+        function renderDetailEditorPreview() {
+            if (!masterFilmCanvas) return; const [aw, ah] = document.getElementById('aspectRatio').value.split('/'); const tr = aw / ah;
+            const ctx = detailEditCanvas.getContext('2d'); detailEditCanvas.width = 400 * tr; detailEditCanvas.height = 400;
+            drawInstaFrame(ctx, detailEditCanvas.width, detailEditCanvas.height, detailCrops[currentEditIdx], masterFilmCanvas, tr);
+        }
+        slideBtns.forEach(btn => { btn.onclick = (e) => { slideBtns.forEach(b => b.classList.replace('bg-rose-600', 'bg-neutral-800')); e.target.classList.replace('bg-neutral-800', 'bg-rose-600'); currentEditIdx = parseInt(e.target.dataset.idx); renderDetailEditorPreview(); }; });
+
+        function processFinalGallery() {
+            if (!masterFilmCanvas) return; generatedImages = []; previewContainer.innerHTML = ''; const [aw, ah] = document.getElementById('aspectRatio').value.split('/'); const tr = aw / ah;
+            let mode = 'seamless'; document.getElementsByName('mode').forEach(r => { if(r.checked) mode = r.value; });
+            interactiveControlPanel.classList.toggle('hidden', mode !== 'detail'); if(mode === 'detail') renderDetailEditorPreview();
+            let eh = 1500; let ew = eh * tr;
+            if (mode === 'seamless') {
+                const ns = Math.round((masterFilmCanvas.width / masterFilmCanvas.height) / tr) || 1; const sw = masterFilmCanvas.width / ns;
+                for (let i = 0; i < ns; i++) {
+                    const c = document.createElement('canvas'); c.width = ew; c.height = eh; const ctx = c.getContext('2d'); ctx.drawImage(masterFilmCanvas, sw * i, 0, sw, masterFilmCanvas.height, 0, 0, ew, eh);
+                    applyGrainAndText(ctx, ew, eh, i === 0, {x:0, y:0, w:ew, h:eh}); generatedImages.push(c.toDataURL('image/jpeg', 0.95));
+                }
+            } else if (mode === 'detail') {
+                detailCrops.forEach((s, idx) => { const c = document.createElement('canvas'); c.width = ew; c.height = eh; const ctx = c.getContext('2d'); const ib = drawInstaFrame(ctx, ew, eh, s, masterFilmCanvas, tr); applyGrainAndText(ctx, ew, eh, idx === 0, ib); generatedImages.push(c.toDataURL('image/jpeg', 0.95)); });
+            } else {
+                const c = document.createElement('canvas'); c.width = ew; c.height = eh; const ctx = c.getContext('2d'); const ib = drawLetterboxFrame(ctx, ew, eh, masterFilmCanvas, tr); applyGrainAndText(ctx, ew, eh, true, ib); generatedImages.push(c.toDataURL('image/jpeg', 0.95));
+            }
+            generatedImages.forEach((d, i) => { const img = document.createElement('img'); img.src = d; img.className = `h-[250px] md:h-[350px] w-auto object-cover rounded shadow-2xl snap-center ${mode === 'detail' && i === currentEditIdx ? 'border-4 border-rose-500' : 'border border-neutral-800'}`; if(mode === 'detail') img.onclick = () => slideBtns[i].click(); previewContainer.appendChild(img); });
+            document.getElementById('previewCount').innerText = generatedImages.length; downloadBtn.classList.remove('hidden');
+        }
+
+        function drawInstaFrame(ctx, w, h, s, src, tr) {
+            ctx.fillStyle = document.getElementById('bgStyle').value; ctx.fillRect(0, 0, w, h); const z = s.z; const sr = src.width / src.height;
+            const pr = (document.getElementById('frameStyle').value === 'margin') ? 0.85 : 1.0; const dw = w * pr, dh = h * pr; const dx = (w - dw) / 2, dy = (h - dh) / 2;
+            if (z <= 1.0) {
+                let fw, fh; if (sr > tr) { fw = dw; fh = dw / sr; } else { fh = dh; fw = dh * sr; } const iw = fw * z, ih = fh * z; const ix = dx + (dw - iw) / 2, iy = dy + (dh - ih) / 2; ctx.drawImage(src, 0, 0, src.width, src.height, ix, iy, iw, ih); return {x:ix, y:iy, w:iw, h:ih};
+            } else {
+                let cw, ch; if (sr > tr) { ch = src.height; cw = src.height * tr; } else { cw = src.width; ch = src.width / tr; } const sw = cw / z, sh = ch / z;
+                ctx.drawImage(src, Math.max(0, src.width - sw) * (s.x / 100), Math.max(0, src.height - sh) * (s.y / 100), sw, sh, dx, dy, dw, dh); return {x:dx, y:dy, w:dw, h:dh};
+            }
+        }
+        function drawLetterboxFrame(ctx, w, h, src, tr) {
+            ctx.fillStyle = document.getElementById('bgStyle').value; ctx.fillRect(0, 0, w, h); const sr = src.width / src.height; const pr = (document.getElementById('frameStyle').value === 'margin') ? 0.85 : 1.0; const dw = w * pr, dh = h * pr;
+            let fw, fh; if (sr > tr) { fw = dw; fh = dw / sr; } else { fh = dh; fw = dh * sr; } const ix = (w - fw) / 2, iy = (h - fh) / 2; ctx.drawImage(src, 0, 0, src.width, src.height, ix, iy, fw, fh); return {x:ix, y:iy, w:fw, h:fh};
+        }
+        function applyGrainAndText(ctx, w, h, isF, ib) {
+            const gi = parseInt(document.getElementById('grainSlider').value);
+            if (gi > 0) {
+                if (!grainCanvas) { grainCanvas = document.createElement('canvas'); grainCanvas.width = 512; grainCanvas.height = 512; const gCtx = grainCanvas.getContext('2d'); const id = gCtx.createImageData(512, 512); for (let i = 0; i < id.data.length; i += 4) { const v = Math.random() < 0.5 ? 0 : 255; id.data[i] = id.data[i+1] = id.data[i+2] = v; id.data[i+3] = 255; } gCtx.putImageData(id, 0, 0); }
+                ctx.save(); ctx.globalAlpha = gi / 100; ctx.globalCompositeOperation = 'soft-light'; ctx.fillStyle = ctx.createPattern(grainCanvas, 'repeat'); ctx.fillRect(0, 0, w, h); ctx.restore();
+            }
+            const txt = watermarkText.value.trim(); const target = document.getElementById('watermarkTarget').value;
+            if (txt && (target === 'all' || (target === 'first' && isF))) {
+                const al = document.getElementById('watermarkAlign').value; const fs = document.getElementById('watermarkFont').value; const frs = document.getElementById('frameStyle').value; const bgs = document.getElementById('bgStyle').value;
+                ctx.font = `italic ${Math.max(16, Math.floor(w * 0.016))}px ${fs}`; ctx.textBaseline = 'middle'; const msb = h - (ib.y + ib.h); const dout = (frs === 'margin') || (msb > h * 0.04);
+                let tx, ty; const pix = w * 0.03, piy = h * 0.03;
+                if (dout) { ctx.fillStyle = (bgs === '#FFFFFF') ? '#555555' : '#AAAAAA'; ctx.shadowColor = 'transparent'; ty = ib.y + ib.h + (msb / 2); if(al === 'left') tx = ib.x; else if(al === 'right') tx = ib.x + ib.w; else tx = ib.x + (ib.w/2); } 
+                else { ctx.fillStyle = 'rgba(255, 255, 255, 0.95)'; ctx.shadowColor = 'rgba(0, 0, 0, 0.9)'; ctx.shadowBlur = 6; ty = ib.y + ib.h - piy; if(al === 'left') tx = ib.x + pix; else if(al === 'right') tx = ib.x + ib.w - pix; else tx = ib.x + (ib.w/2); }
+                ctx.textAlign = al; ctx.fillText(txt, tx, ty); ctx.shadowColor = 'transparent';
+            }
+        }
+
+        [document.getElementById('aspectRatio'), document.getElementById('bgStyle'), document.getElementById('frameStyle'), watermarkText, document.getElementById('watermarkFont'), document.getElementById('watermarkAlign'), document.getElementById('watermarkTarget')].forEach(el => el.onchange = processFinalGallery);
+        document.getElementsByName('mode').forEach(r => r.onchange = processFinalGallery);
+        document.getElementById('grainSlider').oninput = (e) => { document.getElementById('grainValueDisplay').textContent = `${e.target.value}%`; processFinalGallery(); };
+
+        downloadBtn.onclick = () => {
+            if (generatedImages.length === 0) return; downloadBtn.innerText = "Processing... Check Browser Permission";
+            generatedImages.forEach((d, i) => { setTimeout(() => { const l = document.createElement('a'); l.download = `cineRoll_part${i + 1}.jpg`; l.href = d; document.body.appendChild(l); l.click(); document.body.removeChild(l); if (i === generatedImages.length - 1) downloadBtn.innerText = "✅ Download Complete!"; }, i * 800); });
+        };
+    </script>
+</body>
+</html>
