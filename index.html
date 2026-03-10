@@ -84,15 +84,18 @@
                 <span class="text-[10px] text-neutral-400 bg-neutral-800 px-2 py-1 rounded uppercase">Drag to Pan / Pinch to Zoom</span>
             </div>
             
-            <div id="cropperContainer" class="relative w-full max-w-[600px] bg-black overflow-hidden select-none touch-none rounded-lg border border-neutral-700 grab-cursor aspect-video">
-                <div id="emptyState" class="absolute inset-0 flex flex-col items-center justify-center text-neutral-500 z-10 pointer-events-none">
+           <div id="cropperContainer" class="relative w-full max-w-[600px] min-h-[400px] bg-black overflow-hidden select-none touch-none rounded-lg border border-neutral-700 flex items-center justify-center">
+
+            <div id="emptyState" class="absolute inset-0 flex flex-col items-center justify-center text-neutral-500 z-10 pointer-events-none transition-opacity duration-300">
                 <svg class="w-12 h-12 mb-3 text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
                 </svg>
-                <p class="text-sm font-light tracking-widest uppercase text-neutral-400">Drop your footage here</p>
+                <p class="text-sm font-light tracking-widest uppercase text-neutral-400">Awaiting Photo</p>
+                <p class="text-[10px] text-neutral-600 mt-2">Use 'Choose File' button to load</p>
             </div>
-                <img id="cropperImg" class="w-full block pointer-events-none" />
+
+            <img id="cropperImg" class="max-w-full max-h-[70vh] block pointer-events-none object-contain" />
                 <div id="cropBox" class="absolute border border-rose-500 grid-lines flex items-center justify-center">
                     <div class="absolute w-3 h-3 border-t-2 border-l-2 border-rose-500 -top-1 -left-1"></div>
                     <div class="absolute w-3 h-3 border-t-2 border-r-2 border-rose-500 -top-1 -right-1"></div>
