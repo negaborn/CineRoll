@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>cineRoll 101.0 | Crystal Clear</title>
+    <title>cineRoll 102.0 | Final Polish</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = { darkMode: 'class', theme: { extend: { colors: { 
@@ -58,11 +58,18 @@
         .cropper-snap .cropper-view-box { outline: 2px solid #22c55e !important; }
         .cropper-modal { background-color: rgba(0,0,0,0.85); }
 
-        /* 🌟 V101: 크롭 먹통의 주범이었던 'display: flex'를 상위 컨테이너에서 완벽히 제거 */
         #preview-area { position: absolute; inset: 0; overflow: auto; user-select: none; -webkit-user-select: none; }
-        /* 🌟 자식 요소인 inner에서만 flex를 사용하여 중앙 정렬 수행 (충돌 방지) */
-        #preview-area-inner { display: flex; min-width: 100%; min-height: 100%; padding: 2rem 1rem; transition: opacity 0.2s; user-select: none; align-items: center; justify-content: center;}
+        
+        /* 🌟 V102: 모바일 하단 알약 메뉴를 완벽히 피하는 패딩 (pb-24) 및 젠모드 시 중앙정렬 */
+        #preview-area-inner { 
+            display: flex; min-width: 100%; min-height: 100%; 
+            padding: 2rem 1rem 6rem 1rem; /* 하단 6rem(96px) 여백으로 줌 메뉴 가림 원천 차단 */
+            transition: padding 0.3s; user-select: none; flex-direction: column; align-items: center; justify-content: center;
+        }
         @media (min-width: 768px) { #preview-area-inner { padding: 4rem 2rem; } }
+        
+        /* 🌟 V102: 젠 모드에서는 줌 메뉴 패딩을 없애서 화면 100% 정중앙으로 자석처럼 붙임 */
+        body.zen-mode #preview-area-inner { padding: 1rem !important; }
         
         #preview-wrapper-parent { position: relative; flex-shrink: 0; box-shadow: 0 40px 100px rgba(0,0,0,0.95); margin: auto; }
         
@@ -504,15 +511,22 @@
             }
         }
 
+        // 🌟 V102: 모바일 하단 알약 메뉴를 완벽히 피하고, 젠모드 시 100% 정중앙에 고정되는 공학적 수식
         function applyZoom() { 
             const parentWrap = document.getElementById('preview-wrapper-parent'); 
             if(!parentWrap) return; 
             const isMobile = window.innerWidth < 768;
             const isZen = document.body.classList.contains('zen-mode');
             
-            const parentW = DOM.previewArea.clientWidth - (isMobile ? 32 : 64); 
-            const safeBottomMargin = (isMobile && !isZen) ? 90 : 40; 
-            const parentH = DOM.previewArea.clientHeight - safeBottomMargin; 
+            const padX = isMobile ? 32 : 64;
+            // 젠모드일때는 상하 32px만, 일반 모바일일때는 하단에 알약메뉴(6rem=96px) + 여유공간 합쳐서 약 128px의 안전 여백을 뺍니다.
+            let padY = 0;
+            if (isZen) padY = 32; 
+            else if (isMobile) padY = 128; 
+            else padY = 128; 
+
+            const parentW = DOM.previewArea.clientWidth - padX; 
+            const parentH = DOM.previewArea.clientHeight - padY; 
             
             if (parentW <= 0 || parentH <= 0) return; 
             
@@ -1148,10 +1162,17 @@
                 let slides = currentStrategy === 'seamless' ? parseInt(DOM.sSlides.value) : 1;
                 const activeBorder = DOM.sBorder ? DOM.sBorder.value : 'none';
 
-                let exportBaseWidth = isHighRes ? 12000 : 2160; 
+                // 🌟 V102: 사파리 캔버스 크래시 방지용 최대 면적 안전 장치 (1,500만 픽셀)
+                const MAX_AREA = 15000000; 
+                const maxSafeWidth = Math.floor(Math.sqrt(MAX_AREA * activeGlobalRatio));
+                
+                let targetWidth = currentStrategy === 'seamless' ? (isHighRes ? 3000 * slides : 1080 * slides) : (isHighRes ? 4000 : 1080);
+                
+                // 타겟 가로폭이 브라우저 안전선을 넘지 않도록 자동 차단
+                targetWidth = Math.min(targetWidth, maxSafeWidth);
 
                 let masterCanvas = cropper.getCroppedCanvas({
-                    maxWidth: currentStrategy === 'seamless' ? exportBaseWidth * slides : exportBaseWidth,
+                    maxWidth: targetWidth,
                     fillColor: 'transparent',
                     imageSmoothingEnabled: true, imageSmoothingQuality: 'high'
                 });
