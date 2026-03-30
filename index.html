@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>cineRoll 97.0 | Seamless Sync</title>
+    <title>cineRoll 98.0 | True Gallery</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = { darkMode: 'class', theme: { extend: { colors: { 
@@ -58,8 +58,9 @@
         .cropper-snap .cropper-view-box { outline: 2px solid #22c55e !important; }
         .cropper-modal { background-color: rgba(0,0,0,0.85); }
 
-        #preview-area { position: absolute; inset: 0; overflow: auto; user-select: none; -webkit-user-select: none; }
-        #preview-area-inner { display: flex; min-width: 100%; min-height: 100%; padding: 2rem 1rem; transition: opacity 0.2s; user-select: none; flex-wrap: nowrap; align-items: center;}
+        #preview-area { position: absolute; inset: 0; overflow: auto; user-select: none; -webkit-user-select: none; display: flex; }
+        /* 🌟 V98.0: justify-center 추가로 어떤 줌 상태에서도 갤러리처럼 정중앙에 사진을 위치시킴 */
+        #preview-area-inner { display: flex; min-width: 100%; min-height: 100%; padding: 2rem 1rem; transition: opacity 0.2s; user-select: none; flex-wrap: nowrap; align-items: center; justify-content: center;}
         @media (min-width: 768px) { #preview-area-inner { padding: 4rem 2rem; } }
         
         #preview-wrapper-parent { position: relative; flex-shrink: 0; box-shadow: 0 40px 100px rgba(0,0,0,0.95); margin: auto; }
@@ -117,6 +118,9 @@
 
         body.zen-mode header, body.zen-mode aside { display: none !important; }
         body.zen-mode #main-stage { background-color: #000000 !important; }
+        
+        /* 🌟 V98.0: 젠 모드 실행 시 방해되는 줌 메뉴 완벽 숨김 */
+        body.zen-mode #zoom-controls { display: none !important; }
         
         .zen-tooltip { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: #fff; padding: 8px 16px; border-radius: 20px; font-size: 11px; z-index: 9999; pointer-events: none; opacity: 0; transition: opacity 0.5s; letter-spacing: 0.05em;}
         .zen-mode .zen-tooltip { opacity: 1; animation: fadeOut 3s forwards; animation-delay: 2s; }
@@ -500,12 +504,17 @@
             }
         }
 
-        // 🌟 V97.0: 실시간 리플로우(Real-time Reflow) 적용으로 모바일 줌 딜레이 완벽 제거
+        // 🌟 V98.0: FIT 모드 시 줌 메뉴(Pill) 높이만큼 안전 여백(Safe Margin) 확보
         function applyZoom() { 
             const parentWrap = document.getElementById('preview-wrapper-parent'); 
             if(!parentWrap) return; 
             const parentW = DOM.previewArea.clientWidth - (window.innerWidth < 768 ? 32 : 64); 
-            const parentH = DOM.previewArea.clientHeight - (window.innerWidth < 768 ? 32 : 100); 
+            
+            // 모바일이면서 젠모드가 아닐 때, 하단 줌 메뉴(약 60px) 높이를 빼서 사진이 가려지지 않게 함
+            const isZen = document.body.classList.contains('zen-mode');
+            const zoomPillHeight = (window.innerWidth < 768 && !isZen) ? 60 : 0;
+            const parentH = DOM.previewArea.clientHeight - (window.innerWidth < 768 ? 32 : 100) - zoomPillHeight; 
+            
             if (parentW <= 0 || parentH <= 0) return; 
             
             if (zoomMode === 'fit') { 
@@ -514,12 +523,11 @@
                 parentWrap.style.width = (targetH * activeGlobalRatio) + 'px'; 
                 DOM.inZoom.value = 100; DOM.sliderZoom.value = 100; 
             } else { 
-                let val = DOM.sliderZoom.value; 
                 let baseHeightForZoom = Math.min(parentH, parentW / activeGlobalRatio); 
-                let zoomedH = baseHeightForZoom * (val / 100); 
+                let zoomedH = baseHeightForZoom * (DOM.sliderZoom.value / 100); 
                 parentWrap.style.height = zoomedH + 'px'; 
                 parentWrap.style.width = (zoomedH * activeGlobalRatio) + 'px'; 
-                DOM.inZoom.value = val; 
+                DOM.inZoom.value = DOM.sliderZoom.value; 
             } 
             ModuleTypo.update(); 
         }
@@ -607,7 +615,6 @@
             }
         });
 
-        // 🌟 V97.0: 줌 메뉴 토글 로직 수정 (숨김/표시 클래스 정리)
         function switchTab(target) {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.innerText.toLowerCase() === target));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
