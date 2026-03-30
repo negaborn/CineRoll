@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>cineRoll 92.0 | Flawless Fix</title>
+    <title>cineRoll 93.0 | Mobile Responsive</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = { darkMode: 'class', theme: { extend: { colors: { 
@@ -59,7 +59,8 @@
         .cropper-modal { background-color: rgba(0,0,0,0.85); }
 
         #preview-area { position: absolute; inset: 0; overflow: auto; user-select: none; -webkit-user-select: none; }
-        #preview-area-inner { display: flex; min-width: 100%; min-height: 100%; padding: 4rem 2rem; transition: opacity 0.2s; user-select: none; flex-wrap: nowrap; align-items: center;}
+        /* 모바일에서는 패딩을 줄여서 화면을 넓게 씁니다 */
+        #preview-area-inner { display: flex; min-width: 100%; min-height: 100%; padding: 2rem 1rem; md:padding: 4rem 2rem; transition: opacity 0.2s; user-select: none; flex-wrap: nowrap; align-items: center;}
         
         #preview-wrapper-parent { position: relative; flex-shrink: 0; box-shadow: 0 40px 100px rgba(0,0,0,0.95); margin: auto; }
         
@@ -69,7 +70,6 @@
         
         .preview-img { image-rendering: high-quality; image-rendering: -webkit-optimize-contrast; transition: filter 0.2s; display: block; width: 100%; height: 100%; object-fit: cover;}
         
-        /* 🌟 V92.0: CSS 클래스명 vnotch로 정상 복구 (종이 절단 완료) */
         .border-vnotch { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 0 60%, 1.8% 57.5%, 0 55%, 0 51%, 1.8% 48.5%, 0 46%); }
 
         .slide-container { position: relative; overflow: hidden; transition: background-color 0.1s; }
@@ -126,26 +126,26 @@
         body.zen-mode #btn-exit-zen { display: flex; }
     </style>
 </head>
-<body class="flex flex-col h-screen overflow-hidden">
+<body class="flex flex-col overflow-hidden" style="height: 100dvh;">
     
     <div class="zen-tooltip">Press 'F' or 'ESC' to exit Zen Mode</div>
     <button id="btn-exit-zen" class="fixed top-6 right-6 z-[9999] bg-white/10 hover:bg-coral-500 text-white p-3 rounded-full transition-colors backdrop-blur-md items-center justify-center shadow-lg" onclick="toggleZenMode()" title="Exit Zen Mode">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path></svg>
     </button>
 
-    <header class="h-14 border-b border-border bg-panel flex items-center justify-between px-6 shrink-0 z-30 shadow-sm relative">
+    <header class="h-14 border-b border-border bg-panel flex items-center justify-between px-4 md:px-6 shrink-0 z-30 shadow-sm relative">
         <div class="flex items-center gap-2 cursor-pointer" onclick="location.reload()">
             <h1 class="logo-font text-xl font-bold tracking-tight text-white">cine<span class="text-coral-500">Roll</span></h1>
         </div>
-        <div class="flex items-center gap-4">
-            <div id="zoom-controls" class="hidden flex items-center gap-4 bg-[#111] px-4 py-1.5 rounded-lg border border-border shadow-md">
+        <div class="flex items-center gap-2 md:gap-4">
+            <div id="zoom-controls" class="hidden md:flex items-center gap-4 bg-[#111] px-4 py-1.5 rounded-lg border border-border shadow-md">
                 <input type="range" id="slider-zoom" min="20" max="400" value="100" class="w-32 h-1">
                 <button class="text-[10px] font-bold text-coral-400 hover:text-white uppercase px-1" onclick="setZoom('fit')">FIT</button>
                 <div class="flex items-center"><input type="number" id="in-zoom" class="bg-transparent text-right outline-none w-8 text-white font-mono text-[10px]" value="100"><span class="text-[10px] text-neutral-400">%</span></div>
             </div>
             
-            <div class="flex items-center gap-2 border-l border-border pl-4 ml-2">
-                <button id="btn-zen-mode" class="hidden items-center justify-center w-8 h-8 bg-[#111] text-neutral-400 hover:text-white rounded border border-border transition-colors cursor-pointer" onclick="toggleZenMode()" title="Zen Mode (F)">
+            <div class="flex items-center gap-2 md:border-l md:border-border md:pl-4 md:ml-2">
+                <button id="btn-zen-mode" class="hidden md:flex items-center justify-center w-8 h-8 bg-[#111] text-neutral-400 hover:text-white rounded border border-border transition-colors cursor-pointer" onclick="toggleZenMode()" title="Zen Mode (F)">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
                 </button>
 
@@ -154,31 +154,31 @@
                 </button>
             </div>
 
-            <button onclick="location.reload()" class="hidden md:flex items-center gap-1.5 text-[10px] font-bold text-neutral-400 hover:text-white bg-[#111] px-3 py-1.5 rounded border border-border transition-colors ml-2" title="Start New Project">
+            <button onclick="location.reload()" class="flex md:flex items-center gap-1.5 text-[10px] font-bold text-neutral-400 hover:text-white bg-[#111] px-3 py-1.5 rounded border border-border transition-colors md:ml-2" title="Start New Project">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-                NEW PHOTO
+                <span class="hidden sm:inline">NEW PHOTO</span>
             </button>
         </div>
     </header>
 
-    <div class="flex-1 flex overflow-hidden">
-        <main id="main-stage" class="flex-1 relative flex bg-background overflow-hidden select-none transition-colors duration-300">
+    <div class="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+        <main id="main-stage" class="w-full h-[45%] md:h-full md:flex-1 relative flex bg-background overflow-hidden select-none transition-colors duration-300 shrink-0">
             <div id="upload-zone" class="absolute inset-0 flex flex-col items-center justify-center z-50 bg-background transition-opacity duration-300">
-                <label class="relative w-[300px] h-[180px] border border-dashed border-[#333] rounded-xl flex flex-col items-center justify-center text-neutral-500 hover:border-coral-500 hover:text-coral-400 transition-colors bg-[#141414] cursor-pointer">
+                <label class="relative w-[260px] md:w-[300px] h-[160px] md:h-[180px] border border-dashed border-[#333] rounded-xl flex flex-col items-center justify-center text-neutral-500 hover:border-coral-500 hover:text-coral-400 transition-colors bg-[#141414] cursor-pointer">
                     <input type="file" id="upload-input" accept="image/*,.tif,.tiff" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
                     <svg class="w-8 h-8 mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                    <span id="uploadText" class="text-[10px] font-bold tracking-widest uppercase">Import Professional Resource</span>
-                    <span class="text-[9px] mt-2 opacity-50">JPEG, PNG, TIFF Supported</span>
+                    <span id="uploadText" class="text-[10px] font-bold tracking-widest uppercase">Import Resource</span>
+                    <span class="text-[9px] mt-2 opacity-50">JPEG, PNG, TIFF</span>
                 </label>
             </div>
 
             <div id="smart-snap-badge" class="absolute transform -translate-x-1/2 bg-green-500 text-black px-4 py-1.5 rounded-full font-bold text-[10px] uppercase tracking-wider opacity-0 transition-all duration-100 z-50 pointer-events-none shadow-[0_0_20px_rgba(34,197,94,0.5)]"></div>
             
             <div id="image-container" class="absolute inset-0 z-10 w-full h-full hidden opacity-0 transition-opacity duration-300"></div>
-            <div id="preview-area" class="hidden z-20"><div id="preview-area-inner"></div></div>
+            <div id="preview-area" class="hidden z-20 w-full h-full"><div id="preview-area-inner"></div></div>
         </main>
 
-        <aside class="w-full md:w-[320px] h-full bg-panel border-l border-border flex flex-col shrink-0 z-40 shadow-2xl relative select-none">
+        <aside class="w-full flex-1 md:flex-none md:w-[320px] md:h-full bg-panel border-t md:border-t-0 md:border-l border-border flex flex-col shrink-0 z-40 shadow-2xl relative select-none overflow-hidden">
             <nav class="flex border-b border-border shrink-0 bg-panel px-2">
                 <button class="tab-btn active" onclick="switchTab('format')">Format</button>
                 <button class="tab-btn" onclick="switchTab('frame')">Frame</button>
@@ -186,7 +186,7 @@
                 <button class="tab-btn" onclick="switchTab('typo')">Typo</button>
             </nav>
 
-            <div class="flex-1 overflow-y-auto custom-scroll p-6">
+            <div class="flex-1 overflow-y-auto custom-scroll p-4 md:p-6 pb-20">
                 <div id="tab-format" class="tab-content space-y-7">
                     <div>
                         <label class="min-label"><span>Output Strategy</span></label>
@@ -394,7 +394,7 @@
                 </div>
             </div>
 
-            <div class="p-6 border-t border-border shrink-0 bg-panel space-y-3">
+            <div class="p-4 md:p-6 pb-8 md:pb-6 border-t border-border shrink-0 bg-panel space-y-3">
                 <div>
                     <label class="min-label mb-1"><span>Export Quality</span></label>
                     <select id="exportQuality" class="min-select bg-[#141414] border-neutral-700 font-bold">
@@ -826,7 +826,6 @@
                             iw.style.width=`${marginScale * 100}%`; iw.style.height=`${marginScale * 100}%`; 
                             iw.style.left=`${(1 - marginScale) / 2 * 100}%`; iw.style.top=`${(1 - marginScale) / 2 * 100}%`; 
                             
-                            // 🌟 V92.0 CSS 미리보기 렌더링 픽스
                             if (activeBorder === 'fineart') {
                                 iw.style.border = `${Math.max(1, bWeight)}px solid rgba(20,20,20,0.95)`;
                             }
@@ -912,13 +911,11 @@
             document.getElementById('select-lut').value = 'none'; ModuleColor.updateLut();
         };
 
-        // 🌟 V92.0: 60fps 글로벌 드래그 매니저 (메모리 누수 완전 픽스)
         const DragState = { active: false, target: null, container: null, gx: null, gy: null };
         
         function initGlobalDrag() {
             function startDrag(e, type, el) {
                 DragState.active = true; DragState.target = type; activeTarget = type;
-                // V92.0 픽스: 타겟 컨테이너를 올바른 부모(layer-glass > div)로 지정
                 DragState.container = el.parentElement; 
                 if(DragState.container) {
                     DragState.gx = DragState.container.querySelector('.snap-guide-x');
@@ -1144,7 +1141,6 @@
                     } 
                     ctx.restore();
 
-                    // 🌟 V92.0: 정예화된 프로페셔널 렌더링 엔진 (수출용)
                     if (isMargin) {
                         if (activeBorder === 'fineart') {
                             ctx.save();
