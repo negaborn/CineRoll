@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>cineRoll 94.0 | The Native Hybrid</title>
+    <title>cineRoll 95.0 | Mobile Breathing</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = { darkMode: 'class', theme: { extend: { colors: { 
@@ -134,8 +134,8 @@
             <svg class="w-10 h-10 text-coral-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
             <h3 class="text-white font-bold text-lg mb-3">Desktop Optimized</h3>
             <p class="text-neutral-400 text-[13px] mb-6 leading-relaxed">
-                cineRoll은 픽셀 단위의 정교한 파인아트 렌더링을 위한 <strong>PC/Mac 환경</strong>에 최적화되어 있습니다.<br><br>
-                모바일 환경에서는 가벼운 <span class="text-white font-semibold">Lite 버전</span>으로 구동됩니다.
+                cineRoll is optimized for <strong>PC/Mac</strong> environments to ensure pixel-perfect fine-art rendering.<br><br>
+                On mobile devices, it runs as a <span class="text-white font-semibold">Lite version</span>.
             </p>
             <button onclick="document.getElementById('mobile-warning-popup').style.display='none'" class="w-full bg-coral-500 hover:bg-coral-600 text-white font-bold py-3.5 rounded-lg text-[11px] uppercase tracking-widest transition-all shadow-lg active:scale-95">
                 Continue to Lite
@@ -178,7 +178,7 @@
 
     <div class="flex-1 flex flex-col md:flex-row overflow-hidden w-full relative">
         
-        <main id="main-stage" class="w-full h-[50%] md:h-full md:flex-1 relative flex bg-background overflow-hidden select-none transition-colors duration-300 shrink-0">
+        <main id="main-stage" class="w-full h-[40%] md:h-full md:flex-1 relative flex bg-background overflow-hidden select-none transition-colors duration-300 shrink-0">
             <div id="upload-zone" class="absolute inset-0 flex flex-col items-center justify-center z-50 bg-background transition-opacity duration-300">
                 <label class="relative w-[260px] md:w-[300px] h-[160px] md:h-[180px] border border-dashed border-[#333] rounded-xl flex flex-col items-center justify-center text-neutral-500 hover:border-coral-500 hover:text-coral-400 transition-colors bg-[#141414] cursor-pointer">
                     <input type="file" id="upload-input" accept="image/*,.tif,.tiff" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
@@ -410,15 +410,14 @@
                 </div>
             </div>
 
-            <div class="p-4 md:p-6 border-t border-border shrink-0 bg-panel space-y-3 z-50">
-                <div>
-                    <label class="min-label mb-1"><span>Export Quality</span></label>
-                    <select id="exportQuality" class="min-select bg-[#141414] border-neutral-700 font-bold">
-                        <option value="1080">Instagram Optimized (Web)</option>
-                        <option value="native">High-Res Archive (Native Pro)</option>
+            <div class="p-3 pb-6 md:p-6 md:pb-6 border-t border-border shrink-0 bg-panel z-50">
+                <div class="flex flex-row md:flex-col gap-2 items-center md:items-stretch">
+                    <select id="exportQuality" class="min-select bg-[#141414] border-neutral-700 font-bold flex-1 h-10 m-0">
+                        <option value="1080">IG Optimized</option>
+                        <option value="native">High-Res Archive</option>
                     </select>
+                    <button class="flex-1 w-full bg-coral-500 hover:bg-coral-600 text-white font-bold h-10 rounded text-[11px] uppercase transition-all shadow-lg active:scale-95 opacity-50 cursor-not-allowed" id="btn-export">Export</button>
                 </div>
-                <button class="w-full bg-coral-500 hover:bg-coral-600 text-white font-bold py-3 rounded text-[11px] uppercase transition-all shadow-lg active:scale-95 opacity-50 cursor-not-allowed" id="btn-export">Export Gallery</button>
             </div>
         </aside>
     </div>
@@ -862,24 +861,25 @@
                     if(type === 'after') {
                         const grain = document.createElement('div'); grain.className="gallery-grain-overlay"; grain.style.backgroundImage=`url(${staticGrainDataUrl})`; grain.style.opacity=(DOM.sGrain.value/100)*2.5; sc.appendChild(grain);
                         
+                        // 🌟 V95.0: 절대 픽셀(px)이 아닌 퍼센트(%) 기반 반응형 IG Safe Zone (비율 붕괴 방지)
                         const safeZone = `
-                        <div class="safe-zone-overlay absolute inset-0 z-40 hidden flex-col justify-between p-4 mix-blend-difference opacity-70">
-                            <div class="flex items-center gap-2">
-                                <div class="w-8 h-8 rounded-full border border-white/60 bg-white/20"></div>
-                                <div class="w-24 h-3 rounded bg-white/40"></div>
+                        <div class="safe-zone-overlay absolute inset-0 z-40 hidden flex-col justify-between p-[4%] mix-blend-difference opacity-70 pointer-events-none">
+                            <div class="flex items-center gap-[3%]">
+                                <div class="w-[10%] aspect-square max-w-[32px] rounded-full border border-white/60 bg-white/20"></div>
+                                <div class="w-[30%] max-w-[96px] h-[4px] md:h-[8px] rounded bg-white/40"></div>
                             </div>
-                            <div class="flex justify-between items-center pb-2">
-                                <div class="flex gap-4">
-                                    <div class="w-6 h-6 rounded-full border border-white/60 bg-white/20"></div>
-                                    <div class="w-6 h-6 rounded-full border border-white/60 bg-white/20"></div>
-                                    <div class="w-6 h-6 rounded-full border border-white/60 bg-white/20"></div>
+                            <div class="flex justify-between items-center">
+                                <div class="flex gap-[5%] w-[40%]">
+                                    <div class="w-[20%] aspect-square max-w-[24px] rounded-full border border-white/60 bg-white/20"></div>
+                                    <div class="w-[20%] aspect-square max-w-[24px] rounded-full border border-white/60 bg-white/20"></div>
+                                    <div class="w-[20%] aspect-square max-w-[24px] rounded-full border border-white/60 bg-white/20"></div>
                                 </div>
-                                <div class="flex gap-1.5">
-                                    <div class="w-1.5 h-1.5 rounded-full bg-coral-500"></div>
-                                    <div class="w-1.5 h-1.5 rounded-full bg-white/40"></div>
-                                    <div class="w-1.5 h-1.5 rounded-full bg-white/40"></div>
+                                <div class="flex gap-[5%] w-[15%] justify-center">
+                                    <div class="w-[20%] aspect-square max-w-[6px] rounded-full bg-coral-500"></div>
+                                    <div class="w-[20%] aspect-square max-w-[6px] rounded-full bg-white/40"></div>
+                                    <div class="w-[20%] aspect-square max-w-[6px] rounded-full bg-white/40"></div>
                                 </div>
-                                <div class="w-6 h-6 rounded-full border border-white/60 bg-white/20"></div>
+                                <div class="w-[10%] aspect-square max-w-[24px] rounded-full border border-white/60 bg-white/20"></div>
                             </div>
                         </div>`;
                         sc.insertAdjacentHTML('beforeend', safeZone);
