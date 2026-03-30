@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>cineRoll 95.0 | Mobile Breathing</title>
+    <title>cineRoll 97.0 | Seamless Sync</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = { darkMode: 'class', theme: { extend: { colors: { 
@@ -17,7 +17,7 @@
     <script src="https://cdn.jsdelivr.net/npm/exifr/dist/full.umd.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.js"></script>
 
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=Inter:wght@300;400;500;600&family=Cinzel:wght@600&family=Cormorant+Garamond:ital,wght@1,600&family=Montserrat:wght@400;700&family=Playfair+Display:ital,wght@0,600;1,600&family=Oswald:wght@500&family=Lato:wght@400;700&family=Bebas+Neue&family=Lora:ital,wght@0,500;1,500&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700&family=Inter:wght@400;700&family=Cinzel:wght@400;700&family=Cormorant+Garamond:wght@400;700&family=Montserrat:wght@400;700&family=Playfair+Display:wght@400;700&family=Oswald:wght@400;700&family=Lato:wght@400;700&family=Bebas+Neue&family=Lora:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #111111; color: #a3a3a3; transition: background-color 0.3s; }
@@ -128,6 +128,21 @@
 </head>
 <body class="fixed inset-0 w-full h-[100dvh] flex flex-col overflow-hidden overscroll-none bg-background">
     
+    <div style="position: absolute; width: 0; height: 0; overflow: hidden; visibility: hidden; pointer-events: none; z-index: -1;">
+        <span style="font-family: 'Inter'; font-weight: 400;">preload</span>
+        <span style="font-family: 'Inter'; font-weight: 700;">preload</span>
+        <span style="font-family: 'Outfit'; font-weight: 700;">preload</span>
+        <span style="font-family: 'Cinzel'; font-weight: 700;">preload</span>
+        <span style="font-family: 'Cormorant Garamond'; font-weight: 700;">preload</span>
+        <span style="font-family: 'Montserrat'; font-weight: 700;">preload</span>
+        <span style="font-family: 'Playfair Display'; font-weight: 700;">preload</span>
+        <span style="font-family: 'Oswald'; font-weight: 700;">preload</span>
+        <span style="font-family: 'Lato'; font-weight: 700;">preload</span>
+        <span style="font-family: 'Bebas Neue'; font-weight: 400;">preload</span>
+        <span style="font-family: 'Lora'; font-weight: 700;">preload</span>
+        <span style="font-family: 'Roboto'; font-weight: 700;">preload</span>
+    </div>
+
     <div id="mobile-warning-popup" class="fixed inset-0 z-[99999] bg-black/90 backdrop-blur-md flex md:hidden flex-col items-center justify-center p-6 text-center transition-opacity duration-300">
         <h2 class="logo-font text-3xl font-bold text-white mb-6">cine<span class="text-coral-500">Roll</span></h2>
         <div class="bg-[#1c1c1e] border border-[#2d2d30] rounded-xl p-6 max-w-sm w-full shadow-2xl">
@@ -153,13 +168,7 @@
             <h1 class="logo-font text-xl font-bold tracking-tight text-white">cine<span class="text-coral-500">Roll</span></h1>
         </div>
         <div class="flex items-center gap-2 md:gap-4">
-            <div id="zoom-controls" class="hidden md:flex items-center gap-4 bg-[#111] px-4 py-1.5 rounded-lg border border-border shadow-md">
-                <input type="range" id="slider-zoom" min="20" max="400" value="100" class="w-32 h-1">
-                <button class="text-[10px] font-bold text-coral-400 hover:text-white uppercase px-1" onclick="setZoom('fit')">FIT</button>
-                <div class="flex items-center"><input type="number" id="in-zoom" class="bg-transparent text-right outline-none w-8 text-white font-mono text-[10px]" value="100"><span class="text-[10px] text-neutral-400">%</span></div>
-            </div>
-            
-            <div class="flex items-center gap-2 md:border-l md:border-border md:pl-4 md:ml-2">
+            <div class="flex items-center gap-2 md:border-border md:pl-4 md:ml-2">
                 <button id="btn-zen-mode" class="hidden md:flex items-center justify-center w-8 h-8 bg-[#111] text-neutral-400 hover:text-white rounded border border-border transition-colors cursor-pointer" onclick="toggleZenMode()" title="Zen Mode (F)">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
                 </button>
@@ -190,6 +199,12 @@
 
             <div id="smart-snap-badge" class="absolute transform -translate-x-1/2 bg-green-500 text-black px-4 py-1.5 rounded-full font-bold text-[10px] uppercase tracking-wider opacity-0 transition-all duration-100 z-50 pointer-events-none shadow-[0_0_20px_rgba(34,197,94,0.5)]"></div>
             
+            <div id="zoom-controls" class="hidden absolute bottom-4 md:bottom-6 left-1/2 transform -translate-x-1/2 z-[60] bg-black/80 backdrop-blur-xl px-5 py-2.5 rounded-full border border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.8)] items-center gap-3 md:gap-4 transition-opacity duration-300">
+                <button class="text-[10px] font-bold text-coral-400 hover:text-white uppercase tracking-widest px-1 outline-none" onclick="setZoom('fit')">FIT</button>
+                <input type="range" id="slider-zoom" min="20" max="400" value="100" class="w-24 md:w-32 h-1 bg-neutral-600 rounded-full appearance-none outline-none">
+                <div class="flex items-center w-12 justify-end"><input type="number" id="in-zoom" class="bg-transparent text-right outline-none w-full text-white font-mono text-[11px]" value="100"><span class="text-[11px] text-neutral-400 ml-0.5">%</span></div>
+            </div>
+
             <div id="image-container" class="absolute inset-0 z-10 w-full h-full hidden opacity-0 transition-opacity duration-300"></div>
             <div id="preview-area" class="hidden z-20 w-full h-full"><div id="preview-area-inner"></div></div>
         </main>
@@ -485,6 +500,37 @@
             }
         }
 
+        // 🌟 V97.0: 실시간 리플로우(Real-time Reflow) 적용으로 모바일 줌 딜레이 완벽 제거
+        function applyZoom() { 
+            const parentWrap = document.getElementById('preview-wrapper-parent'); 
+            if(!parentWrap) return; 
+            const parentW = DOM.previewArea.clientWidth - (window.innerWidth < 768 ? 32 : 64); 
+            const parentH = DOM.previewArea.clientHeight - (window.innerWidth < 768 ? 32 : 100); 
+            if (parentW <= 0 || parentH <= 0) return; 
+            
+            if (zoomMode === 'fit') { 
+                let targetH = Math.min(parentH, parentW / activeGlobalRatio); 
+                parentWrap.style.height = targetH + 'px'; 
+                parentWrap.style.width = (targetH * activeGlobalRatio) + 'px'; 
+                DOM.inZoom.value = 100; DOM.sliderZoom.value = 100; 
+            } else { 
+                let val = DOM.sliderZoom.value; 
+                let baseHeightForZoom = Math.min(parentH, parentW / activeGlobalRatio); 
+                let zoomedH = baseHeightForZoom * (val / 100); 
+                parentWrap.style.height = zoomedH + 'px'; 
+                parentWrap.style.width = (zoomedH * activeGlobalRatio) + 'px'; 
+                DOM.inZoom.value = val; 
+            } 
+            ModuleTypo.update(); 
+        }
+        
+        function setZoom(mode) { zoomMode = mode; if(mode === 'fit') { DOM.sliderZoom.value = 100; DOM.inZoom.value = 100; } applyZoom(); }
+        window.addEventListener('resize', () => { if(zoomMode === 'fit') applyZoom(); });
+
+        DOM.sliderZoom.addEventListener('input', (e) => { zoomMode = 'custom'; DOM.inZoom.value = e.target.value; applyZoom(); });
+        DOM.sliderZoom.addEventListener('touchmove', (e) => { zoomMode = 'custom'; DOM.inZoom.value = e.target.value; applyZoom(); }, {passive: true});
+        DOM.inZoom.addEventListener('change', (e) => { zoomMode = 'custom'; DOM.sliderZoom.value = e.target.value; applyZoom(); });
+
         function bindInputSlider(slider, input, callback) {
             if(!slider || !input) return;
             slider.addEventListener('input', (e) => { input.value = e.target.value; if(callback) callback(); });
@@ -506,9 +552,6 @@
         bindInputSlider(DOM.sMarginScale, DOM.inMarginScale, () => ModuleFrame.build());
         bindInputSlider(DOM.sFontScale, DOM.inFontScale, () => ModuleTypo.update()); 
         bindInputSlider(DOM.sBorderWeight, DOM.inBorderWeight, () => ModuleFrame.build());
-
-        DOM.sliderZoom.addEventListener('input', (e) => { zoomMode = 'custom'; DOM.inZoom.value = e.target.value; applyZoom(); });
-        DOM.inZoom.addEventListener('change', (e) => { zoomMode = 'custom'; DOM.sliderZoom.value = e.target.value; applyZoom(); });
 
         window.toggleSplitView = () => {
             isSplitView = !isSplitView;
@@ -564,6 +607,7 @@
             }
         });
 
+        // 🌟 V97.0: 줌 메뉴 토글 로직 수정 (숨김/표시 클래스 정리)
         function switchTab(target) {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.innerText.toLowerCase() === target));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
@@ -572,6 +616,7 @@
             if(target === 'format') {
                 DOM.previewArea.classList.add('hidden'); 
                 DOM.zoomControls.classList.add('hidden'); 
+                DOM.zoomControls.classList.remove('flex');
                 DOM.btnBA.classList.add('hidden'); DOM.btnBA.classList.remove('flex');
                 document.getElementById('btn-zen-mode').classList.add('hidden'); document.getElementById('btn-zen-mode').classList.remove('flex');
                 
@@ -592,6 +637,7 @@
                 if(proxyCropUrl) { 
                     DOM.previewArea.classList.remove('hidden'); 
                     DOM.zoomControls.classList.remove('hidden'); 
+                    DOM.zoomControls.classList.add('flex');
                     DOM.btnBA.classList.remove('hidden'); DOM.btnBA.classList.add('flex');
                     document.getElementById('btn-zen-mode').classList.remove('hidden'); document.getElementById('btn-zen-mode').classList.add('flex');
                     applyZoom(); 
@@ -617,18 +663,18 @@
                     const ctx = cvs.getContext('2d'); const imgData = new ImageData(new Uint8ClampedArray(rgba.buffer), cvs.width, cvs.height); ctx.putImageData(imgData, 0, 0);
                     originalImg = new Image(); 
                     originalImg.onload = () => { 
-                        DOM.upZone.classList.add('hidden'); DOM.upText.innerText = "Import Professional Resource"; switchTab('format'); 
+                        DOM.upZone.classList.add('hidden'); DOM.upText.innerText = "Import Resource"; switchTab('format'); 
                     }; 
                     originalImg.src = cvs.toDataURL('image/jpeg', 0.95);
                     cvs.width = 0; cvs.height = 0;
                 } else {
                     originalImg = new Image(); 
                     originalImg.onload = () => { 
-                        DOM.upZone.classList.add('hidden'); DOM.upText.innerText = "Import Professional Resource"; switchTab('format'); 
+                        DOM.upZone.classList.add('hidden'); DOM.upText.innerText = "Import Resource"; switchTab('format'); 
                     }; 
                     originalImg.src = URL.createObjectURL(file);
                 }
-            } catch (err) { alert("이미지 처리 오류."); DOM.upText.innerText = "Import Professional Resource"; }
+            } catch (err) { alert("이미지 처리 오류."); DOM.upText.innerText = "Import Resource"; }
         }
 
         function setupCropper() {
@@ -861,7 +907,6 @@
                     if(type === 'after') {
                         const grain = document.createElement('div'); grain.className="gallery-grain-overlay"; grain.style.backgroundImage=`url(${staticGrainDataUrl})`; grain.style.opacity=(DOM.sGrain.value/100)*2.5; sc.appendChild(grain);
                         
-                        // 🌟 V95.0: 절대 픽셀(px)이 아닌 퍼센트(%) 기반 반응형 IG Safe Zone (비율 붕괴 방지)
                         const safeZone = `
                         <div class="safe-zone-overlay absolute inset-0 z-40 hidden flex-col justify-between p-[4%] mix-blend-difference opacity-70 pointer-events-none">
                             <div class="flex items-center gap-[3%]">
@@ -1090,6 +1135,8 @@
             DOM.btnExport.innerText = "Processing Engine..."; DOM.btnExport.classList.add('opacity-70', 'pointer-events-none');
             
             try {
+                await document.fonts.ready;
+
                 const qualitySetting = DOM.exportQuality.value;
                 const isHighRes = qualitySetting === 'native';
                 let slides = currentStrategy === 'seamless' ? parseInt(DOM.sSlides.value) : 1;
@@ -1370,9 +1417,6 @@
             }); 
         }
 
-        function setZoom(mode) { zoomMode = mode; if(mode === 'fit') { DOM.sliderZoom.value = 100; DOM.inZoom.value = 100; } applyZoom(); }
-        function applyZoom() { requestAnimationFrame(() => { const parentWrap = document.getElementById('preview-wrapper-parent'); if(!parentWrap) return; const parentW = DOM.previewArea.clientWidth - 64; const parentH = DOM.previewArea.clientHeight - 100; if (parentW <= 0 || parentH <= 0) return; if (zoomMode === 'fit') { let targetH = Math.min(parentH, parentW / activeGlobalRatio); parentWrap.style.height = targetH + 'px'; parentWrap.style.width = (targetH * activeGlobalRatio) + 'px'; DOM.inZoom.value = 100; DOM.sliderZoom.value = 100; } else { let val = DOM.sliderZoom.value; let baseHeightForZoom = Math.min(parentH, parentW / activeGlobalRatio); let zoomedH = baseHeightForZoom * (val / 100); parentWrap.style.height = zoomedH + 'px'; parentWrap.style.width = (zoomedH * activeGlobalRatio) + 'px'; DOM.inZoom.value = val; } ModuleTypo.update(); }); }
-        window.addEventListener('resize', () => { if(zoomMode === 'fit') applyZoom(); });
     </script>
 </body>
 </html>
