@@ -2,8 +2,8 @@
 <html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>cineRoll 93.0 | Mobile Responsive</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>cineRoll 94.0 | The Native Hybrid</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = { darkMode: 'class', theme: { extend: { colors: { 
@@ -59,8 +59,8 @@
         .cropper-modal { background-color: rgba(0,0,0,0.85); }
 
         #preview-area { position: absolute; inset: 0; overflow: auto; user-select: none; -webkit-user-select: none; }
-        /* 모바일에서는 패딩을 줄여서 화면을 넓게 씁니다 */
-        #preview-area-inner { display: flex; min-width: 100%; min-height: 100%; padding: 2rem 1rem; md:padding: 4rem 2rem; transition: opacity 0.2s; user-select: none; flex-wrap: nowrap; align-items: center;}
+        #preview-area-inner { display: flex; min-width: 100%; min-height: 100%; padding: 2rem 1rem; transition: opacity 0.2s; user-select: none; flex-wrap: nowrap; align-items: center;}
+        @media (min-width: 768px) { #preview-area-inner { padding: 4rem 2rem; } }
         
         #preview-wrapper-parent { position: relative; flex-shrink: 0; box-shadow: 0 40px 100px rgba(0,0,0,0.95); margin: auto; }
         
@@ -126,8 +126,23 @@
         body.zen-mode #btn-exit-zen { display: flex; }
     </style>
 </head>
-<body class="flex flex-col overflow-hidden" style="height: 100dvh;">
+<body class="fixed inset-0 w-full h-[100dvh] flex flex-col overflow-hidden overscroll-none bg-background">
     
+    <div id="mobile-warning-popup" class="fixed inset-0 z-[99999] bg-black/90 backdrop-blur-md flex md:hidden flex-col items-center justify-center p-6 text-center transition-opacity duration-300">
+        <h2 class="logo-font text-3xl font-bold text-white mb-6">cine<span class="text-coral-500">Roll</span></h2>
+        <div class="bg-[#1c1c1e] border border-[#2d2d30] rounded-xl p-6 max-w-sm w-full shadow-2xl">
+            <svg class="w-10 h-10 text-coral-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+            <h3 class="text-white font-bold text-lg mb-3">Desktop Optimized</h3>
+            <p class="text-neutral-400 text-[13px] mb-6 leading-relaxed">
+                cineRoll은 픽셀 단위의 정교한 파인아트 렌더링을 위한 <strong>PC/Mac 환경</strong>에 최적화되어 있습니다.<br><br>
+                모바일 환경에서는 가벼운 <span class="text-white font-semibold">Lite 버전</span>으로 구동됩니다.
+            </p>
+            <button onclick="document.getElementById('mobile-warning-popup').style.display='none'" class="w-full bg-coral-500 hover:bg-coral-600 text-white font-bold py-3.5 rounded-lg text-[11px] uppercase tracking-widest transition-all shadow-lg active:scale-95">
+                Continue to Lite
+            </button>
+        </div>
+    </div>
+
     <div class="zen-tooltip">Press 'F' or 'ESC' to exit Zen Mode</div>
     <button id="btn-exit-zen" class="fixed top-6 right-6 z-[9999] bg-white/10 hover:bg-coral-500 text-white p-3 rounded-full transition-colors backdrop-blur-md items-center justify-center shadow-lg" onclick="toggleZenMode()" title="Exit Zen Mode">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path></svg>
@@ -161,8 +176,9 @@
         </div>
     </header>
 
-    <div class="flex-1 flex flex-col md:flex-row overflow-hidden relative">
-        <main id="main-stage" class="w-full h-[45%] md:h-full md:flex-1 relative flex bg-background overflow-hidden select-none transition-colors duration-300 shrink-0">
+    <div class="flex-1 flex flex-col md:flex-row overflow-hidden w-full relative">
+        
+        <main id="main-stage" class="w-full h-[50%] md:h-full md:flex-1 relative flex bg-background overflow-hidden select-none transition-colors duration-300 shrink-0">
             <div id="upload-zone" class="absolute inset-0 flex flex-col items-center justify-center z-50 bg-background transition-opacity duration-300">
                 <label class="relative w-[260px] md:w-[300px] h-[160px] md:h-[180px] border border-dashed border-[#333] rounded-xl flex flex-col items-center justify-center text-neutral-500 hover:border-coral-500 hover:text-coral-400 transition-colors bg-[#141414] cursor-pointer">
                     <input type="file" id="upload-input" accept="image/*,.tif,.tiff" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
@@ -178,7 +194,7 @@
             <div id="preview-area" class="hidden z-20 w-full h-full"><div id="preview-area-inner"></div></div>
         </main>
 
-        <aside class="w-full flex-1 md:flex-none md:w-[320px] md:h-full bg-panel border-t md:border-t-0 md:border-l border-border flex flex-col shrink-0 z-40 shadow-2xl relative select-none overflow-hidden">
+        <aside class="w-full flex-1 md:flex-none md:w-[320px] md:h-full bg-panel border-t md:border-t-0 md:border-l border-border flex flex-col shrink-0 z-40 relative select-none overflow-hidden">
             <nav class="flex border-b border-border shrink-0 bg-panel px-2">
                 <button class="tab-btn active" onclick="switchTab('format')">Format</button>
                 <button class="tab-btn" onclick="switchTab('frame')">Frame</button>
@@ -186,7 +202,7 @@
                 <button class="tab-btn" onclick="switchTab('typo')">Typo</button>
             </nav>
 
-            <div class="flex-1 overflow-y-auto custom-scroll p-4 md:p-6 pb-20">
+            <div class="flex-1 overflow-y-auto custom-scroll p-4 md:p-6 overscroll-contain">
                 <div id="tab-format" class="tab-content space-y-7">
                     <div>
                         <label class="min-label"><span>Output Strategy</span></label>
@@ -394,7 +410,7 @@
                 </div>
             </div>
 
-            <div class="p-4 md:p-6 pb-8 md:pb-6 border-t border-border shrink-0 bg-panel space-y-3">
+            <div class="p-4 md:p-6 border-t border-border shrink-0 bg-panel space-y-3 z-50">
                 <div>
                     <label class="min-label mb-1"><span>Export Quality</span></label>
                     <select id="exportQuality" class="min-select bg-[#141414] border-neutral-700 font-bold">
