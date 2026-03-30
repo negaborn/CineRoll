@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>cineRoll 102.0 | Final Polish</title>
+    <title>cineRoll 103.0 | Stabilizer</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = { darkMode: 'class', theme: { extend: { colors: { 
@@ -60,15 +60,16 @@
 
         #preview-area { position: absolute; inset: 0; overflow: auto; user-select: none; -webkit-user-select: none; }
         
-        /* 🌟 V102: 모바일 하단 알약 메뉴를 완벽히 피하는 패딩 (pb-24) 및 젠모드 시 중앙정렬 */
+        /* 🌟 V103: 사파리 젠모드 상단 쏠림 해결을 위한 Grid 정렬 체계 도입 */
         #preview-area-inner { 
-            display: flex; min-width: 100%; min-height: 100%; 
-            padding: 2rem 1rem 6rem 1rem; /* 하단 6rem(96px) 여백으로 줌 메뉴 가림 원천 차단 */
-            transition: padding 0.3s; user-select: none; flex-direction: column; align-items: center; justify-content: center;
+            display: grid; place-items: center; /* 핵심 정렬 속성 */
+            min-width: 100%; min-height: 100%; 
+            padding: 2rem 1rem 8rem 1rem; /* 하단 패딩 늘려 FIT 메뉴 가림 방지 */
+            transition: padding 0.3s ease; user-select: none;
         }
         @media (min-width: 768px) { #preview-area-inner { padding: 4rem 2rem; } }
         
-        /* 🌟 V102: 젠 모드에서는 줌 메뉴 패딩을 없애서 화면 100% 정중앙으로 자석처럼 붙임 */
+        /* 🌟 V103: 젠 모드에서는 패딩을 없애서 Grid가 완벽한 화면 중앙에 액자를 놓도록 함 */
         body.zen-mode #preview-area-inner { padding: 1rem !important; }
         
         #preview-wrapper-parent { position: relative; flex-shrink: 0; box-shadow: 0 40px 100px rgba(0,0,0,0.95); margin: auto; }
@@ -212,7 +213,7 @@
             <div id="zoom-controls" class="hidden absolute bottom-4 md:bottom-6 left-1/2 transform -translate-x-1/2 z-[60] bg-black/80 backdrop-blur-xl px-5 py-2.5 rounded-full border border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.8)] items-center gap-3 md:gap-4 transition-opacity duration-300">
                 <button class="text-[10px] font-bold text-coral-400 hover:text-white uppercase tracking-widest px-1 outline-none" onclick="setZoom('fit')">FIT</button>
                 <input type="range" id="slider-zoom" min="20" max="400" value="100" class="w-24 md:w-32 h-1 bg-neutral-600 rounded-full appearance-none outline-none">
-                <div class="flex items-center w-12 justify-end"><input type="number" id="in-zoom" class="bg-transparent text-right outline-none w-full text-white font-mono text-[11px]" value="100"><span class="text-[11px] text-neutral-400 ml-0.5">%</span></div>
+                <div class="flex items-center w-16 justify-end"><input type="number" id="in-zoom" class="bg-transparent text-right outline-none w-full text-white font-mono text-[11px]" value="100"><span class="text-[11px] text-neutral-400 ml-0.5">%</span></div>
             </div>
 
             <div id="image-container" class="absolute inset-0 z-10 w-full h-full hidden opacity-0 transition-opacity duration-300"></div>
@@ -511,7 +512,7 @@
             }
         }
 
-        // 🌟 V102: 모바일 하단 알약 메뉴를 완벽히 피하고, 젠모드 시 100% 정중앙에 고정되는 공학적 수식
+        // 🌟 V103: 모바일 하단 알약 메뉴 가림 방지를 위한 패딩 계산식 튜닝
         function applyZoom() { 
             const parentWrap = document.getElementById('preview-wrapper-parent'); 
             if(!parentWrap) return; 
@@ -519,12 +520,9 @@
             const isZen = document.body.classList.contains('zen-mode');
             
             const padX = isMobile ? 32 : 64;
-            // 젠모드일때는 상하 32px만, 일반 모바일일때는 하단에 알약메뉴(6rem=96px) + 여유공간 합쳐서 약 128px의 안전 여백을 뺍니다.
-            let padY = 0;
-            if (isZen) padY = 32; 
-            else if (isMobile) padY = 128; 
-            else padY = 128; 
-
+            // 줌 컨트롤 높이가 약 60px이므로 상하 여백 합쳐서 최소 100px 이상 확보
+            let padY = isMobile ? 120 : 128; 
+            
             const parentW = DOM.previewArea.clientWidth - padX; 
             const parentH = DOM.previewArea.clientHeight - padY; 
             
@@ -1150,59 +1148,62 @@
             ModuleTypo.update();
         };
 
+        // 🌟 V103: iOS/Safari 다운로드 불가 & 화질 저하 동시 해결
         DOM.btnExport.addEventListener('click', async () => {
             if (!cropper) return alert("크롭 엔진을 찾을 수 없습니다. 이미지를 다시 업로드해주세요."); 
             DOM.btnExport.innerText = "Processing Engine..."; DOM.btnExport.classList.add('opacity-70', 'pointer-events-none');
             
             try {
+                // iOS 검지 (Safari 한계 우회용)
+                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
                 await document.fonts.ready;
 
                 const qualitySetting = DOM.exportQuality.value;
                 const isHighRes = qualitySetting === 'native';
                 let slides = currentStrategy === 'seamless' ? parseInt(DOM.sSlides.value) : 1;
-                const activeBorder = DOM.sBorder ? DOM.sBorder.value : 'none';
 
-                // 🌟 V102: 사파리 캔버스 크래시 방지용 최대 면적 안전 장치 (1,500만 픽셀)
-                const MAX_AREA = 15000000; 
-                const maxSafeWidth = Math.floor(Math.sqrt(MAX_AREA * activeGlobalRatio));
+                // 인스타 최적화 화질 상향 (1080 -> 2160)
+                let baseW = isHighRes ? 12000 : 2160; 
+
+                // 🌟 V103: 사파리 캔버스 크래시 방지용 최대 화소 면적 타협 (약 1,500만 화소)
+                const SAFAIR_MAX_AREA = 15000000; 
+                let targetWidth = currentStrategy === 'seamless' ? baseW * slides : baseW;
+                let targetHeight = targetWidth / activeGlobalRatio;
                 
-                let targetWidth = currentStrategy === 'seamless' ? (isHighRes ? 3000 * slides : 1080 * slides) : (isHighRes ? 4000 : 1080);
-                
-                // 타겟 가로폭이 브라우저 안전선을 넘지 않도록 자동 차단
-                targetWidth = Math.min(targetWidth, maxSafeWidth);
+                // 사파리에서 임계 면적을 넘어가면 자동으로 최적화 상한선 적용 (안 튕기게)
+                if ((targetWidth * targetHeight) > SAFAIR_MAX_AREA) {
+                    targetWidth = Math.sqrt(SAFAIR_MAX_AREA * activeGlobalRatio);
+                }
 
                 let masterCanvas = cropper.getCroppedCanvas({
-                    maxWidth: targetWidth,
+                    maxWidth: targetWidth, 
                     fillColor: 'transparent',
                     imageSmoothingEnabled: true, imageSmoothingQuality: 'high'
                 });
 
                 if (!masterCanvas) throw new Error("원본 데이터를 렌더링하는데 실패했습니다.");
 
-                const zip = new JSZip();
                 const imgRatio = masterCanvas.width / masterCanvas.height;
-
                 let singleW = currentStrategy === 'seamless' ? masterCanvas.width / slides : masterCanvas.width;
-                let exportW = currentStrategy === 'seamless' ? singleW * slides : singleW;
-                let exportH = exportW / imgRatio;
+                let exportH = masterCanvas.height;
                 
                 const marginScale = isMargin ? parseInt(DOM.sMarginScale.value) / 100 : 1;
                 const bWeight = DOM.sBorderWeight ? parseFloat(DOM.sBorderWeight.value) : 3;
+                const activeBorder = DOM.sBorder ? DOM.sBorder.value : 'none';
                 const gi = parseInt(DOM.sGrain.value); let grainCanvas = null;
                 if (gi > 0) { grainCanvas = document.createElement('canvas'); grainCanvas.width = 512; grainCanvas.height = 512; const gCtx = grainCanvas.getContext('2d'); const id = gCtx.createImageData(512, 512); for (let i = 0; i < id.data.length; i += 4) { const val = Math.random() < 0.5 ? 0 : 255; id.data[i] = id.data[i+1] = id.data[i+2] = val; id.data[i+3] = 255; } gCtx.putImageData(id, 0, 0); }
+
+                // 🌟 V103: iOS에서는 ZIP 대신 네이티브 공유하기로 파일 전달
+                let filesToShare = [];
+                const zip = new JSZip();
 
                 for (let i = 0; i < slides; i++) {
                     await new Promise(resolve => setTimeout(resolve, 50)); 
                     const workCvs = document.createElement('canvas'); 
-                    const sliceW = singleW; 
-                    workCvs.width = sliceW; workCvs.height = exportH; 
+                    workCvs.width = singleW; workCvs.height = exportH; 
                     const ctx = workCvs.getContext('2d'); 
-                    
-                    ctx.imageSmoothingEnabled = true;
-                    ctx.imageSmoothingQuality = 'high';
-                    
-                    ctx.fillStyle = bgColor; ctx.fillRect(0, 0, sliceW, exportH); 
-
+                    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+                    ctx.fillStyle = bgColor; ctx.fillRect(0, 0, singleW, exportH); 
                     ctx.save(); 
                     
                     let filterStr = lutStyleStr;
@@ -1213,116 +1214,84 @@
                     if(filterStr !== 'none' && filterStr !== '') ctx.filter = filterStr;
                     else ctx.filter = 'none';
                     
-                    let drawX = 0, drawY = 0, drawW = sliceW, drawH = exportH;
+                    let drawX = 0, drawY = 0, drawW = singleW, drawH = exportH;
 
                     if(isMargin) {
                         if(activeBorder === 'instant') {
                             const polScale = marginScale * 0.88;
-                            drawW = sliceW * polScale; drawH = exportH * polScale; 
-                            drawX = (sliceW - drawW) / 2; drawY = exportH * 0.06; 
+                            drawW = singleW * polScale; drawH = exportH * polScale; 
+                            drawX = (singleW - drawW) / 2; drawY = exportH * 0.06; 
                         } else {
-                            drawW = sliceW * marginScale; drawH = exportH * marginScale; 
-                            drawX = (sliceW - drawW) / 2; drawY = (exportH - drawH) / 2; 
+                            drawW = singleW * marginScale; drawH = exportH * marginScale; 
+                            drawX = (singleW - drawW) / 2; drawY = (exportH - drawH) / 2; 
                         }
-                        
-                        if(currentStrategy === 'seamless') { ctx.drawImage(masterCanvas, i * singleW, 0, singleW, exportH, drawX, drawY, drawW, drawH); } else { ctx.drawImage(masterCanvas, drawX, drawY, drawW, drawH); }
+                        if(currentStrategy === 'seamless') { ctx.drawImage(masterCanvas, i * (masterCanvas.width/slides), 0, (masterCanvas.width/slides), masterCanvas.height, drawX, drawY, drawW, drawH); } else { ctx.drawImage(masterCanvas, drawX, drawY, drawW, drawH); }
                     } else { 
-                        if(currentStrategy === 'seamless') { ctx.drawImage(masterCanvas, i * singleW, 0, singleW, exportH, 0, 0, sliceW, exportH); } else { ctx.drawImage(masterCanvas, 0, 0, sliceW, exportH); }
+                        if(currentStrategy === 'seamless') { ctx.drawImage(masterCanvas, i * (masterCanvas.width/slides), 0, (masterCanvas.width/slides), masterCanvas.height, 0, 0, singleW, exportH); } else { ctx.drawImage(masterCanvas, 0, 0, singleW, exportH); }
                     } 
                     ctx.restore();
 
                     if (isMargin) {
                         if (activeBorder === 'fineart') {
-                            ctx.save();
-                            const strokeW = Math.max(1, exportH * 0.001 * bWeight); 
-                            ctx.strokeStyle = 'rgba(20,20,20,0.95)';
-                            ctx.lineWidth = strokeW;
-                            ctx.strokeRect(drawX + strokeW/2, drawY + strokeW/2, drawW - strokeW, drawH - strokeW);
-                            ctx.restore();
-                        }
-                        else if (activeBorder === 'vnotch') {
-                            ctx.save();
-                            ctx.globalCompositeOperation = 'destination-out';
-                            ctx.beginPath();
-                            const nTop = exportH * 0.45;
-                            const nHeight = exportH * 0.10;
-                            const notchW = sliceW * 0.015; 
-                            
-                            ctx.moveTo(0, nTop);
-                            ctx.lineTo(notchW, nTop + nHeight*0.25);
-                            ctx.lineTo(0, nTop + nHeight*0.4);
-                            ctx.lineTo(0, nTop + nHeight*0.6); 
-                            ctx.lineTo(notchW, nTop + nHeight*0.75);
-                            ctx.lineTo(0, nTop + nHeight);
-                            ctx.closePath();
-                            ctx.fill();
-                            ctx.restore();
+                            ctx.save(); const strokeW = Math.max(1, exportH * 0.001 * bWeight); ctx.strokeStyle = 'rgba(20,20,20,0.95)'; ctx.lineWidth = strokeW; ctx.strokeRect(drawX + strokeW/2, drawY + strokeW/2, drawW - strokeW, drawH - strokeW); ctx.restore();
+                        } else if (activeBorder === 'vnotch') {
+                            ctx.save(); ctx.globalCompositeOperation = 'destination-out'; ctx.beginPath(); const nTop = exportH * 0.45; const nHeight = exportH * 0.10; const notchW = singleW * 0.015; ctx.moveTo(0, nTop); ctx.lineTo(notchW, nTop + nHeight*0.25); ctx.lineTo(0, nTop + nHeight*0.4); ctx.lineTo(0, nTop + nHeight*0.6); ctx.lineTo(notchW, nTop + nHeight*0.75); ctx.lineTo(0, nTop + nHeight); ctx.closePath(); ctx.fill(); ctx.restore();
                         }
                     }
 
-                    if (grainCanvas) { ctx.save(); ctx.globalAlpha = (gi / 100) * 1.5; ctx.globalCompositeOperation = 'soft-light'; ctx.fillStyle = ctx.createPattern(grainCanvas, 'repeat'); ctx.fillRect(0, 0, sliceW, exportH); ctx.restore(); }
+                    if (grainCanvas) { ctx.save(); ctx.globalAlpha = (gi / 100) * 1.5; ctx.globalCompositeOperation = 'soft-light'; ctx.fillStyle = ctx.createPattern(grainCanvas, 'repeat'); ctx.fillRect(0, 0, singleW, exportH); ctx.restore(); }
                     
                     const txt = DOM.wmText.value.trim(); const target = DOM.wmTarget.value;
                     const glowAmt = parseInt(DOM.sGlowAmt.value);
                     const showLogo = DOM.toggleLogo ? DOM.toggleLogo.checked : false;
 
                     if (txt && (currentStrategy === 'single' || target === 'all' || parseInt(target) === i + 1)) {
-                        ctx.save(); 
-                        const fontWeight = isBold ? 'bold ' : ''; 
-                        const fontScaleMultiplier = DOM.sFontScale.value / 100; 
-                        const exportFontSize = Math.floor(exportH * (currentStrategy === 'single' ? 0.025 : 0.018)) * fontScaleMultiplier;
-                        
-                        let fontVal = DOM.fontSel.value; 
-                        ctx.font = `${fontWeight} ${exportFontSize}px '${fontVal}', sans-serif`; 
-                        ctx.textBaseline = 'middle'; ctx.textAlign = 'center'; ctx.letterSpacing = "2px"; 
-                        
-                        const textDrawX = sliceW * (tPosX / 100); const textDrawY = exportH * (tPosY / 100);
+                        ctx.save(); const fontWeight = isBold ? 'bold ' : ''; const fontScaleMultiplier = DOM.sFontScale.value / 100; const exportFontSize = Math.floor(exportH * (currentStrategy === 'single' ? 0.025 : 0.018)) * fontScaleMultiplier;
+                        let fontVal = DOM.fontSel.value; ctx.font = `${fontWeight} ${exportFontSize}px '${fontVal}', sans-serif`; ctx.textBaseline = 'middle'; ctx.textAlign = 'center'; ctx.letterSpacing = "2px"; 
+                        const textDrawX = singleW * (tPosX / 100); const textDrawY = exportH * (tPosY / 100);
                         const textWidth = ctx.measureText(txt).width;
-                        
                         if (textStylePreset !== 'none') {
-                            const gradient = ctx.createLinearGradient(
-                                textDrawX - textWidth/2, textDrawY - exportFontSize/2, 
-                                textDrawX + textWidth/2, textDrawY + exportFontSize/2
-                            );
-                            if (textStylePreset === 'gold') {
-                                gradient.addColorStop(0, "#BF953F"); gradient.addColorStop(0.25, "#FCF6BA"); gradient.addColorStop(0.5, "#B38728"); gradient.addColorStop(0.75, "#FBF5B7"); gradient.addColorStop(1, "#AA771C");
-                            } else {
-                                gradient.addColorStop(0, "#8A9097"); gradient.addColorStop(0.25, "#E0E5EC"); gradient.addColorStop(0.5, "#8A9097"); gradient.addColorStop(0.75, "#B0B5BB"); gradient.addColorStop(1, "#595F66");
-                            }
+                            const gradient = ctx.createLinearGradient(textDrawX - textWidth/2, textDrawY - exportFontSize/2, textDrawX + textWidth/2, textDrawY + exportFontSize/2);
+                            if (textStylePreset === 'gold') { gradient.addColorStop(0, "#BF953F"); gradient.addColorStop(0.25, "#FCF6BA"); gradient.addColorStop(0.5, "#B38728"); gradient.addColorStop(0.75, "#FBF5B7"); gradient.addColorStop(1, "#AA771C");
+                            } else { gradient.addColorStop(0, "#8A9097"); gradient.addColorStop(0.25, "#E0E5EC"); gradient.addColorStop(0.5, "#8A9097"); gradient.addColorStop(0.75, "#B0B5BB"); gradient.addColorStop(1, "#595F66"); }
                             ctx.fillStyle = gradient;
-                        } else {
-                            ctx.fillStyle = DOM.textColor.value;
-                        }
-                        
-                        if (isGlow) { 
-                            const glowScale = exportFontSize / 50; 
-                            const currentGlow = glowAmt * glowScale;
-                            ctx.shadowColor = (textStylePreset === 'none') ? DOM.textColor.value : 'rgba(0,0,0,0.8)'; 
-                            ctx.shadowBlur = currentGlow * 1.5; 
-                        } else { 
-                            ctx.shadowColor = 'transparent'; 
-                        }
-                        
+                        } else { ctx.fillStyle = DOM.textColor.value; }
+                        if (isGlow) { const glowScale = exportFontSize / 50; const currentGlow = glowAmt * glowScale; ctx.shadowColor = (textStylePreset === 'none') ? DOM.textColor.value : 'rgba(0,0,0,0.8)'; ctx.shadowBlur = currentGlow * 1.5; } else { ctx.shadowColor = 'transparent'; }
                         ctx.fillText(txt, textDrawX, textDrawY); ctx.restore(); 
                     }
                     if (logoObj && logoUrl && showLogo && (currentStrategy === 'single' || target === 'all' || parseInt(target) === i + 1)) {
-                        ctx.save(); ctx.globalAlpha = DOM.sLogoOp.value / 100; 
-                        const drawLogoW = sliceW * (DOM.sLogoScale.value / 100) * 0.5; 
-                        const drawLogoH = (drawLogoW / logoObj.width) * logoObj.height;
-                        ctx.drawImage(logoObj, (sliceW * (lPosX / 100)) - (drawLogoW/2), (exportH * (lPosY / 100)) - (drawLogoH/2), drawLogoW, drawLogoH); ctx.restore();
+                        ctx.save(); ctx.globalAlpha = DOM.sLogoOp.value / 100; const drawLogoW = singleW * (DOM.sLogoScale.value / 100) * 0.5; const drawLogoH = (drawLogoW / logoObj.width) * logoObj.height; ctx.drawImage(logoObj, (singleW * (lPosX / 100)) - (drawLogoW/2), (exportH * (lPosY / 100)) - (drawLogoH/2), drawLogoW, drawLogoH); ctx.restore();
                     }
                     
-                    const outputQuality = isHighRes ? 1.0 : 0.95; 
-                    await new Promise((resolve, reject) => { 
+                    const fn = currentStrategy === 'seamless' ? `cineRoll_${i+1}.jpg` : `cineRoll_single.jpg`;
+                    await new Promise((resolve) => { 
                         workCvs.toBlob((blob) => { 
-                            if(blob) { zip.file(currentStrategy === 'seamless' ? `cineRoll_pan_${i+1}.jpg` : `cineRoll_single.jpg`, blob); resolve(); }
-                            else { reject(new Error("Canvas to Blob failed. Image might be too large.")); }
-                        }, 'image/jpeg', outputQuality); 
-                        workCvs.width = 0; workCvs.height = 0;
+                            if(isIOS) {
+                                // iOS용 파일 객체 생성
+                                filesToShare.push(new File([blob], fn, {type: 'image/jpeg'}));
+                            } else {
+                                zip.file(fn, blob);
+                            }
+                            resolve(); 
+                        }, 'image/jpeg', 1.0); 
                     });
+                    workCvs.width = 0; workCvs.height = 0;
                 }
-                const content = await zip.generateAsync({type:"blob"}); masterCanvas.width = 0; masterCanvas.height = 0; const link = document.createElement('a'); link.href = URL.createObjectURL(content); link.download = `cineRoll_Gallery.zip`; document.body.appendChild(link); link.click(); document.body.removeChild(link); DOM.btnExport.innerText = "✅ Download Complete!";
-            } catch (err) { alert("Export Failed: " + err.message); console.error(err); } finally { DOM.btnExport.classList.remove('opacity-70', 'pointer-events-none'); setTimeout(() => { DOM.btnExport.innerText = "Export Gallery"; }, 3000); }
+                
+                if (isIOS && navigator.share && filesToShare.length > 0) {
+                    // 🌟 V103: iOS 네이티브 공유하기로 다운로드 우회
+                    await navigator.share({
+                        files: filesToShare,
+                        title: 'cineRoll Output',
+                    });
+                    DOM.btnExport.innerText = "✅ Sent to Share Sheet!";
+                } else {
+                    const content = await zip.generateAsync({type:"blob"}); 
+                    const link = document.createElement('a'); link.href = URL.createObjectURL(content); link.download = `cineRoll_Output.zip`; document.body.appendChild(link); link.click(); document.body.removeChild(link); 
+                    DOM.btnExport.innerText = "✅ Download Complete!";
+                }
+                masterCanvas.width = 0; masterCanvas.height = 0; 
+            } catch (err) { alert("Export Failed: " + err.message); console.error(err); DOM.btnExport.innerText = "❌ Export Failed"; } finally { DOM.btnExport.classList.remove('opacity-70', 'pointer-events-none'); setTimeout(() => { DOM.btnExport.innerText = "Export Gallery"; }, 3000); }
         });
 
         function setBG(el) { document.querySelectorAll('[data-bg]').forEach(b=>b.classList.remove('active')); el.classList.add('active'); bgColor=el.dataset.bg; document.querySelectorAll('.slide-container').forEach(sc => { if(!sc.closest('[style*="polygon"]')) { sc.style.backgroundColor = bgColor; } }); ModuleTypo.update(); }
@@ -1343,19 +1312,15 @@
             const preset = { id: Date.now(), text: txt, color: DOM.textColor.value, bold: isBold, glow: isGlow, font: DOM.fontSel.value, glowAmt: DOM.sGlowAmt.value, type: textStylePreset }; 
             savedCustomPresets.push(preset); 
             localStorage.setItem('cineroll_presets_v2', JSON.stringify(savedCustomPresets)); 
-            
             const saveBtn = document.getElementById('btn-save-preset'); 
-            saveBtn.innerText = "✔️ Saved"; 
-            saveBtn.classList.add('text-green-400'); 
+            saveBtn.innerText = "✔️ Saved"; saveBtn.classList.add('text-green-400'); 
             setTimeout(() => { saveBtn.innerText = "SAVE PRESET"; saveBtn.classList.remove('text-green-400'); }, 1000); 
-            
             renderPresetChips(); 
         }
         
         function renderPresetChips() { 
             const container = document.getElementById('custom-presets-container');
-            if(!container) return;
-            container.innerHTML = ''; 
+            if(!container) return; container.innerHTML = ''; 
             savedCustomPresets.forEach(p => { 
                 const chip = document.createElement('div'); chip.className = "preset-chip flex items-center bg-[#1a1a1c] border border-border rounded text-[10px] text-neutral-400 cursor-pointer hover:border-coral-500/50 transition-colors"; 
                 const nameBtn = document.createElement('div'); nameBtn.className = "px-3 py-1.5 truncate max-w-[120px]"; nameBtn.innerText = p.text; nameBtn.onclick = () => loadPreset(p); 
@@ -1365,27 +1330,16 @@
         }
         
         function loadPreset(p) { 
-            DOM.wmText.value = p.text; 
-            DOM.textColor.value = p.color; 
-            isBold = p.bold; 
-            isGlow = p.glow; 
-            DOM.fontSel.value = p.font; 
-            DOM.sGlowAmt.value = p.glowAmt || 15; 
-            textStylePreset = p.type; 
-            
+            DOM.wmText.value = p.text; DOM.textColor.value = p.color; isBold = p.bold; isGlow = p.glow; DOM.fontSel.value = p.font; DOM.sGlowAmt.value = p.glowAmt || 15; textStylePreset = p.type; 
             document.getElementById('btnBold').classList.toggle('active', isBold); 
             document.getElementById('btnGlow').classList.toggle('active', isGlow); 
-            
             document.querySelectorAll('.preset-pill').forEach(btn => btn.classList.remove('active')); 
             if(p.type === 'gold') document.getElementById('btn-preset-gold').classList.add('active'); 
             if(p.type === 'silver') document.getElementById('btn-preset-silver').classList.add('active'); 
-            
             ModuleTypo.update(); 
         }
         
         function deletePreset(id) { savedCustomPresets = savedCustomPresets.filter(p => p.id !== id); localStorage.setItem('cineroll_presets_v2', JSON.stringify(savedCustomPresets)); renderPresetChips(); }
-        window.exportPresets = function() { if(savedCustomPresets.length === 0) return alert("내보낼 프리셋이 없습니다."); const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(savedCustomPresets)); const downloadAnchorNode = document.createElement('a'); downloadAnchorNode.setAttribute("href", dataStr); downloadAnchorNode.setAttribute("download", "cineroll_presets.json"); document.body.appendChild(downloadAnchorNode); downloadAnchorNode.click(); downloadAnchorNode.remove(); }
-        window.importPresets = function(e) { const file = e.target.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = (event) => { try { const imported = JSON.parse(event.target.result); if(Array.isArray(imported)) { savedCustomPresets = imported; localStorage.setItem('cineroll_presets_v2', JSON.stringify(savedCustomPresets)); renderPresetChips(); alert("프리셋을 성공적으로 불러왔습니다!"); } else { throw new Error(); } } catch(err) { alert("잘못된 프리셋 파일입니다."); } }; reader.readAsText(file); e.target.value = ''; }
         
         function toggleBold() { isBold=!isBold; document.getElementById('btnBold').classList.toggle('active', isBold); ModuleTypo.update(); }
         function toggleGlow() { isGlow=!isGlow; document.getElementById('btnGlow').classList.toggle('active', isGlow); ModuleTypo.update(); }
@@ -1394,56 +1348,30 @@
             const file = e.target.files[0]; if(!file) return; 
             const reader = new FileReader(); 
             reader.onload = ev => { 
-                logoUrl = ev.target.result; 
-                logoObj = new Image(); 
-                logoObj.onload = () => { 
-                    DOM.toggleLogo.checked = true;
-                    DOM.logoStatus.classList.remove('hidden'); 
-                    DOM.logoSettings.classList.remove('opacity-30', 'pointer-events-none');
-                    ModuleTypo.update(); 
-                }; 
+                logoUrl = ev.target.result; logoObj = new Image(); 
+                logoObj.onload = () => { DOM.toggleLogo.checked = true; DOM.logoStatus.classList.remove('hidden'); DOM.logoSettings.classList.remove('opacity-30', 'pointer-events-none'); ModuleTypo.update(); }; 
                 logoObj.src = logoUrl; 
-            }; 
-            reader.readAsDataURL(file); 
+            }; reader.readAsDataURL(file); 
         });
 
         function extractExif() { 
             if(!rawFile) return alert("사진을 먼저 업로드해주세요."); 
             if(isExifOn) { isExifOn=false; DOM.wmText.value=manualBackupText; ModuleTypo.update(); return; } 
-            
             exifr.parse(rawFile, {tiff: true, exif: true}).then(exif => { 
                 if(exif && Object.keys(exif).length > 0) { 
                     let t = []; 
-                    
-                    let make = exif.Make || "";
-                    let model = exif.Model || "";
-                    let cameraStr = "";
-                    if (make && model) {
-                        if (model.toLowerCase().startsWith(make.toLowerCase())) cameraStr = model;
-                        else cameraStr = `${make} ${model}`;
-                    } else {
-                        cameraStr = make || model || "";
-                    }
+                    let make = exif.Make || ""; let model = exif.Model || ""; let cameraStr = "";
+                    if (make && model) { if (model.toLowerCase().startsWith(make.toLowerCase())) cameraStr = model; else cameraStr = `${make} ${model}`; } else { cameraStr = make || model || ""; }
                     if (cameraStr) t.push(cameraStr);
-
                     let aperture = exif.FNumber || exif.ApertureValue;
                     if(aperture && Number(aperture) > 0) t.push(`f/${Number(aperture).toFixed(1).replace('.0', '')}`); 
-                    
                     if(exif.ExposureTime) t.push(`${exif.ExposureTime>=1 ? exif.ExposureTime : `1/${Math.round(1/exif.ExposureTime)}`}s`); 
                     if(exif.ISO) t.push(`ISO ${exif.ISO}`); 
                     if(exif.LensModel) t.push(exif.LensModel);
-
                     if(t.length) { manualBackupText=DOM.wmText.value; DOM.wmText.value=t.join(' | '); isExifOn=true; ModuleTypo.update(); } 
-                } else { 
-                    let oldVal = DOM.wmText.value; DOM.wmText.value = "No EXIF Data"; setTimeout(() => { DOM.wmText.value = oldVal; ModuleTypo.update(); }, 1500);
-                    ModuleTypo.update();
-                } 
-            }).catch(err => { 
-                let oldVal = DOM.wmText.value; DOM.wmText.value = "No EXIF Data"; setTimeout(() => { DOM.wmText.value = oldVal; ModuleTypo.update(); }, 1500); 
-                ModuleTypo.update();
-            }); 
+                } else { alert("EXIF 데이터가 없습니다."); } 
+            }).catch(err => alert("EXIF 데이터를 읽지 못했습니다.")); 
         }
-
     </script>
 </body>
 </html>
