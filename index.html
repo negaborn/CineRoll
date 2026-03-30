@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>cineRoll 100.0 | Masterpiece</title>
+    <title>cineRoll 101.0 | Crystal Clear</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = { darkMode: 'class', theme: { extend: { colors: { 
@@ -58,12 +58,13 @@
         .cropper-snap .cropper-view-box { outline: 2px solid #22c55e !important; }
         .cropper-modal { background-color: rgba(0,0,0,0.85); }
 
-        /* 🌟 V100: 마그네틱 중앙 정렬(Magnetic Center)을 위한 CSS 재구성 */
-        #preview-area { position: absolute; inset: 0; overflow: auto; user-select: none; -webkit-user-select: none; display: flex; flex-direction: column; }
+        /* 🌟 V101: 크롭 먹통의 주범이었던 'display: flex'를 상위 컨테이너에서 완벽히 제거 */
+        #preview-area { position: absolute; inset: 0; overflow: auto; user-select: none; -webkit-user-select: none; }
+        /* 🌟 자식 요소인 inner에서만 flex를 사용하여 중앙 정렬 수행 (충돌 방지) */
         #preview-area-inner { display: flex; min-width: 100%; min-height: 100%; padding: 2rem 1rem; transition: opacity 0.2s; user-select: none; align-items: center; justify-content: center;}
         @media (min-width: 768px) { #preview-area-inner { padding: 4rem 2rem; } }
         
-        #preview-wrapper-parent { position: relative; flex-shrink: 0; box-shadow: 0 40px 100px rgba(0,0,0,0.95); margin: auto; } /* margin: auto가 젠모드에서 완벽한 중앙을 잡아줍니다 */
+        #preview-wrapper-parent { position: relative; flex-shrink: 0; box-shadow: 0 40px 100px rgba(0,0,0,0.95); margin: auto; }
         
         .preview-layer { display: flex; width: 100%; height: 100%; position: absolute; inset: 0; pointer-events: none; }
         .layer-glass { z-index: 50; pointer-events: none; }
@@ -118,7 +119,6 @@
 
         body.zen-mode header, body.zen-mode aside { display: none !important; }
         body.zen-mode #main-stage { background-color: #000000 !important; }
-        
         body.zen-mode #zoom-controls { display: none !important; }
         
         .zen-tooltip { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: #fff; padding: 8px 16px; border-radius: 20px; font-size: 11px; z-index: 9999; pointer-events: none; opacity: 0; transition: opacity 0.5s; letter-spacing: 0.05em;}
@@ -209,6 +209,7 @@
             </div>
 
             <div id="image-container" class="absolute inset-0 z-10 w-full h-full hidden opacity-0 transition-opacity duration-300"></div>
+            
             <div id="preview-area" class="hidden z-20 w-full h-full"><div id="preview-area-inner"></div></div>
         </main>
 
@@ -503,7 +504,6 @@
             }
         }
 
-        // 🌟 V100: "비행 금지 구역" (Safe Margin) 확보 수식 적용
         function applyZoom() { 
             const parentWrap = document.getElementById('preview-wrapper-parent'); 
             if(!parentWrap) return; 
@@ -511,7 +511,6 @@
             const isZen = document.body.classList.contains('zen-mode');
             
             const parentW = DOM.previewArea.clientWidth - (isMobile ? 32 : 64); 
-            // 줌 알약 메뉴가 사진 하단과 겹치지 않도록 90px의 '비행 금지 구역'을 뺍니다.
             const safeBottomMargin = (isMobile && !isZen) ? 90 : 40; 
             const parentH = DOM.previewArea.clientHeight - safeBottomMargin; 
             
