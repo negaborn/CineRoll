@@ -1,531 +1,1366 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>cineRoll | Ultimate Instagram Carousel Creator</title>
-    <link rel="icon" type="image/svg+xml" href="cinerollfavicon.svg">
+    <title>cineRoll 92.0 | Flawless Fix</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Caveat&family=Cinzel:wght@500;700&family=Cormorant+Garamond:ital,wght@0,400;1,400&family=Inter:wght@300;500&family=Lato:ital,wght@0,400;1,400&family=Lora:ital,wght@0,400;1,400&family=Montserrat:ital,wght@0,400;1,400&family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Roboto+Mono&family=Space+Mono&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = { darkMode: 'class', theme: { extend: { colors: { 
+            background: '#111111', panel: '#1c1c1e', border: '#2d2d30', coral: { 400: '#fb7185', 500: '#f43f5e', 600: '#e11d48' } 
+        } } } }
+    </script>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exifr/dist/full.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.js"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=Inter:wght@300;400;500;600&family=Cinzel:wght@600&family=Cormorant+Garamond:ital,wght@1,600&family=Montserrat:wght@400;700&family=Playfair+Display:ital,wght@0,600;1,600&family=Oswald:wght@500&family=Lato:wght@400;700&family=Bebas+Neue&family=Lora:ital,wght@0,500;1,500&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    
     <style>
-        .grab-cursor { cursor: grab; }
-        .grab-cursor:active { cursor: grabbing; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        input[type=range].accent-rose-500::-webkit-slider-thumb { background: #e11d48; }
-        #cropBox { box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7); touch-action: none; pointer-events: none; }
-        .grid-lines {
-            background-image: 
-                linear-gradient(to right, rgba(255,255,255,0.3) 1px, transparent 1px),
-                linear-gradient(to bottom, rgba(255,255,255,0.3) 1px, transparent 1px);
-            background-size: 33.33% 33.33%;
+        body { font-family: 'Inter', sans-serif; background-color: #111111; color: #a3a3a3; transition: background-color 0.3s; }
+        .logo-font { font-family: 'Outfit', sans-serif; }
+        
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #111; }
+        ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 4px; border: 2px solid #111; }
+        ::-webkit-scrollbar-corner { background: #111; }
+
+        .tab-btn { padding: 12px 0; font-size: 10px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #737373; border-bottom: 2px solid transparent; transition: all 0.2s; outline: none; flex: 1; text-align: center; }
+        .tab-btn:hover { color: #d4d4d4; }
+        .tab-btn.active { color: #fff; border-bottom-color: #f43f5e; }
+
+        .min-label { display: flex; justify-content: space-between; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: #888; margin-bottom: 8px; font-weight: 600; }
+        .min-select, .min-input { width: 100%; background: #111; border: 1px solid #2d2d30; color: #e5e5e5; font-size: 12px; padding: 8px 10px; border-radius: 4px; outline: none; transition: border-color 0.2s; appearance: none; }
+        .min-select:focus, .min-input:focus { border-color: #555; }
+        
+        .min-btn { background: #1c1c1e; border: 1px solid #2d2d30; color: #d4d4d4; font-size: 11px; padding: 8px 12px; border-radius: 4px; font-weight: 500; transition: all 0.1s; cursor: pointer; text-align: center; }
+        .min-btn:hover { background: #2d2d30; border-color: #404040; color: #fff; }
+        .min-btn.active { background: #2d2d30; border-color: #f43f5e; color: #fff; }
+
+        .min-btn-primary { background: #f43f5e; color: #fff; border: none; font-weight: 600; padding: 12px; border-radius: 4px; cursor: pointer; transition: background 0.2s; width: 100%; text-transform: uppercase; letter-spacing: 0.05em; font-size: 11px;}
+        .min-btn-primary:hover { background: #e11d48; }
+
+        input[type=range] { -webkit-appearance: none; background: transparent; width: 100%; height: 16px; cursor: pointer; }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 2px; background: #3f3f46; border-radius: 1px; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 12px; width: 12px; border-radius: 50%; background: #d4d4d4; margin-top: -5px; transition: transform 0.1s; }
+        input[type=range]:active::-webkit-slider-thumb { background: #f43f5e; transform: scale(1.2); }
+
+        input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type="number"] { -moz-appearance: textfield; cursor: text;}
+
+        .cropper-view-box, .cropper-face { border-radius: 0px; outline: 0; }
+        .cropper-line, .cropper-point { background-color: #f43f5e !important; }
+        .cropper-view-box { outline: 1px solid #f43f5e !important; }
+        .cropper-snap .cropper-line, .cropper-snap .cropper-point { background-color: #22c55e !important; }
+        .cropper-snap .cropper-view-box { outline: 2px solid #22c55e !important; }
+        .cropper-modal { background-color: rgba(0,0,0,0.85); }
+
+        #preview-area { position: absolute; inset: 0; overflow: auto; user-select: none; -webkit-user-select: none; }
+        #preview-area-inner { display: flex; min-width: 100%; min-height: 100%; padding: 4rem 2rem; transition: opacity 0.2s; user-select: none; flex-wrap: nowrap; align-items: center;}
+        
+        #preview-wrapper-parent { position: relative; flex-shrink: 0; box-shadow: 0 40px 100px rgba(0,0,0,0.95); margin: auto; }
+        
+        .preview-layer { display: flex; width: 100%; height: 100%; position: absolute; inset: 0; pointer-events: none; }
+        .layer-glass { z-index: 50; pointer-events: none; }
+        .layer-glass > div { pointer-events: auto; }
+        
+        .preview-img { image-rendering: high-quality; image-rendering: -webkit-optimize-contrast; transition: filter 0.2s; display: block; width: 100%; height: 100%; object-fit: cover;}
+        
+        /* 🌟 V92.0: CSS 클래스명 vnotch로 정상 복구 (종이 절단 완료) */
+        .border-vnotch { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 0 60%, 1.8% 57.5%, 0 55%, 0 51%, 1.8% 48.5%, 0 46%); }
+
+        .slide-container { position: relative; overflow: hidden; transition: background-color 0.1s; }
+        .gallery-grain-overlay { mix-blend-mode: overlay; pointer-events: none; z-index: 10; position: absolute; inset: 0; }
+        
+        .draggable-text, .draggable-logo { position: absolute; cursor: grab; z-index: 50; transform: translate(-50%, -50%); padding: 10px; outline: none; border: none; white-space: nowrap; display: flex; align-items: center; justify-content: center; }
+        .draggable-logo img { flex-shrink: 0; max-width: none !important; pointer-events: none; display: block; }
+        .draggable-text:focus, .draggable-logo:focus { outline: 1px dashed rgba(255,255,255,0.4); outline-offset: 2px; }
+        
+        .snap-guide { position: absolute; background-color: #f43f5e; z-index: 40; pointer-events: none; display: none; }
+        .snap-guide-x { left: 0; right: 0; height: 1px; }
+        .snap-guide-y { top: 0; bottom: 0; width: 1px; }
+
+        .disabled-block { opacity: 0.3; pointer-events: none; filter: grayscale(100%); display: none; }
+        .safe-zone-overlay { pointer-events: none; }
+        .show-safe-zone .safe-zone-overlay { display: flex !important; }
+
+        input[type="color"] { -webkit-appearance: none; border: none; width: 20px; height: 20px; border-radius: 50%; cursor: pointer; padding: 0; background: transparent; outline: 1px solid #52525b; outline-offset: 2px; transition: transform 0.1s;}
+        input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+        input[type="color"]::-webkit-color-swatch { border: none; border-radius: 50%; }
+
+        .style-btn { transition: all 0.1s; }
+        .style-btn.active { background-color: #f43f5e; color: white; border-color: #f43f5e; }
+
+        .preset-pill { background: #111; border: 1px solid #2d2d30; padding: 4px 8px; border-radius: 4px; font-size: 9px; font-weight: 700; text-transform: uppercase; cursor: pointer; transition: all 0.2s; color: #888; }
+        .preset-pill:hover { border-color: #555; color: #fff; }
+        .preset-pill.active { background: #f43f5e; border-color: #f43f5e; color: #fff; }
+        
+        .preset-chip { background: #222; border: 1px solid #333; border-radius: 6px; font-size: 10px; color: #ccc; display: flex; align-items: center; overflow: hidden; transition: all 0.2s; cursor: pointer; }
+        .preset-chip:hover { border-color: #555; color: #fff; }
+        .preset-chip .chip-name { padding: 4px 8px; }
+        .preset-chip .chip-del { padding: 4px 6px; background: #1a1a1a; color: #888; transition: background 0.2s, color 0.2s; }
+        .preset-chip .chip-del:hover { background: #f43f5e; color: #fff; }
+
+        .text-preset-gold {
+            background-image: linear-gradient(135deg, #BF953F 0%, #FCF6BA 25%, #B38728 50%, #FBF5B7 75%, #AA771C 100%);
+            -webkit-background-clip: text; background-clip: text;
+            -webkit-text-fill-color: transparent; color: transparent;
         }
-        /* iOS 꾹 누르기 저장 메뉴 강제 활성화 */
-        .saveable-img {
-            -webkit-touch-callout: default !important;
-            -webkit-user-select: auto !important;
+        .text-preset-silver {
+            background-image: linear-gradient(135deg, #8A9097 0%, #E0E5EC 25%, #8A9097 50%, #B0B5BB 75%, #595F66 100%);
+            -webkit-background-clip: text; background-clip: text;
+            -webkit-text-fill-color: transparent; color: transparent;
         }
+
+        body.zen-mode header, body.zen-mode aside { display: none !important; }
+        body.zen-mode #main-stage { background-color: #000000 !important; }
+        
+        .zen-tooltip { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: #fff; padding: 8px 16px; border-radius: 20px; font-size: 11px; z-index: 9999; pointer-events: none; opacity: 0; transition: opacity 0.5s; letter-spacing: 0.05em;}
+        .zen-mode .zen-tooltip { opacity: 1; animation: fadeOut 3s forwards; animation-delay: 2s; }
+        @keyframes fadeOut { to { opacity: 0; } }
+
+        #btn-exit-zen { display: none; }
+        body.zen-mode #btn-exit-zen { display: flex; }
     </style>
 </head>
-<body class="bg-neutral-950 text-neutral-300 p-4 md:p-6 flex flex-col items-center min-h-screen font-sans">
+<body class="flex flex-col h-screen overflow-hidden">
     
-<header class="text-center mb-16 flex flex-col items-center">
-        <img src="cinerollfavicon.svg" alt="cineRoll Logo" class="w-20 h-20 mb-2 drop-shadow-md rounded-full">
-        
-        <h1 class="text-5xl mb-8 text-[#e11d48]" style="font-family: 'Great Vibes', cursive; font-weight: 400;">cineRoll</h1>
-        
-        <h2 class="text-2xl md:text-3xl font-light text-neutral-200 tracking-tight leading-snug">
-            Unsqueeze Your Vision. <br>
-            <span class="font-bold text-[#e11d48]">Frame Your Cinema.</span>
-        </h2>
-    </header>
-    
-    <div class="bg-neutral-900 p-5 md:p-6 rounded-2xl shadow-2xl mb-6 w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-6 border border-neutral-800">
-        
-        <div class="col-span-full">
-            <label class="block text-sm font-semibold mb-2 text-neutral-400 uppercase tracking-wider">1. Load Image</label>
-            <div class="flex items-center gap-3">
-                <button onclick="document.getElementById('upload').click()" class="bg-rose-900 text-rose-200 px-5 py-2.5 rounded-lg text-sm font-bold hover:bg-rose-800 transition shadow-lg">Choose File</button>
-                <span id="fileNameDisplay" class="text-xs text-neutral-500 italic">No file chosen</span>
-            </div>
-            <input type="file" id="upload" accept="image/*" class="hidden"/>
-        </div>
+    <div class="zen-tooltip">Press 'F' or 'ESC' to exit Zen Mode</div>
+    <button id="btn-exit-zen" class="fixed top-6 right-6 z-[9999] bg-white/10 hover:bg-coral-500 text-white p-3 rounded-full transition-colors backdrop-blur-md items-center justify-center shadow-lg" onclick="toggleZenMode()" title="Exit Zen Mode">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path></svg>
+    </button>
 
-        <div>
-            <label class="block text-sm font-semibold mb-2 text-neutral-400 uppercase tracking-wider">2. Lens De-squeeze</label>
-            <select id="squeeze" class="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-rose-500 text-white transition">
-                <option value="1" selected>Standard (1.0x)</option>
-                <option value="1.33">1.33x Anamorphic</option>
-                <option value="1.5">1.5x Anamorphic</option>
-                <option value="1.6">1.6x Anamorphic (Sirui)</option>
-                <option value="1.8">1.8x Anamorphic</option>
-                <option value="2.0">2.0x Anamorphic</option>
-            </select>
+    <header class="h-14 border-b border-border bg-panel flex items-center justify-between px-6 shrink-0 z-30 shadow-sm relative">
+        <div class="flex items-center gap-2 cursor-pointer" onclick="location.reload()">
+            <h1 class="logo-font text-xl font-bold tracking-tight text-white">cine<span class="text-coral-500">Roll</span></h1>
         </div>
-
-        <div>
-            <label class="block text-sm font-semibold mb-2 text-rose-400 uppercase tracking-wider">3. Master Format</label>
-            <select id="filmFormat" class="w-full bg-neutral-950 border border-rose-900/50 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-rose-500 text-white transition font-bold">
-                <option value="original" selected>Original Ratio</option>
-                <option value="1/1">1:1 (6x6 Medium Format)</option>
-                <option value="1.16/1">1:1.16 (6x7 Medium Format)</option>
-                <option value="1.5/1">1:1.5 (6x9 Panorama)</option>
-                <option value="2/1">1:2 (6x12 Panorama)</option>
-                <option value="2.35/1">2.35:1 (Cinemascope)</option>
-                <option value="2.76/1">2.76:1 (70mm Ultra Panavision)</option>
-            </select>
-        </div>
-
-        <div id="visualCropPanel" class="col-span-full bg-neutral-950 p-4 rounded-xl border border-rose-900 flex flex-col items-center">
-            <div class="w-full flex justify-between items-center mb-3">
-                <label class="block text-sm font-bold text-rose-400 uppercase">🎯 Phase 1: Master Film Framing</label>
-                <span class="text-[10px] text-neutral-400 bg-neutral-800 px-2 py-1 rounded uppercase">Drag to Pan / Pinch to Zoom</span>
+        <div class="flex items-center gap-4">
+            <div id="zoom-controls" class="hidden flex items-center gap-4 bg-[#111] px-4 py-1.5 rounded-lg border border-border shadow-md">
+                <input type="range" id="slider-zoom" min="20" max="400" value="100" class="w-32 h-1">
+                <button class="text-[10px] font-bold text-coral-400 hover:text-white uppercase px-1" onclick="setZoom('fit')">FIT</button>
+                <div class="flex items-center"><input type="number" id="in-zoom" class="bg-transparent text-right outline-none w-8 text-white font-mono text-[10px]" value="100"><span class="text-[10px] text-neutral-400">%</span></div>
             </div>
             
-           <div id="cropperContainer" class="relative w-full max-w-[600px] min-h-[400px] bg-black overflow-hidden select-none touch-none rounded-lg border border-neutral-700 flex items-center justify-center">
+            <div class="flex items-center gap-2 border-l border-border pl-4 ml-2">
+                <button id="btn-zen-mode" class="hidden items-center justify-center w-8 h-8 bg-[#111] text-neutral-400 hover:text-white rounded border border-border transition-colors cursor-pointer" onclick="toggleZenMode()" title="Zen Mode (F)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+                </button>
 
-    <div id="emptyState" class="absolute inset-0 flex flex-col items-center justify-center text-neutral-500 z-10 pointer-events-none">
-        <svg class="w-12 h-12 mb-3 text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
-        </svg>
-        <p class="text-sm font-light tracking-widest uppercase text-neutral-400">Awaiting Photo</p>
-    </div>
+                <button id="btn-split-view" class="hidden items-center justify-center w-8 h-8 bg-[#111] text-neutral-400 hover:text-white rounded border border-border transition-colors cursor-pointer" onclick="toggleSplitView()" title="Split View (Before & After)">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" /><line x1="12" y1="3" x2="12" y2="21" /><rect x="12" y="3" width="9" height="18" fill="currentColor" opacity="0.3" /></svg>
+                </button>
+            </div>
 
-    <div id="imageStage" class="relative inline-block hidden">
-        <img id="cropperImg" class="max-w-full max-h-[70vh] block pointer-events-none object-contain" />
-        
-        <div id="cropBox" class="absolute border border-rose-500 grid-lines flex items-center justify-center pointer-events-auto cursor-move">
-            <div class="absolute w-3 h-3 border-t-2 border-l-2 border-rose-500 -top-1 -left-1"></div>
-            <div class="absolute w-3 h-3 border-t-2 border-r-2 border-rose-500 -top-1 -right-1"></div>
-            <div class="absolute w-3 h-3 border-b-2 border-l-2 border-rose-500 -bottom-1 -left-1"></div>
-            <div class="absolute w-3 h-3 border-b-2 border-r-2 border-rose-500 -bottom-1 -right-1"></div>
+            <button onclick="location.reload()" class="hidden md:flex items-center gap-1.5 text-[10px] font-bold text-neutral-400 hover:text-white bg-[#111] px-3 py-1.5 rounded border border-border transition-colors ml-2" title="Start New Project">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                NEW PHOTO
+            </button>
         </div>
-    </div>
-</div>
-                    <div class="absolute w-3 h-3 border-b-2 border-r-2 border-rose-500 -bottom-1 -right-1"></div>
+    </header>
+
+    <div class="flex-1 flex overflow-hidden">
+        <main id="main-stage" class="flex-1 relative flex bg-background overflow-hidden select-none transition-colors duration-300">
+            <div id="upload-zone" class="absolute inset-0 flex flex-col items-center justify-center z-50 bg-background transition-opacity duration-300">
+                <label class="relative w-[300px] h-[180px] border border-dashed border-[#333] rounded-xl flex flex-col items-center justify-center text-neutral-500 hover:border-coral-500 hover:text-coral-400 transition-colors bg-[#141414] cursor-pointer">
+                    <input type="file" id="upload-input" accept="image/*,.tif,.tiff" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                    <svg class="w-8 h-8 mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    <span id="uploadText" class="text-[10px] font-bold tracking-widest uppercase">Import Professional Resource</span>
+                    <span class="text-[9px] mt-2 opacity-50">JPEG, PNG, TIFF Supported</span>
+                </label>
+            </div>
+
+            <div id="smart-snap-badge" class="absolute transform -translate-x-1/2 bg-green-500 text-black px-4 py-1.5 rounded-full font-bold text-[10px] uppercase tracking-wider opacity-0 transition-all duration-100 z-50 pointer-events-none shadow-[0_0_20px_rgba(34,197,94,0.5)]"></div>
+            
+            <div id="image-container" class="absolute inset-0 z-10 w-full h-full hidden opacity-0 transition-opacity duration-300"></div>
+            <div id="preview-area" class="hidden z-20"><div id="preview-area-inner"></div></div>
+        </main>
+
+        <aside class="w-full md:w-[320px] h-full bg-panel border-l border-border flex flex-col shrink-0 z-40 shadow-2xl relative select-none">
+            <nav class="flex border-b border-border shrink-0 bg-panel px-2">
+                <button class="tab-btn active" onclick="switchTab('format')">Format</button>
+                <button class="tab-btn" onclick="switchTab('frame')">Frame</button>
+                <button class="tab-btn" onclick="switchTab('color')">Color</button>
+                <button class="tab-btn" onclick="switchTab('typo')">Typo</button>
+            </nav>
+
+            <div class="flex-1 overflow-y-auto custom-scroll p-6">
+                <div id="tab-format" class="tab-content space-y-7">
+                    <div>
+                        <label class="min-label"><span>Output Strategy</span></label>
+                        <div class="grid grid-cols-2 gap-2" id="strategy-btns">
+                            <button class="min-btn active" data-val="seamless">Seamless</button>
+                            <button class="min-btn" data-val="single">Single</button>
+                        </div>
+                    </div>
+                    <div id="ratio-wrapper" class="disabled-block">
+                        <div class="flex justify-between items-center mb-2"><label class="min-label mb-0"><span>Aspect Ratio</span></label><button class="text-[10px] text-neutral-500 hover:text-white" onclick="resetFraming()">↺</button></div>
+                        <select class="min-select" id="select-ratio">
+                            <option value="NaN">Free Crop (Smart Snap)</option>
+                            <option value="1">1:1 (Square)</option>
+                            <option value="0.8" selected>4:5 (Vertical IG)</option>
+                            <option value="0.75">3:4 (Classic Portrait)</option>
+                            <option value="0.666">2:3 (35mm Vertical)</option>
+                            <option value="1.5">3:2 (35mm Horizontal)</option>
+                            <option value="1.777">16:9 (Landscape)</option>
+                        </select>
+                    </div>
+                    <div id="seamless-count-wrapper">
+                        <div class="flex justify-between items-center mb-2"><label class="min-label mb-0"><span>Pan Slides</span></label><button class="text-[10px] text-neutral-500 hover:text-white" onclick="resetFraming()">↺</button></div>
+                        <select class="min-select" id="select-slides"><option value="2">2 Slides</option><option value="3" selected>3 Slides</option><option value="4">4 Slides</option></select>
+                    </div>
+                    <div class="pt-4 border-t border-border">
+                        <label class="min-label"><span>Anamorphic De-squeeze</span></label>
+                        <select class="min-select" id="select-squeeze">
+                            <option value="100" selected>1.0x (Standard)</option>
+                            <option value="133">1.33x</option>
+                            <option value="150">1.50x</option>
+                            <option value="160">1.60x (Sirui)</option>
+                            <option value="180">1.80x</option>
+                            <option value="200">2.00x</option>
+                        </select>
+                    </div>
+                    <div class="pt-4 border-t border-border">
+                        <label class="min-label"><span>Straighten</span><div class="flex items-center"><input type="number" id="in-angle" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="0"><span>°</span></div></label>
+                        <div class="flex items-center gap-2"><input type="range" id="slider-angle" min="-45" max="45" value="0" step="0.5" class="flex-1"><button class="text-[10px] text-neutral-500 hover:text-white" onclick="resetAngle()">↺</button></div>
+                    </div>
+                    <button class="w-full text-[11px] font-bold text-coral-400 border border-coral-900/50 hover:bg-coral-950/20 py-3 rounded mt-4 transition-colors" onclick="applyCropAndRender()">Apply Crop (Enter)</button>
+                </div>
+
+                <div id="tab-frame" class="tab-content space-y-7 hidden">
+                    <div>
+                        <label class="min-label mb-2"><span>Paper Texture</span></label>
+                        <div class="grid grid-cols-2 gap-2 mb-2">
+                            <button class="min-btn active" data-bg="#000000" onclick="setBG(this)">Pure Black</button>
+                            <button class="min-btn" data-bg="#ffffff" onclick="setBG(this)">Pure White</button>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button class="min-btn" data-bg="#141414" onclick="setBG(this)">Archival Black</button>
+                            <button class="min-btn" data-bg="#F4F0E6" onclick="setBG(this)">Baryta White</button>
+                        </div>
+                    </div>
+                    
+                    <div class="pt-4 border-t border-border">
+                        <label class="min-label"><span>Layout Presentation</span></label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button class="min-btn active" id="btn-edge" onclick="setMargin(false)">Edge-to-Edge</button>
+                            <button class="min-btn" id="btn-margin" onclick="setMargin(true)">Margin Frame</button>
+                        </div>
+                    </div>
+                    
+                    <div id="margin-scale-wrapper" class="pt-4 border-t border-border hidden">
+                        <label class="min-label"><span>Frame Padding</span><div class="flex items-center"><input type="number" id="in-margin-scale" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="85"><span>%</span></div></label>
+                        <div class="flex items-center gap-2"><input type="range" id="slider-margin-scale" min="50" max="100" value="85" oninput="ModuleFrame.build()"></div>
+                        
+                        <div class="mt-5 border-t border-border pt-4">
+                            <label class="min-label mb-2"><span class="text-coral-400 font-bold">Film Borders (Pro)</span></label>
+                            <select id="select-border" class="min-select bg-[#141414]" onchange="ModuleFrame.updateBorderOptions()">
+                                <option value="none">None (Clean Cut)</option>
+                                <option value="fineart">Fine-Art Solid Line</option>
+                                <option value="vnotch">120mm V-Notch Edge</option>
+                                <option value="instant">Type-100</option>
+                            </select>
+                            
+                            <div id="border-weight-wrapper" class="mt-3 hidden transition-opacity duration-300">
+                                <label class="min-label mb-1"><span>Border Weight</span><div class="flex items-center"><input type="number" id="in-borderWeight" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="3"></div></label>
+                                <input type="range" id="slider-borderWeight" min="1" max="10" value="3" step="0.5" oninput="ModuleFrame.build()">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-4 border-t border-border">
+                        <div class="flex justify-between items-center"><label class="min-label mb-0"><span>IG Safe Zone Guide</span></label>
+                            <button id="btn-safezone" class="min-btn text-[9px] px-2 py-1" onclick="toggleSafeZone()">OFF</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-color" class="tab-content space-y-6 hidden">
+                    <div class="pb-4 border-b border-border mb-4">
+                        <div class="flex justify-between items-center mb-3">
+                            <label class="min-label mb-0"><span class="text-coral-400 font-bold">Cinematic LUT</span></label>
+                            <button onclick="document.getElementById('uploadLut').click()" class="min-btn text-[9px] px-2 py-1 flex items-center gap-1"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg> .CUBE</button>
+                            <input type="file" id="uploadLut" accept=".cube" class="hidden">
+                        </div>
+                        <select id="select-lut" class="min-select mb-3" onchange="ModuleColor.updateLut()">
+                            <option value="none">None (Original)</option>
+                            <option value="kodak">Kodak Portra 400 (Emulation)</option>
+                            <option value="fuji">Fujifilm Pro 400H (Emulation)</option>
+                            <option value="cinematic">Teal & Orange (Cinema)</option>
+                        </select>
+                        <div id="lut-intensity-wrapper" class="opacity-50 pointer-events-none transition-opacity">
+                            <label class="min-label mb-1"><span class="text-[9px] text-neutral-500">LUT Intensity</span><span id="val-lut-intensity" class="text-[9px] text-neutral-500 font-mono">100%</span></label>
+                            <input type="range" id="slider-lut-intensity" min="0" max="100" value="100" oninput="ModuleColor.updateLut()">
+                        </div>
+                    </div>
+
+                    <div><label class="min-label"><span>Brightness</span><div class="flex items-center"><input type="number" id="in-br" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="100"><span>%</span></div></label><input type="range" id="slider-br" min="50" max="150" value="100"></div>
+                    <div><label class="min-label"><span>Contrast</span><div class="flex items-center"><input type="number" id="in-co" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="100"><span>%</span></div></label><input type="range" id="slider-co" min="50" max="150" value="100"></div>
+                    <div><label class="min-label"><span>Saturation</span><div class="flex items-center"><input type="number" id="in-sa" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="100"><span>%</span></div></label><input type="range" id="slider-sa" min="0" max="200" value="100"></div>
+                    <div class="pt-4 border-t border-border"><label class="min-label"><span>Film Grain</span><div class="flex items-center"><input type="number" id="in-grain" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="0"><span>%</span></div></label><input type="range" id="slider-grain" min="0" max="100" value="0"></div>
+                    <button class="w-full text-[10px] text-neutral-500 hover:text-white py-2 border border-border rounded mt-4" onclick="resetColor()">Reset Lab</button>
+                </div>
+
+                <div id="tab-typo" class="tab-content space-y-7 hidden">
+                    <div class="space-y-4">
+                        <div class="flex flex-col gap-2">
+                            <label class="min-label mb-0"><span>Branding Style</span></label>
+                            <div class="flex items-center justify-between">
+                                <div class="flex gap-1">
+                                    <button class="preset-pill" id="btn-preset-gold" onclick="applyCinePreset('gold')">GOLD</button>
+                                    <button class="preset-pill" id="btn-preset-silver" onclick="applyCinePreset('silver')">SILVER</button>
+                                </div>
+                                <button id="btn-save-preset" onclick="saveCurrentPreset()" class="text-[9px] font-bold text-coral-400 border border-coral-900/50 hover:bg-coral-950/20 px-3 py-1.5 rounded transition-colors uppercase tracking-widest flex items-center justify-center min-w-[85px]">SAVE PRESET</button>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-2 bg-[#111] p-2 rounded border border-border">
+                            <input type="color" id="textColorPicker" value="#FFFFFF" oninput="ModuleTypo.updateColorFromPicker()">
+                            <div class="w-px h-3 bg-border mx-1"></div>
+                            <button id="btnBold" class="style-btn px-2 py-0.5 rounded border border-border text-[9px]" onclick="toggleBold()">B</button>
+                            <button id="btnGlow" class="style-btn active px-2 py-0.5 rounded border border-border text-coral-300 text-[9px] bg-coral-900/20" onclick="toggleGlow()">Glow</button>
+                            
+                            <select id="fontSelect" class="bg-transparent text-[10px] outline-none text-neutral-300 ml-auto" onchange="ModuleTypo.update()">
+                                <optgroup label="Modern Sans">
+                                    <option value="Inter">Inter</option>
+                                    <option value="Outfit">Outfit</option>
+                                    <option value="Montserrat">Montserrat</option>
+                                    <option value="Lato">Lato</option>
+                                    <option value="Roboto">Roboto</option>
+                                </optgroup>
+                                <optgroup label="Editorial Serif">
+                                    <option value="Playfair Display">Playfair Display</option>
+                                    <option value="Cinzel">Cinzel</option>
+                                    <option value="Cormorant Garamond">Garamond</option>
+                                    <option value="Lora">Lora</option>
+                                </optgroup>
+                                <optgroup label="Display">
+                                    <option value="Oswald">Oswald</option>
+                                    <option value="Bebas Neue">Bebas Neue</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                        
+                        <div class="pt-2">
+                            <label class="min-label mb-1"><span>Font Scale</span><div class="flex items-center"><input type="number" id="in-fontScale" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="100"><span>%</span></div></label>
+                            <input type="range" id="slider-fontScale" min="30" max="200" value="100" oninput="ModuleTypo.update()">
+                        </div>
+
+                        <div id="glow-slider-wrapper" class="pt-2">
+                            <label class="min-label mb-1"><span class="text-[9px] text-neutral-500">Glow Intensity</span><span id="val-glow" class="text-[9px] text-neutral-500 font-mono">15px</span></label>
+                            <input type="range" id="slider-glow-amount" min="1" max="50" value="15" oninput="ModuleTypo.update()">
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <input type="text" id="watermarkText" placeholder="Caption or Gear..." class="min-input flex-1" oninput="ModuleTypo.update()">
+                            <button onclick="extractExif()" class="min-btn text-[9px] px-2 font-bold text-coral-400">EXIF</button>
+                        </div>
+                        
+                        <div id="custom-presets-container" class="flex flex-wrap gap-2 pt-2 empty:hidden"></div>
+                    </div>
+
+                    <div id="target-display-wrapper" class="pt-4 border-t border-border space-y-3">
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="min-label mb-0"><span>Target Display</span></label>
+                        </div>
+                        <select id="watermarkTarget" class="min-select" onchange="ModuleTypo.update()">
+                            <option value="all">Apply to All Slides</option>
+                            <option value="1">Slide 1 (Cover) Only</option>
+                            <option value="2">Slide 2 Only</option>
+                            <option value="3">Slide 3 Only</option>
+                            <option value="4">Slide 4 Only</option>
+                        </select>
+                    </div>
+
+                    <div class="pt-4 border-t border-border space-y-3">
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="min-label mb-0 flex items-center gap-2 cursor-pointer hover:text-white transition-colors">
+                                <input type="checkbox" id="toggle-logo" class="w-3 h-3 accent-coral-500 cursor-pointer" onchange="handleLogoToggleCheckbox()">
+                                <span>Custom Logo (PNG)</span>
+                            </label>
+                            <span id="logoStatus" class="text-[9px] text-green-400 hidden">✅ Loaded</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <button onclick="document.getElementById('uploadLogo').click()" class="bg-[#111] border border-border px-3 py-1.5 rounded text-[10px] flex-1 hover:text-white transition-colors">+ Upload Logo</button>
+                            <input type="file" id="uploadLogo" accept="image/png" class="hidden">
+                        </div>
+                        <div id="logoSettings" class="opacity-30 pointer-events-none transition-opacity duration-300 space-y-3 pt-2">
+                            <div><label class="min-label"><span>Logo Scale</span><div class="flex items-center"><input type="number" id="in-logoScale" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="20"><span>%</span></div></label><input type="range" id="sliderLogoScale" min="5" max="100" value="20" oninput="ModuleTypo.update()"></div>
+                            <div><label class="min-label"><span>Opacity</span><div class="flex items-center"><input type="number" id="in-logoOp" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="100"><span>%</span></div></label><input type="range" id="sliderLogoOp" min="10" max="100" value="100" oninput="ModuleTypo.update()"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
-            
-            <button id="applyCropBtn" class="mt-4 px-6 py-3 bg-rose-600 text-white font-bold rounded-lg w-full hover:bg-rose-500 transition-all uppercase tracking-tighter shadow-lg shadow-rose-900/50">
-                Confirm Master Crop
-            </button>
-        </div>
 
-        <div class="col-span-full border-t border-neutral-800 my-2"></div>
-
-        <div>
-            <label class="block text-sm font-semibold mb-2 text-neutral-400 uppercase tracking-wider">4. Insta Canvas</label>
-            <select id="aspectRatio" class="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-rose-500 text-white transition">
-                <option value="4/5" selected>4:5 Vertical (High-Impact)</option>
-                <option value="1/1">1:1 Square (Classic)</option>
-            </select>
-        </div>
-
-        <div>
-            <label class="block text-sm font-semibold mb-2 text-neutral-400 uppercase tracking-wider">5. Margin & Background</label>
-            <div class="grid grid-cols-2 gap-2">
-                <select id="bgStyle" class="bg-neutral-950 border border-neutral-800 rounded-lg px-2 py-3 outline-none focus:ring-2 focus:ring-rose-500 text-white text-xs">
-                    <option value="#000000" selected>Deep Black</option>
-                    <option value="#FFFFFF">Gallery White</option>
-                </select>
-                <select id="frameStyle" class="bg-neutral-950 border border-neutral-800 rounded-lg px-2 py-3 outline-none focus:ring-2 focus:ring-rose-500 text-white text-xs">
-                    <option value="fit" selected>Edge-to-Edge</option>
-                    <option value="margin">Classic Frame</option>
-                </select>
+            <div class="p-6 border-t border-border shrink-0 bg-panel space-y-3">
+                <div>
+                    <label class="min-label mb-1"><span>Export Quality</span></label>
+                    <select id="exportQuality" class="min-select bg-[#141414] border-neutral-700 font-bold">
+                        <option value="1080">Instagram Optimized (Web)</option>
+                        <option value="native">High-Res Archive (Native Pro)</option>
+                    </select>
+                </div>
+                <button class="w-full bg-coral-500 hover:bg-coral-600 text-white font-bold py-3 rounded text-[11px] uppercase transition-all shadow-lg active:scale-95 opacity-50 cursor-not-allowed" id="btn-export">Export Gallery</button>
             </div>
-        </div>
-
-        <div class="col-span-full">
-            <label class="block text-sm font-semibold mb-2 text-neutral-400 uppercase tracking-wider">6. Output Strategy</label>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <label class="relative flex items-center justify-center p-4 border border-neutral-700 rounded-xl cursor-pointer hover:bg-neutral-800 transition peer-checked:border-rose-500">
-                    <input type="radio" name="mode" value="seamless" checked class="hidden peer">
-                    <div class="text-center peer-checked:text-rose-400">
-                        <div class="font-bold mb-1">Seamless</div>
-                        <div class="text-[10px] text-neutral-500 uppercase">Panorama Slice</div>
-                    </div>
-                </label>
-                <label class="relative flex items-center justify-center p-4 border border-neutral-700 rounded-xl cursor-pointer hover:bg-neutral-800 transition peer-checked:border-rose-500">
-                    <input type="radio" name="mode" value="detail" class="hidden peer">
-                    <div class="text-center peer-checked:text-rose-400">
-                        <div class="font-bold mb-1">Grid (4)</div>
-                        <div class="text-[10px] text-neutral-500 uppercase">Multi-Zoom</div>
-                    </div>
-                </label>
-                <label class="relative flex items-center justify-center p-4 border border-neutral-700 rounded-xl cursor-pointer hover:bg-neutral-800 transition peer-checked:border-rose-500">
-                    <input type="radio" name="mode" value="single" class="hidden peer">
-                    <div class="text-center peer-checked:text-rose-400">
-                        <div class="font-bold mb-1">Single</div>
-                        <div class="text-[10px] text-neutral-500 uppercase">Classic Shot</div>
-                    </div>
-                </label>
-            </div>
-        </div>
-
-        <div class="col-span-full bg-neutral-950 p-4 rounded-xl border border-neutral-800">
-            <div class="flex justify-between items-center mb-3">
-                <label class="block text-sm font-semibold text-rose-400 uppercase tracking-wider">7. Typography (Auto-Align)</label>
-                <button id="savePresetBtn" class="text-[10px] bg-rose-600 hover:bg-rose-500 text-white px-2 py-1 rounded transition font-bold uppercase">Save Preset</button>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
-                <input type="text" id="watermarkText" placeholder="Photo caption or gear data..." class="col-span-full md:col-span-4 bg-neutral-900 border border-neutral-700 rounded-lg px-4 py-2 outline-none focus:ring-2 focus:ring-rose-500 text-white placeholder-neutral-600 transition text-sm">
-                <select id="watermarkFont" class="col-span-full md:col-span-2 bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-rose-500 text-xs text-neutral-300">
-                    <optgroup label="Editorial Serif">
-                        <option value="'Playfair Display', serif" selected>Playfair (Vogue Style)</option>
-                        <option value="'Cinzel', serif">Cinzel (Movie Poster)</option>
-                        <option value="'Cormorant Garamond', serif">Garamond (Elegant)</option>
-                    </optgroup>
-                    <optgroup label="Modern Sans">
-                        <option value="'Inter', sans-serif">Inter (Minimal)</option>
-                        <option value="'Montserrat', sans-serif">Montserrat (Geometric)</option>
-                    </optgroup>
-                    <optgroup label="Technical">
-                        <option value="'Space Mono', monospace">Space Mono (Gear Data)</option>
-                        <option value="'Caveat', cursive">Caveat (Signature)</option>
-                    </optgroup>
-                </select>
-                <select id="watermarkAlign" class="bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-rose-500 text-xs text-neutral-300">
-                    <option value="left" selected>Align Left</option>
-                    <option value="center">Align Center</option>
-                    <option value="right">Align Right</option>
-                </select>
-                <select id="watermarkTarget" class="bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-rose-500 text-xs text-neutral-300">
-                    <option value="first">Cover Only</option>
-                    <option value="all">All Slides</option>
-                </select>
-            </div>
-            <div id="presetContainer" class="flex gap-2 flex-wrap"></div>
-        </div>
-
-        <div class="col-span-full bg-neutral-950 p-4 rounded-xl border border-neutral-800">
-            <label class="block text-sm font-semibold mb-3 text-rose-400 uppercase tracking-wider">8. Film Grain</label>
-            <div class="flex items-center gap-4">
-                <input type="range" id="grainSlider" min="0" max="100" value="15" class="w-full h-2 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-rose-500">
-                <span id="grainValueDisplay" class="text-sm font-mono text-neutral-400 w-12 text-right">15%</span>
-            </div>
-        </div>
-    </div>
-
-    <div id="interactiveControlPanel" class="bg-neutral-900 p-5 md:p-6 rounded-2xl shadow-xl mb-8 w-full max-w-4xl border border-rose-900/50 hidden">
-        <div class="flex justify-between items-center mb-4">
-            <h3 class="text-rose-400 font-bold uppercase tracking-widest text-xs">🎯 Phase 2: Insta Detail Framing</h3>
-        </div>
-        <div class="flex gap-2 mb-4 md:mb-6 overflow-x-auto pb-2">
-            <button class="slide-btn flex-1 min-w-[70px] py-2 bg-rose-600 text-white rounded-lg font-bold transition text-xs uppercase shadow-lg shadow-rose-900/50" data-idx="0">Slide 1</button>
-            <button class="slide-btn flex-1 min-w-[70px] py-2 bg-neutral-800 text-neutral-400 rounded-lg hover:bg-neutral-700 transition text-xs uppercase" data-idx="1">Slide 2</button>
-            <button class="slide-btn flex-1 min-w-[70px] py-2 bg-neutral-800 text-neutral-400 rounded-lg hover:bg-neutral-700 transition text-xs uppercase" data-idx="2">Slide 3</button>
-            <button class="slide-btn flex-1 min-w-[70px] py-2 bg-neutral-800 text-neutral-400 rounded-lg hover:bg-neutral-700 transition text-xs uppercase" data-idx="3">Slide 4</button>
-        </div>
-        <div class="flex flex-col items-center bg-neutral-950 p-4 rounded-xl border border-neutral-800 relative w-full overflow-hidden">
-            <canvas id="detailEditCanvas" class="shadow-2xl rounded border border-neutral-800 max-w-full touch-none grab-cursor" width="400" height="500"></canvas>
-            <p class="text-[10px] text-neutral-500 mt-3 uppercase tracking-widest" id="detailEditStatus">Drag to Pan / Pinch to Zoom</p>
-        </div>
-    </div>
-
-    <div class="w-full max-w-5xl mb-12">
-        <h2 class="text-lg font-bold mb-4 text-neutral-300 uppercase tracking-widest text-center">Preview Results</h2>
-        
-        <div id="previewContainer" class="flex gap-4 overflow-x-auto pb-8 snap-x no-scrollbar border border-neutral-800 p-4 rounded-xl bg-neutral-900/50 min-h-[300px] items-center justify-start text-neutral-600 text-sm">
-            Please confirm Master Crop to see results.
-        </div>
-        
-        <div class="flex flex-col items-center justify-center mt-6">
-            <button id="download" class="px-10 py-4 bg-rose-600 text-white font-bold rounded-xl hover:bg-rose-500 transition-all text-sm md:text-lg shadow-lg shadow-rose-900/50 hidden uppercase tracking-tighter">
-                Download All (PC/Mac)
-            </button>
-        </div>
+        </aside>
     </div>
 
     <script>
-        let currentImg = null; let rawDeSqueezedCanvas = null; let masterFilmCanvas = null;    
-        let generatedImages = []; let grainCanvas = null;
-        
-        const upload = document.getElementById('upload'); const squeezeSelect = document.getElementById('squeeze');
-        const filmFormatSelect = document.getElementById('filmFormat'); const visualCropPanel = document.getElementById('visualCropPanel');
-        const cropperImg = document.getElementById('cropperImg'); const cropBox = document.getElementById('cropBox');
-        const applyCropBtn = document.getElementById('applyCropBtn'); const interactiveControlPanel = document.getElementById('interactiveControlPanel');
-        const slideBtns = document.querySelectorAll('.slide-btn'); const detailEditCanvas = document.getElementById('detailEditCanvas');
-        const previewContainer = document.getElementById('previewContainer'); const downloadBtn = document.getElementById('download');
-        const watermarkText = document.getElementById('watermarkText'); const presetContainer = document.getElementById('presetContainer');
-        const savePresetBtn = document.getElementById('savePresetBtn');
-        const fileNameDisplay = document.getElementById('fileNameDisplay');
-        const cContainer = document.getElementById('cropperContainer');
+        const DOM = {
+            mainStage: document.getElementById('main-stage'), main: document.getElementById('image-container'), 
+            previewArea: document.getElementById('preview-area'), previewInner: document.getElementById('preview-area-inner'),
+            btnBA: document.getElementById('btn-split-view'),
+            upZone: document.getElementById('upload-zone'), upInput: document.getElementById('upload-input'), upText: document.getElementById('uploadText'),
+            sRatio: document.getElementById('select-ratio'), sSlides: document.getElementById('select-slides'), sSqueeze: document.getElementById('select-squeeze'), 
+            sAngle: document.getElementById('slider-angle'), inAngle: document.getElementById('in-angle'),
+            sBr: document.getElementById('slider-br'), inBr: document.getElementById('in-br'), 
+            sCo: document.getElementById('slider-co'), inCo: document.getElementById('in-co'),
+            sSa: document.getElementById('slider-sa'), inSa: document.getElementById('in-sa'),
+            sGrain: document.getElementById('slider-grain'), inGrain: document.getElementById('in-grain'),
+            wmText: document.getElementById('watermarkText'), fontSel: document.getElementById('fontSelect'), textColor: document.getElementById('textColorPicker'), wmTarget: document.getElementById('watermarkTarget'),
+            sGlowAmt: document.getElementById('slider-glow-amount'), valGlow: document.getElementById('val-glow'), glowWrapper: document.getElementById('glow-slider-wrapper'),
+            
+            sFontScale: document.getElementById('slider-fontScale'), inFontScale: document.getElementById('in-fontScale'), 
+            
+            upLogo: document.getElementById('uploadLogo'), logoSettings: document.getElementById('logoSettings'), logoStatus: document.getElementById('logoStatus'), toggleLogo: document.getElementById('toggle-logo'),
+            sLogoScale: document.getElementById('sliderLogoScale'), inLogoScale: document.getElementById('in-logoScale'),
+            sLogoOp: document.getElementById('sliderLogoOp'), inLogoOp: document.getElementById('in-logoOp'),
+            btnExport: document.getElementById('btn-export'), badge: document.getElementById('smart-snap-badge'),
+            zoomControls: document.getElementById('zoom-controls'), sliderZoom: document.getElementById('slider-zoom'), inZoom: document.getElementById('in-zoom'),
+            marginScaleWrapper: document.getElementById('margin-scale-wrapper'), sMarginScale: document.getElementById('slider-margin-scale'), inMarginScale: document.getElementById('in-margin-scale'),
+            
+            sBorder: document.getElementById('select-border'), sBorderWeight: document.getElementById('slider-borderWeight'), inBorderWeight: document.getElementById('in-borderWeight'),
+            borderWeightWrapper: document.getElementById('border-weight-wrapper'),
+            
+            targetWrapper: document.getElementById('target-display-wrapper'),
+            presetsContainer: document.getElementById('custom-presets-container'),
+            exportQuality: document.getElementById('exportQuality')
+        };
 
-        let savedPresets = JSON.parse(localStorage.getItem('carouselPresets')) || [
-            "Antenna for the Vanished - Oaxaca, MX", "Shot on Lumix S5M2X | Sirui Saturn 1.6x"
-        ];
-        function renderPresets() {
-            presetContainer.innerHTML = '';
-            savedPresets.forEach((text, index) => {
-                const wrapper = document.createElement('div'); wrapper.className = 'flex items-center bg-neutral-800 rounded-md overflow-hidden';
-                const applyBtn = document.createElement('button'); applyBtn.className = 'text-[10px] hover:bg-neutral-700 px-2 py-1 text-neutral-400 truncate max-w-[120px]';
-                applyBtn.innerText = text; applyBtn.onclick = () => { watermarkText.value = text; processFinalGallery(); };
-                const delBtn = document.createElement('button'); delBtn.className = 'text-[10px] bg-rose-950/20 hover:bg-rose-700 px-1.5 py-1 text-rose-300';
-                delBtn.innerText = '✕'; delBtn.onclick = () => { savedPresets.splice(index, 1); localStorage.setItem('carouselPresets', JSON.stringify(savedPresets)); renderPresets(); };
-                wrapper.appendChild(applyBtn); wrapper.appendChild(delBtn); presetContainer.appendChild(wrapper);
+        let cropper = null; let originalImg = null; let rawFile = null; let currentStrategy = 'seamless'; 
+        let proxyCropUrl = null; 
+        let staticGrainDataUrl = null; let activeGlobalRatio = 1; let zoomMode = 'fit';
+        let isMargin = false; let bgColor = '#000000'; let isSafeZone = false;
+        let isBold = false; let isGlow = true; let isExifOn = false; let manualBackupText = "";
+        let tPosX = 50, tPosY = 94, lPosX = 50, lPosY = 80; let logoObj = null; let logoUrl = null; let activeTarget = null;
+        let isCropperReady = false; let textStylePreset = 'none'; 
+        let isSplitView = false; let splitPos = 50; 
+        let savedCustomPresets = [];
+        let lutStyleStr = 'none';
+
+        function initGrain() {
+            const c = document.createElement('canvas'); c.width = 256; c.height = 256; const ctx = c.getContext('2d'); const id = ctx.createImageData(256, 256);
+            for (let i = 0; i < id.data.length; i += 4) { const v = Math.random() < 0.5 ? 0 : 255; id.data[i] = id.data[i+1] = id.data[i+2] = v; id.data[i+3] = 40; }
+            ctx.putImageData(id, 0, 0); staticGrainDataUrl = c.toDataURL('image/png');
+        }
+        initGrain();
+
+        window.addEventListener('DOMContentLoaded', () => { 
+            loadPresetsFromStorage(); 
+            initGlobalDrag(); 
+        });
+
+        function loadPresetsFromStorage() {
+            const stored = localStorage.getItem('cineroll_presets_v2');
+            if (stored) { 
+                try { savedCustomPresets = JSON.parse(stored); renderPresetChips(); } 
+                catch(e) { console.error("Preset parsing error", e); }
+            }
+        }
+
+        function bindInputSlider(slider, input, callback) {
+            if(!slider || !input) return;
+            slider.addEventListener('input', (e) => { input.value = e.target.value; if(callback) callback(); });
+            input.addEventListener('change', (e) => { 
+                let val = parseFloat(e.target.value);
+                if(val < parseFloat(slider.min)) val = slider.min;
+                if(val > parseFloat(slider.max)) val = slider.max;
+                e.target.value = val; slider.value = val; 
+                if(callback) callback(); 
             });
         }
-        savePresetBtn.onclick = () => { const text = watermarkText.value.trim(); if (text && !savedPresets.includes(text)) { savedPresets.push(text); localStorage.setItem('carouselPresets', JSON.stringify(savedPresets)); renderPresets(); } };
-        renderPresets();
+        bindInputSlider(DOM.sAngle, DOM.inAngle, () => { if(cropper) cropper.rotateTo(DOM.sAngle.value); });
+        bindInputSlider(DOM.sBr, DOM.inBr, () => ModuleColor.update());
+        bindInputSlider(DOM.sCo, DOM.inCo, () => ModuleColor.update());
+        bindInputSlider(DOM.sSa, DOM.inSa, () => ModuleColor.update());
+        bindInputSlider(DOM.sGrain, DOM.inGrain, () => ModuleColor.update());
+        bindInputSlider(DOM.sLogoScale, DOM.inLogoScale, () => ModuleTypo.update());
+        bindInputSlider(DOM.sLogoOp, DOM.inLogoOp, () => ModuleTypo.update());
+        bindInputSlider(DOM.sMarginScale, DOM.inMarginScale, () => ModuleFrame.build());
+        bindInputSlider(DOM.sFontScale, DOM.inFontScale, () => ModuleTypo.update()); 
+        bindInputSlider(DOM.sBorderWeight, DOM.inBorderWeight, () => ModuleFrame.build());
 
-        let cBox = { x: 0, y: 0, w: 100, h: 100 }; let targetFormatRatio = null;
-        let currentEditIdx = 0; let detailCrops = [{ z: 0.95, x: 50, y: 50 }, { z: 1.5, x: 0, y: 50 }, { z: 1.5, x: 50, y: 50 }, { z: 1.5, x: 100, y: 50 }];
+        DOM.sliderZoom.addEventListener('input', (e) => { zoomMode = 'custom'; DOM.inZoom.value = e.target.value; applyZoom(); });
+        DOM.inZoom.addEventListener('change', (e) => { zoomMode = 'custom'; DOM.sliderZoom.value = e.target.value; applyZoom(); });
 
-        upload.addEventListener('change', (e) => {
-            const file = e.target.files[0]; if(!file) return;
-            fileNameDisplay.innerText = file.name;
-            document.getElementById('emptyState').classList.add('hidden');
-            document.getElementById('imageStage').classList.remove('hidden');
-            const reader = new FileReader();
-            reader.onload = (event) => { currentImg = new Image(); currentImg.onload = setupRawCanvas; currentImg.src = event.target.result; };
-            reader.readAsDataURL(file);
-        });
-
-        squeezeSelect.addEventListener('change', setupRawCanvas);
-
-        function setupRawCanvas() {
-            if(!currentImg) return;
-            const sf = parseFloat(squeezeSelect.value);
-            rawDeSqueezedCanvas = document.createElement('canvas'); rawDeSqueezedCanvas.width = currentImg.width * sf; rawDeSqueezedCanvas.height = currentImg.height;
-            rawDeSqueezedCanvas.getContext('2d').drawImage(currentImg, 0, 0, currentImg.width, currentImg.height, 0, 0, rawDeSqueezedCanvas.width, rawDeSqueezedCanvas.height);
-            cropperImg.src = rawDeSqueezedCanvas.toDataURL('image/jpeg', 0.8);
-            cropperImg.onload = () => updateFormatAndResetBox();
-        }
-
-        filmFormatSelect.addEventListener('change', updateFormatAndResetBox);
-
-        function updateFormatAndResetBox() {
-            if(!rawDeSqueezedCanvas) return;
-            const format = filmFormatSelect.value; visualCropPanel.classList.remove('hidden');
-            if (format === 'original') { 
-                targetFormatRatio = null; cBox.x = 0; cBox.y = 0; cBox.w = cropperImg.clientWidth; cBox.h = cropperImg.clientHeight; applyCropBtn.innerText = "Confirm Original Ratio"; 
-            } else {
-                const [w, h] = format.split('/'); targetFormatRatio = parseFloat(w) / parseFloat(h);
-                const cw = cropperImg.clientWidth; const ch = cropperImg.clientHeight;
-                if (cw / ch > targetFormatRatio) { cBox.h = ch * 0.9; cBox.w = cBox.h * targetFormatRatio; } 
-                else { cBox.w = cw * 0.9; cBox.h = cBox.w / targetFormatRatio; }
-                cBox.x = (cw - cBox.w) / 2; cBox.y = (ch - cBox.h) / 2; applyCropBtn.innerText = "Confirm Master Crop";
-            }
-            renderCropBox();
-        }
-
-        function renderCropBox() { cropBox.style.left = `${cBox.x}px`; cropBox.style.top = `${cBox.y}px`; cropBox.style.width = `${cBox.w}px`; cropBox.style.height = `${cBox.h}px`; }
+        window.toggleSplitView = () => {
+            isSplitView = !isSplitView;
+            DOM.btnBA.classList.toggle('active', isSplitView);
+            DOM.btnBA.classList.toggle('text-coral-400', isSplitView);
+            ModuleFrame.build(); 
+        };
         
-        function enforceBoxBounds() {
-            const mw = cropperImg.clientWidth; const mh = cropperImg.clientHeight;
-            if(cBox.w > mw) { cBox.w = mw; cBox.h = mw / targetFormatRatio; }
-            if(cBox.h > mh) { cBox.h = mh; cBox.w = mh * targetFormatRatio; }
-            if(cBox.x < 0) cBox.x = 0; if(cBox.y < 0) cBox.y = 0;
-            if(cBox.x + cBox.w > mw) cBox.x = mw - cBox.w; if(cBox.y + cBox.h > mh) cBox.y = mh - cBox.h;
-        }
+        window.toggleZenMode = () => {
+            if(!proxyCropUrl) return;
+            document.body.classList.toggle('zen-mode');
+            setTimeout(() => applyZoom(), 100);
+        };
 
-        let isMasterDragging = false; let masterLastX, masterLastY;
-        let masterInitialDistance = null;
-
-        function getDistance(touches) { return Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY); }
-
-        function startMasterDrag(e) {
-            if(targetFormatRatio === null) return;
-            if (e.touches && e.touches.length === 2) {
-                masterInitialDistance = getDistance(e.touches);
-                isMasterDragging = false; return;
-            }
-            isMasterDragging = true; cContainer.style.cursor = 'grabbing';
-            masterLastX = e.touches ? e.touches[0].clientX : e.clientX;
-            masterLastY = e.touches ? e.touches[0].clientY : e.clientY;
-        }
-        
-        function moveMasterDrag(e) {
-            if (e.touches && e.touches.length === 2 && masterInitialDistance !== null) {
-                e.preventDefault();
-                const currentDistance = getDistance(e.touches);
-                const sf = currentDistance > masterInitialDistance ? 1.02 : 0.98;
-                const ow = cBox.w; const oh = cBox.h;
-                cBox.w *= sf; cBox.h *= sf; 
-                cBox.x -= (cBox.w - ow) / 2; cBox.y -= (cBox.h - oh) / 2; 
-                if(cBox.w < 50) { cBox.w = 50; cBox.h = 50 / targetFormatRatio; }
-                enforceBoxBounds(); renderCropBox();
-                masterInitialDistance = currentDistance; return;
-            }
-            if (!isMasterDragging) return;
-            if (e.touches) e.preventDefault(); 
-            const cx = e.touches ? e.touches[0].clientX : e.clientX;
-            const cy = e.touches ? e.touches[0].clientY : e.clientY;
-            cBox.x += (cx - masterLastX); cBox.y += (cy - masterLastY);
-            masterLastX = cx; masterLastY = cy;
-            enforceBoxBounds(); renderCropBox();
-        }
-        function endMasterDrag() { isMasterDragging = false; masterInitialDistance = null; cContainer.style.cursor = 'grab'; }
-
-        cContainer.addEventListener('mousedown', startMasterDrag); cContainer.addEventListener('touchstart', startMasterDrag, {passive: false});
-        window.addEventListener('mousemove', moveMasterDrag, {passive: false}); window.addEventListener('touchmove', moveMasterDrag, {passive: false});
-        window.addEventListener('mouseup', endMasterDrag); window.addEventListener('touchend', endMasterDrag);
-
-        cContainer.addEventListener('wheel', (e) => { 
-            if(targetFormatRatio === null) return; e.preventDefault(); 
-            const sf = e.deltaY > 0 ? 0.95 : 1.05; const ow = cBox.w; const oh = cBox.h; 
-            cBox.w *= sf; cBox.h *= sf; cBox.x -= (cBox.w - ow) / 2; cBox.y -= (cBox.h - oh) / 2; 
-            if(cBox.w < 50) { cBox.w = 50; cBox.h = 50 / targetFormatRatio; } 
-            enforceBoxBounds(); renderCropBox(); 
-        }, {passive: false});
-
-        applyCropBtn.addEventListener('click', () => {
-            if(!rawDeSqueezedCanvas) return;
-            masterFilmCanvas = document.createElement('canvas');
-            if (filmFormatSelect.value === 'original') { 
-                masterFilmCanvas.width = rawDeSqueezedCanvas.width; masterFilmCanvas.height = rawDeSqueezedCanvas.height; 
-                masterFilmCanvas.getContext('2d').drawImage(rawDeSqueezedCanvas, 0, 0); 
-            } else {
-                const sx = rawDeSqueezedCanvas.width / cropperImg.clientWidth; const sy = rawDeSqueezedCanvas.height / cropperImg.clientHeight;
-                masterFilmCanvas.width = cBox.w * sx; masterFilmCanvas.height = cBox.h * sy;
-                masterFilmCanvas.getContext('2d').drawImage(rawDeSqueezedCanvas, cBox.x * sx, cBox.y * sy, masterFilmCanvas.width, masterFilmCanvas.height, 0, 0, masterFilmCanvas.width, masterFilmCanvas.height);
-            }
-            visualCropPanel.classList.add('border-green-500'); setTimeout(() => visualCropPanel.classList.remove('border-green-500'), 500);
-            detailCrops = [{ z: 0.95, x: 50, y: 50 }, { z: 1.5, x: 0, y: 50 }, { z: 1.5, x: 50, y: 50 }, { z: 1.5, x: 100, y: 50 }];
-            currentEditIdx = 0; updateBtnUI(); processFinalGallery();
-        });
-
-        function updateBtnUI() { slideBtns.forEach((b, i) => { if(i === currentEditIdx) { b.classList.replace('bg-neutral-800', 'bg-rose-600'); b.classList.add('shadow-lg', 'shadow-rose-900/50'); } else { b.classList.replace('bg-rose-600', 'bg-neutral-800'); b.classList.remove('shadow-lg', 'shadow-rose-900/50'); } }); }
-
-        let isDetailDragging = false; let detailLastX, detailLastY; let detailInitialDistance = null;
-
-        function startDetailDrag(e) {
-            if (e.touches && e.touches.length === 2) { detailInitialDistance = getDistance(e.touches); isDetailDragging = false; return; }
-            isDetailDragging = true; detailLastX = e.touches ? e.touches[0].clientX : e.clientX; detailLastY = e.touches ? e.touches[0].clientY : e.clientY;
-        }
-        
-        function moveDetailDrag(e) {
-            if (!masterFilmCanvas) return;
-            if (e.touches && e.touches.length === 2 && detailInitialDistance !== null) {
-                e.preventDefault(); const currentDistance = getDistance(e.touches); const s = detailCrops[currentEditIdx];
-                s.z = Math.max(0.3, Math.min(4.0, s.z + (currentDistance > detailInitialDistance ? 0.04 : -0.04))); 
-                renderDetailEditorPreview(); detailInitialDistance = currentDistance;
-                clearTimeout(detailEditCanvas.wT); detailEditCanvas.wT = setTimeout(processFinalGallery, 400); return;
-            }
-            if (!isDetailDragging) return;
-            if(e.touches) e.preventDefault();
-            const cx = e.touches ? e.touches[0].clientX : e.clientX; const cy = e.touches ? e.touches[0].clientY : e.clientY;
-            const s = detailCrops[currentEditIdx]; const sens = 0.3 / s.z; 
-            s.x = Math.max(0, Math.min(100, s.x - (cx - detailLastX) * sens)); s.y = Math.max(0, Math.min(100, s.y - (cy - detailLastY) * sens)); 
-            detailLastX = cx; detailLastY = cy; renderDetailEditorPreview();
-        }
-        function endDetailDrag() { detailInitialDistance = null; if (isDetailDragging) { isDetailDragging = false; processFinalGallery(); } }
-
-        detailEditCanvas.addEventListener('mousedown', startDetailDrag); detailEditCanvas.addEventListener('touchstart', startDetailDrag, {passive: false});
-        window.addEventListener('mousemove', moveDetailDrag, {passive: false}); window.addEventListener('touchmove', moveDetailDrag, {passive: false});
-        window.addEventListener('mouseup', endDetailDrag); window.addEventListener('touchend', endDetailDrag);
-
-        detailEditCanvas.addEventListener('wheel', (e) => { 
-            e.preventDefault(); if(!masterFilmCanvas) return;
-            const s = detailCrops[currentEditIdx]; s.z = Math.max(0.3, Math.min(4.0, s.z + (e.deltaY > 0 ? -0.05 : 0.05))); 
-            renderDetailEditorPreview(); clearTimeout(detailEditCanvas.wT); detailEditCanvas.wT = setTimeout(processFinalGallery, 400); 
-        }, {passive: false});
-
-        function renderDetailEditorPreview() {
-            if (!masterFilmCanvas) return; const [aw, ah] = document.getElementById('aspectRatio').value.split('/'); const tr = aw / ah;
-            const ctx = detailEditCanvas.getContext('2d'); detailEditCanvas.width = 400 * tr; detailEditCanvas.height = 400;
-            drawInstaFrame(ctx, detailEditCanvas.width, detailEditCanvas.height, detailCrops[currentEditIdx], masterFilmCanvas, tr);
-        }
-
-        slideBtns.forEach(btn => { btn.addEventListener('click', (e) => { currentEditIdx = parseInt(e.target.dataset.idx); updateBtnUI(); renderDetailEditorPreview(); processFinalGallery(); }); });
-
-        // 🌟 수정된 갤러리 렌더링 (사진과 개별 다운로드 버튼 그룹화) 🌟
-        function processFinalGallery() {
-            if (!masterFilmCanvas) return; generatedImages = []; previewContainer.innerHTML = ''; const [aw, ah] = document.getElementById('aspectRatio').value.split('/'); const tr = aw / ah;
-            let mode = 'seamless'; document.getElementsByName('mode').forEach(r => { if(r.checked) mode = r.value; });
-            interactiveControlPanel.classList.toggle('hidden', mode !== 'detail'); if(mode === 'detail') renderDetailEditorPreview();
-            let eh = 1500; let ew = eh * tr;
+        let isDraggingSplit = false;
+        window.addEventListener('mousemove', (e) => {
+            if(!isDraggingSplit || !isSplitView) return;
+            e.preventDefault(); 
+            const parentWrapper = document.getElementById('preview-wrapper-parent');
+            const layerImagesBefore = document.getElementById('layer-images-before');
+            const handle = document.getElementById('split-handle');
+            if(!parentWrapper || !layerImagesBefore || !handle) return;
             
-            if (mode === 'seamless') {
-                const ns = Math.round((masterFilmCanvas.width / masterFilmCanvas.height) / tr) || 1; const sw = masterFilmCanvas.width / ns;
-                for (let i = 0; i < ns; i++) {
-                    const c = document.createElement('canvas'); c.width = ew; c.height = eh; const ctx = c.getContext('2d'); ctx.drawImage(masterFilmCanvas, sw * i, 0, sw, masterFilmCanvas.height, 0, 0, ew, eh);
-                    applyGrainAndText(ctx, ew, eh, i === 0, {x:0, y:0, w:ew, h:eh}); generatedImages.push(c.toDataURL('image/jpeg', 0.95));
+            const rect = parentWrapper.getBoundingClientRect();
+            let pct = ((e.clientX - rect.left) / rect.width) * 100;
+            pct = Math.max(0, Math.min(100, pct));
+            splitPos = pct;
+            
+            layerImagesBefore.style.clipPath = `polygon(0 0, ${pct}% 0, ${pct}% 100%, 0 100%)`;
+            layerImagesBefore.style.WebkitClipPath = `polygon(0 0, ${pct}% 0, ${pct}% 100%, 0 100%)`; 
+            handle.style.left = `${pct}%`;
+        });
+        window.addEventListener('mouseup', () => { isDraggingSplit = false; });
+
+        document.addEventListener('keydown', (e) => {
+            const isInput = ['INPUT', 'TEXTAREA'].includes(e.target.tagName);
+            if(e.key.toLowerCase() === 'f' && !isInput) { e.preventDefault(); toggleZenMode(); }
+            if(e.key === 'Escape' && document.body.classList.contains('zen-mode')) { toggleZenMode(); }
+            
+            if(e.key === 'Enter' && !isInput && e.target.tagName !== 'BUTTON') {
+                const formatTab = document.getElementById('tab-format');
+                if(formatTab && !formatTab.classList.contains('hidden') && cropper && isCropperReady) {
+                    e.preventDefault(); applyCropAndRender(); 
                 }
-            } else if (mode === 'detail') {
-                detailCrops.forEach((s, idx) => { const c = document.createElement('canvas'); c.width = ew; c.height = eh; const ctx = c.getContext('2d'); const ib = drawInstaFrame(ctx, ew, eh, s, masterFilmCanvas, tr); applyGrainAndText(ctx, ew, eh, idx === 0, ib); generatedImages.push(c.toDataURL('image/jpeg', 0.95)); });
-            } else {
-                const c = document.createElement('canvas'); c.width = ew; c.height = eh; const ctx = c.getContext('2d'); const ib = drawLetterboxFrame(ctx, ew, eh, masterFilmCanvas, tr); applyGrainAndText(ctx, ew, eh, true, ib); generatedImages.push(c.toDataURL('image/jpeg', 0.95));
             }
-            
-            generatedImages.forEach((dataUrl, i) => { 
-                // 1. 개별 이미지를 감싸는 컨테이너 생성
-                const wrapper = document.createElement('div');
-                wrapper.className = 'flex flex-col items-center gap-3 snap-center shrink-0 mb-4';
+            if(activeTarget && !isInput) {
+                const step = 0.5; let moved = false;
+                if(e.key === 'ArrowUp') { if(activeTarget==='text') tPosY-=step; else lPosY-=step; moved=true; }
+                if(e.key === 'ArrowDown') { if(activeTarget==='text') tPosY+=step; else lPosY+=step; moved=true; }
+                if(e.key === 'ArrowLeft') { if(activeTarget==='text') tPosX-=step; else lPosX-=step; moved=true; }
+                if(e.key === 'ArrowRight') { if(activeTarget==='text') tPosX+=step; else lPosX+=step; moved=true; }
+                if(moved) { e.preventDefault(); ModuleTypo.updatePositions(); }
+            }
+        });
 
-                // 2. 이미지 태그 생성
-                const img = document.createElement('img'); 
-                img.src = dataUrl; 
-                img.className = `h-[250px] md:h-[350px] w-auto object-cover rounded shadow-2xl transition-all saveable-img ${mode === 'detail' && i === currentEditIdx ? 'border-4 border-rose-500 scale-[1.03] z-10' : 'border border-neutral-800'}`; 
-                if(mode === 'detail') {
-                    img.addEventListener('click', () => { currentEditIdx = i; updateBtnUI(); renderDetailEditorPreview(); processFinalGallery(); }); 
-                    img.style.cursor = 'pointer';
+        function switchTab(target) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.innerText.toLowerCase() === target));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+            document.getElementById(`tab-${target}`).classList.remove('hidden');
+            
+            if(target === 'format') {
+                DOM.previewArea.classList.add('hidden'); 
+                DOM.zoomControls.classList.add('hidden'); 
+                DOM.btnBA.classList.add('hidden'); DOM.btnBA.classList.remove('flex');
+                document.getElementById('btn-zen-mode').classList.add('hidden'); document.getElementById('btn-zen-mode').classList.remove('flex');
+                
+                DOM.main.classList.remove('hidden');
+                DOM.main.style.display = 'block';
+                void DOM.main.offsetWidth;
+                
+                setTimeout(() => { 
+                    if(originalImg && !cropper) {
+                        setupCropper(); 
+                    } else if(cropper) { 
+                        DOM.main.classList.add('opacity-100'); 
+                        cropper.resize(); 
+                    }
+                }, 50); 
+            } else {
+                DOM.main.classList.remove('opacity-100'); DOM.main.style.display = 'none'; 
+                if(proxyCropUrl) { 
+                    DOM.previewArea.classList.remove('hidden'); 
+                    DOM.zoomControls.classList.remove('hidden'); 
+                    DOM.btnBA.classList.remove('hidden'); DOM.btnBA.classList.add('flex');
+                    document.getElementById('btn-zen-mode').classList.remove('hidden'); document.getElementById('btn-zen-mode').classList.add('flex');
+                    applyZoom(); 
+                }
+            }
+        }
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eName => { DOM.mainStage.addEventListener(eName, e => { e.preventDefault(); e.stopPropagation(); }, false); });
+        DOM.mainStage.addEventListener('drop', e => { if(e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]); });
+        DOM.upInput.addEventListener('change', e => { if(e.target.files.length) handleFile(e.target.files[0]); });
+
+        async function handleFile(file) {
+            if (!file) return; 
+            const isTiff = file.name.toLowerCase().match(/\.tiff?$/);
+            if (!file.type.startsWith('image/') && !isTiff) return;
+
+            DOM.upText.innerText = "Processing File..."; rawFile = file;
+            
+            try {
+                if (isTiff) {
+                    const arrayBuffer = await file.arrayBuffer(); const ifds = UTIF.decode(arrayBuffer); UTIF.decodeImage(arrayBuffer, ifds[0]);
+                    const rgba = UTIF.toRGBA8(ifds[0]); const cvs = document.createElement('canvas'); cvs.width = ifds[0].width; cvs.height = ifds[0].height;
+                    const ctx = cvs.getContext('2d'); const imgData = new ImageData(new Uint8ClampedArray(rgba.buffer), cvs.width, cvs.height); ctx.putImageData(imgData, 0, 0);
+                    originalImg = new Image(); 
+                    originalImg.onload = () => { 
+                        DOM.upZone.classList.add('hidden'); DOM.upText.innerText = "Import Professional Resource"; switchTab('format'); 
+                    }; 
+                    originalImg.src = cvs.toDataURL('image/jpeg', 0.95);
+                    cvs.width = 0; cvs.height = 0;
+                } else {
+                    originalImg = new Image(); 
+                    originalImg.onload = () => { 
+                        DOM.upZone.classList.add('hidden'); DOM.upText.innerText = "Import Professional Resource"; switchTab('format'); 
+                    }; 
+                    originalImg.src = URL.createObjectURL(file);
+                }
+            } catch (err) { alert("이미지 처리 오류."); DOM.upText.innerText = "Import Professional Resource"; }
+        }
+
+        function setupCropper() {
+            if(!originalImg) return; isCropperReady = false; 
+            if(cropper) { cropper.destroy(); cropper = null; }
+            DOM.main.innerHTML = ''; const newImg = document.createElement('img'); newImg.style.display = 'block'; newImg.style.maxWidth = '100%';
+            
+            const sf = parseFloat(DOM.sSqueeze.value)/100; const cvs = document.createElement('canvas');
+            let tw = originalImg.width * sf; let th = originalImg.height; 
+            const maxW = 3500; if(tw > maxW) { const scale = maxW / tw; th *= scale; tw = maxW; } 
+            cvs.width = tw; cvs.height = th; cvs.getContext('2d').drawImage(originalImg, 0, 0, originalImg.width, originalImg.height, 0, 0, tw, th);
+            
+            cvs.toBlob((blob) => {
+                const proxyObjUrl = URL.createObjectURL(blob); 
+                newImg.src = proxyObjUrl;
+                cvs.width = 0; cvs.height = 0; 
+                
+                newImg.onload = () => {
+                    cropper = new Cropper(newImg, { 
+                        viewMode: 1, 
+                        dragMode: 'none', autoCrop: false, background: false, 
+                        ready: () => { 
+                            cropper.crop(); 
+                            updateCropperRatio(); 
+                            isCropperReady = true; 
+                            setTimeout(() => { DOM.main.classList.remove('opacity-0'); DOM.main.classList.add('opacity-100'); }, 50); 
+                        },
+                        crop: () => {
+                            const isFree = isNaN(parseFloat(DOM.sRatio.value)); if(!isFree) { DOM.badge.classList.add('opacity-0'); return; }
+                            const d = cropper.getCropBoxData(); if(!d || d.width===0 || d.height===0) return;
+                            const r = d.width/d.height; let txt = "";
+                            if(r>0.78 && r<0.82) txt="4:5 Vertical IG"; else if(r>0.98 && r<1.02) txt="1:1 Square"; else if(r>1.75 && r<1.8) txt="16:9 Landscape";
+                            else if(r>0.65 && r<0.68) txt="2:3 Vertical"; else if(r>1.45 && r<1.55) txt="3:2 Horizontal"; else if(r>0.74 && r<0.76) txt="3:4 Classic";
+                            if(txt) { DOM.badge.innerText=txt; DOM.badge.classList.remove('opacity-0'); DOM.badge.style.top = Math.max(10, d.top - 28) + 'px'; DOM.badge.style.left = (d.left + d.width/2) + 'px'; } else DOM.badge.classList.add('opacity-0');
+                        }
+                    });
+                }; DOM.main.appendChild(newImg);
+            }, 'image/jpeg', 0.95);
+        }
+
+        function updateCropperRatio() {
+            if(!cropper) return; let fr = NaN; const br = parseFloat(DOM.sRatio.value);
+            if(currentStrategy === 'seamless' && !isNaN(br)) fr = br * parseInt(DOM.sSlides.value); else fr = br;
+            cropper.setAspectRatio(fr); const cd = cropper.getCanvasData(); let bw = cd.width * 0.85, bh = cd.height * 0.85;
+            if(!isNaN(fr)) { const cr = cd.width/cd.height; if(fr > cr) { bw = cd.width * 0.85; bh = bw / fr; } else { bh = cd.height * 0.85; bw = bh * fr; } }
+            cropper.setCropBoxData({ left: cd.left+(cd.width-bw)/2, top: cd.top+(cd.height-bh)/2, width: bw, height: bh });
+        }
+
+        document.querySelectorAll('#strategy-btns .min-btn').forEach(btn => {
+            btn.addEventListener('click', e => {
+                document.querySelectorAll('#strategy-btns .min-btn').forEach(b => b.classList.remove('active')); e.target.classList.add('active'); currentStrategy = e.target.dataset.val;
+                const isSingle = currentStrategy === 'single';
+                document.getElementById('seamless-count-wrapper').classList.toggle('disabled-block', isSingle); 
+                document.getElementById('ratio-wrapper').classList.toggle('disabled-block', !isSingle);
+                DOM.targetWrapper.style.display = isSingle ? 'none' : 'block'; 
+                
+                if(isSingle) document.getElementById('ratio-wrapper').style.display = 'block';
+                else DOM.sRatio.value = "0.8"; 
+                
+                updateCropperRatio();
+            });
+        });
+
+        window.resetFraming = function() {
+            const needsRebuild = DOM.sSqueeze.value !== "100";
+            if (currentStrategy === 'seamless') { DOM.sRatio.value = "0.8"; DOM.sSlides.value = "3"; } else { DOM.sRatio.value = "NaN"; }
+            DOM.sAngle.value = 0; DOM.inAngle.value = 0; DOM.sSqueeze.value = "100"; 
+            if (needsRebuild) { DOM.main.classList.remove('opacity-100'); DOM.main.classList.add('opacity-0'); setTimeout(() => setupCropper(), 300); } else if (cropper) { cropper.rotateTo(0); updateCropperRatio(); }
+        };
+
+        DOM.sRatio.addEventListener('change', updateCropperRatio); DOM.sSlides.addEventListener('change', updateCropperRatio);
+        window.resetAngle = function() { DOM.sAngle.value = 0; DOM.inAngle.value = 0; DOM.sAngle.dispatchEvent(new Event('input')); };
+        DOM.sSqueeze.addEventListener('change', () => { DOM.main.classList.remove('opacity-100'); DOM.main.classList.add('opacity-0'); setTimeout(setupCropper, 300); });
+
+        function applyCropAndRender() {
+            if(!cropper || !isCropperReady) return; 
+            try {
+                DOM.badge.classList.add('opacity-0'); 
+                const cvs = cropper.getCroppedCanvas({ maxWidth: 2560, maxHeight: 2560, fillColor: 'transparent', imageSmoothingEnabled: true, imageSmoothingQuality: 'high' });
+                if (!cvs || cvs.width === 0 || cvs.height === 0) { alert("크롭 영역을 다시 지정해주세요."); return; }
+                
+                activeGlobalRatio = cvs.width / cvs.height; 
+                proxyCropUrl = cvs.toDataURL('image/png'); 
+                cvs.width = 0; cvs.height = 0; 
+                
+                switchTab('frame'); 
+                ModuleFrame.build(); 
+            } catch (err) { alert("오류가 발생했습니다. 새로고침 해주세요."); }
+        }
+
+        const ModuleFrame = {
+            updateBorderOptions: function() {
+                const border = DOM.sBorder.value;
+                if(border === 'fineart') {
+                    DOM.borderWeightWrapper.classList.remove('hidden');
+                } else {
+                    DOM.borderWeightWrapper.classList.add('hidden');
+                }
+                this.build();
+            },
+            build: function() {
+                if(!proxyCropUrl) return; 
+                DOM.previewInner.innerHTML = '';
+                
+                const parentWrapper = document.createElement('div');
+                parentWrapper.id = "preview-wrapper-parent";
+                parentWrapper.className = "flex relative m-auto";
+                parentWrapper.style.aspectRatio = activeGlobalRatio;
+                parentWrapper.style.flexShrink = "0";
+                parentWrapper.style.boxShadow = "0 40px 100px rgba(0,0,0,0.95)";
+                
+                const layerImagesAfter = this.createLayer('after');
+                parentWrapper.appendChild(layerImagesAfter);
+
+                if (isSplitView) {
+                    const layerImagesBefore = this.createLayer('before');
+                    layerImagesBefore.id = 'layer-images-before';
+                    layerImagesBefore.style.clipPath = `polygon(0 0, ${splitPos}% 0, ${splitPos}% 100%, 0 100%)`;
+                    layerImagesBefore.style.WebkitClipPath = `polygon(0 0, ${splitPos}% 0, ${splitPos}% 100%, 0 100%)`; 
+                    layerImagesBefore.style.zIndex = "20";
+                    parentWrapper.appendChild(layerImagesBefore);
+
+                    const handle = document.createElement('div');
+                    handle.id = "split-handle";
+                    handle.className = "absolute top-0 bottom-0 cursor-ew-resize border-r-[3px] border-white shadow-[0_0_10px_rgba(0,0,0,0.5)]";
+                    handle.style.zIndex = "60"; 
+                    handle.style.left = `${splitPos}%`;
+                    handle.style.transform = "translateX(-1.5px)"; 
+                    
+                    const handleCircle = document.createElement('div');
+                    handleCircle.className = "absolute top-1/2 left-1/2 w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-lg transform -translate-x-1/2 -translate-y-1/2";
+                    handleCircle.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2"><path d="M13 5l7 7-7 7M11 5l-7 7 7 7"/></svg>`;
+                    handle.appendChild(handleCircle);
+                    
+                    handle.addEventListener('mousedown', (e) => { isDraggingSplit = true; e.preventDefault(); e.stopPropagation(); });
+                    parentWrapper.appendChild(handle);
                 }
                 
-                // 3. 개별 다운로드 앵커(a) 버튼 생성
-                const singleDownload = document.createElement('a');
-                singleDownload.href = dataUrl;
-                singleDownload.download = `cineRoll_${mode}_part${i + 1}.jpg`;
-                singleDownload.innerHTML = '⬇️ Save';
-                singleDownload.className = 'text-[11px] md:text-xs bg-neutral-800 hover:bg-rose-600 text-neutral-300 hover:text-white px-5 py-2 rounded-full transition font-bold uppercase tracking-wider shadow-lg border border-neutral-700';
+                const layerGlass = document.createElement('div');
+                layerGlass.id = "layer-glass";
+                layerGlass.className = "layer-glass flex w-full h-full absolute inset-0"; 
+                
+                let slides = currentStrategy === 'seamless' ? parseInt(DOM.sSlides.value) : 1;
+                for(let i=0; i<slides; i++) {
+                    const glassPane = document.createElement('div');
+                    glassPane.className = "flex-1 relative h-full"; 
+                    
+                    const gx = document.createElement('div'); gx.className="snap-guide snap-guide-x"; glassPane.appendChild(gx);
+                    const gy = document.createElement('div'); gy.className="snap-guide snap-guide-y"; glassPane.appendChild(gy);
+                    
+                    glassPane.id = `glass-pane-${i+1}`;
+                    layerGlass.appendChild(glassPane);
+                }
 
-                // 4. 컨테이너에 조립
-                wrapper.appendChild(img);
-                wrapper.appendChild(singleDownload);
-                previewContainer.appendChild(wrapper); 
-            });
-            
-            downloadBtn.classList.remove('hidden');
-        }
+                parentWrapper.appendChild(layerGlass);
+                DOM.previewInner.appendChild(parentWrapper); 
+                DOM.btnExport.classList.remove('opacity-50', 'cursor-not-allowed');
+                
+                ModuleColor.update();
+                ModuleTypo.update();
+                applyZoom();
+            },
+            createLayer: function(type) {
+                let slides = currentStrategy === 'seamless' ? parseInt(DOM.sSlides.value) : 1;
+                const layer = document.createElement('div');
+                layer.className = "preview-layer flex w-full h-full absolute inset-0";
+                
+                let filterStr = lutStyleStr;
+                if (type === 'after' && (DOM.sBr.value !== '100' || DOM.sCo.value !== '100' || DOM.sSa.value !== '100')) {
+                    if(filterStr === 'none') filterStr = '';
+                    filterStr += ` brightness(${DOM.sBr.value}%) contrast(${DOM.sCo.value}%) saturate(${DOM.sSa.value}%)`;
+                }
+                
+                let marginScale = isMargin ? parseInt(DOM.sMarginScale.value) / 100 : 1;
+                const activeBorder = DOM.sBorder ? DOM.sBorder.value : 'none';
+                const bWeight = DOM.sBorderWeight ? parseFloat(DOM.sBorderWeight.value) : 3;
+                const isPolaroid = (isMargin && activeBorder === 'instant');
 
-        // Draw & Text Logic
-        function drawInstaFrame(ctx, w, h, s, src, tr) {
-            ctx.fillStyle = document.getElementById('bgStyle').value; ctx.fillRect(0, 0, w, h); const z = s.z; const sr = src.width / src.height;
-            const pr = (document.getElementById('frameStyle').value === 'margin') ? 0.85 : 1.0; const dw = w * pr, dh = h * pr; const dx = (w - dw) / 2, dy = (h - dh) / 2;
-            if (z <= 1.0) { let fw, fh; if (sr > tr) { fw = dw; fh = dw / sr; } else { fh = dh; fw = dh * sr; } const iw = fw * z, ih = fh * z; const ix = dx + (dw - iw) / 2, iy = dy + (dh - ih) / 2; ctx.drawImage(src, 0, 0, src.width, src.height, ix, iy, iw, ih); return {x:ix, y:iy, w:iw, h:ih}; } 
-            else { let cw, ch; if (sr > tr) { ch = src.height; cw = src.height * tr; } else { cw = src.width; ch = src.width / tr; } const sw = cw / z, sh = ch / z; ctx.drawImage(src, Math.max(0, src.width - sw) * (s.x / 100), Math.max(0, src.height - sh) * (s.y / 100), sw, sh, dx, dy, dw, dh); return {x:dx, y:dy, w:dw, h:dh}; }
-        }
-        function drawLetterboxFrame(ctx, w, h, src, tr) {
-            ctx.fillStyle = document.getElementById('bgStyle').value; ctx.fillRect(0, 0, w, h); const sr = src.width / src.height; const pr = (document.getElementById('frameStyle').value === 'margin') ? 0.85 : 1.0; const dw = w * pr, dh = h * pr;
-            let fw, fh; if (sr > tr) { fw = dw; fh = dw / sr; } else { fh = dh; fw = dh * sr; } const ix = (w - fw) / 2, iy = (h - fh) / 2; ctx.drawImage(src, 0, 0, src.width, src.height, ix, iy, fw, fh); return {x:ix, y:iy, w:fw, h:fh};
-        }
-        function applyGrainAndText(ctx, w, h, isF, ib) {
-            const gi = parseInt(document.getElementById('grainSlider').value);
-            if (gi > 0) { if (!grainCanvas) { grainCanvas = document.createElement('canvas'); grainCanvas.width = 512; grainCanvas.height = 512; const gCtx = grainCanvas.getContext('2d'); const id = gCtx.createImageData(512, 512); for (let i = 0; i < id.data.length; i += 4) { const v = Math.random() < 0.5 ? 0 : 255; id.data[i] = id.data[i+1] = id.data[i+2] = v; id.data[i+3] = 255; } gCtx.putImageData(id, 0, 0); } ctx.save(); ctx.globalAlpha = gi / 100; ctx.globalCompositeOperation = 'soft-light'; ctx.fillStyle = ctx.createPattern(grainCanvas, 'repeat'); ctx.fillRect(0, 0, w, h); ctx.restore(); }
-            const txt = watermarkText.value.trim(); const target = document.getElementById('watermarkTarget').value;
-            if (txt && (target === 'all' || (target === 'first' && isF))) {
-                const al = document.getElementById('watermarkAlign').value; const fs = document.getElementById('watermarkFont').value; const frs = document.getElementById('frameStyle').value; const bgs = document.getElementById('bgStyle').value;
-                ctx.font = `italic ${Math.max(16, Math.floor(w * 0.016))}px ${fs}`; ctx.textBaseline = 'middle'; const msb = h - (ib.y + ib.h); const dout = (frs === 'margin') || (msb > h * 0.04);
-                let tx, ty; const pix = w * 0.03, piy = h * 0.03;
-                if (dout) { ctx.fillStyle = (bgs === '#FFFFFF') ? '#555555' : '#AAAAAA'; ctx.shadowColor = 'transparent'; ty = ib.y + ib.h + (msb / 2); if(al === 'left') tx = ib.x; else if(al === 'right') tx = ib.x + ib.w; else tx = ib.x + (ib.w/2); } 
-                else { ctx.fillStyle = 'rgba(255, 255, 255, 0.95)'; ctx.shadowColor = 'rgba(0, 0, 0, 0.9)'; ctx.shadowBlur = 6; ty = ib.y + ib.h - piy; if(al === 'left') tx = ib.x + pix; else if(al === 'right') tx = ib.x + ib.w - pix; else tx = ib.x + (ib.w/2); }
-                ctx.textAlign = al; ctx.fillText(txt, tx, ty); ctx.shadowColor = 'transparent';
-            }
-        }
-
-        [document.getElementById('aspectRatio'), document.getElementById('bgStyle'), document.getElementById('frameStyle'), watermarkText, document.getElementById('watermarkFont'), document.getElementById('watermarkAlign'), document.getElementById('watermarkTarget')].forEach(el => el.addEventListener('change', processFinalGallery));
-        document.getElementsByName('mode').forEach(r => r.addEventListener('change', processFinalGallery));
-        document.getElementById('grainSlider').addEventListener('input', (e) => { document.getElementById('grainValueDisplay').textContent = `${e.target.value}%`; processFinalGallery(); });
-
-        downloadBtn.addEventListener('click', () => {
-            if (generatedImages.length === 0) return;
-            downloadBtn.innerText = "Processing... (Allow Popups)";
-            let delay = 0;
-            generatedImages.forEach((imgData, index) => {
-                setTimeout(() => {
-                    const link = document.createElement('a'); link.download = `cineRoll_part${index + 1}.jpg`; link.href = imgData;
-                    document.body.appendChild(link); link.click(); document.body.removeChild(link);
-                    if (index === generatedImages.length - 1) {
-                        downloadBtn.innerText = "✅ Download Complete!";
-                        setTimeout(() => { downloadBtn.innerText = "Download All (PC/Mac)"; }, 3000);
+                for(let i=0; i<slides; i++) {
+                    const col = document.createElement('div');
+                    col.className = `flex flex-col flex-1 h-full relative`;
+                    
+                    if (currentStrategy === 'seamless' && type === 'after') {
+                        const label = document.createElement('div');
+                        label.className = "absolute -top-6 left-0 right-0 text-[10px] text-neutral-500 font-mono uppercase tracking-widest text-center";
+                        label.innerText = `roll . 0${i+1}`;
+                        col.appendChild(label);
                     }
-                }, delay);
-                delay += 600; 
+
+                    const sc = document.createElement('div'); 
+                    sc.className=`slide-container w-full h-full flex-1 relative shadow-inner border-[#111] last:border-r-0`; 
+                    if(currentStrategy === 'seamless') sc.style.borderRightWidth = '4px'; 
+                    sc.style.backgroundColor = type === 'after' ? bgColor : '#000000'; 
+                    
+                    if(isMargin && type === 'after') {
+                        if(activeBorder === 'vnotch') sc.classList.add('border-vnotch');
+                    }
+
+                    const iw = document.createElement('div'); 
+                    iw.className="absolute overflow-hidden pointer-events-none preview-img-wrapper"; 
+                    
+                    if(isMargin && type === 'after') { 
+                        if(isPolaroid) {
+                            const polScale = marginScale * 0.88;
+                            iw.style.width=`${polScale * 100}%`; 
+                            iw.style.height=`${polScale * 100}%`; 
+                            iw.style.left=`${(1 - polScale) / 2 * 100}%`; 
+                            iw.style.top=`6%`; 
+                        } else {
+                            iw.style.width=`${marginScale * 100}%`; iw.style.height=`${marginScale * 100}%`; 
+                            iw.style.left=`${(1 - marginScale) / 2 * 100}%`; iw.style.top=`${(1 - marginScale) / 2 * 100}%`; 
+                            
+                            // 🌟 V92.0 CSS 미리보기 렌더링 픽스
+                            if (activeBorder === 'fineart') {
+                                iw.style.border = `${Math.max(1, bWeight)}px solid rgba(20,20,20,0.95)`;
+                            }
+                        }
+                    } 
+                    else { iw.style.width="100%"; iw.style.height="100%"; iw.style.left="0"; iw.style.top="0"; }
+                    
+                    const img = document.createElement('img'); img.src=proxyCropUrl; img.style.filter=filterStr;
+                    if(currentStrategy==='seamless') { 
+                        img.className="preview-img absolute max-w-none h-full"; 
+                        img.style.width=`${slides*100}%`; img.style.transform=`translateX(-${(i/slides)*100}%)`; 
+                    } else { 
+                        img.className="preview-img absolute w-full h-full object-cover"; 
+                    }
+                    
+                    iw.appendChild(img); sc.appendChild(iw);
+                    
+                    if(type === 'after') {
+                        const grain = document.createElement('div'); grain.className="gallery-grain-overlay"; grain.style.backgroundImage=`url(${staticGrainDataUrl})`; grain.style.opacity=(DOM.sGrain.value/100)*2.5; sc.appendChild(grain);
+                        
+                        const safeZone = `
+                        <div class="safe-zone-overlay absolute inset-0 z-40 hidden flex-col justify-between p-4 mix-blend-difference opacity-70">
+                            <div class="flex items-center gap-2">
+                                <div class="w-8 h-8 rounded-full border border-white/60 bg-white/20"></div>
+                                <div class="w-24 h-3 rounded bg-white/40"></div>
+                            </div>
+                            <div class="flex justify-between items-center pb-2">
+                                <div class="flex gap-4">
+                                    <div class="w-6 h-6 rounded-full border border-white/60 bg-white/20"></div>
+                                    <div class="w-6 h-6 rounded-full border border-white/60 bg-white/20"></div>
+                                    <div class="w-6 h-6 rounded-full border border-white/60 bg-white/20"></div>
+                                </div>
+                                <div class="flex gap-1.5">
+                                    <div class="w-1.5 h-1.5 rounded-full bg-coral-500"></div>
+                                    <div class="w-1.5 h-1.5 rounded-full bg-white/40"></div>
+                                    <div class="w-1.5 h-1.5 rounded-full bg-white/40"></div>
+                                </div>
+                                <div class="w-6 h-6 rounded-full border border-white/60 bg-white/20"></div>
+                            </div>
+                        </div>`;
+                        sc.insertAdjacentHTML('beforeend', safeZone);
+                    }
+                    col.appendChild(sc); layer.appendChild(col);
+                }
+                return layer;
+            }
+        };
+
+        const ModuleColor = {
+            updateLut: function() {
+                const lutVal = document.getElementById('select-lut').value;
+                const intensity = document.getElementById('slider-lut-intensity').value / 100;
+                document.getElementById('val-lut-intensity').innerText = `${Math.round(intensity*100)}%`;
+                
+                const lutWrap = document.getElementById('lut-intensity-wrapper');
+                if(lutVal === 'none') { lutWrap.classList.add('opacity-50', 'pointer-events-none'); lutStyleStr = 'none'; }
+                else { lutWrap.classList.remove('opacity-50', 'pointer-events-none'); }
+
+                if(lutVal === 'kodak') lutStyleStr = `sepia(${50 * intensity}%) contrast(${100 + 15 * intensity}%) saturate(${100 + 20 * intensity}%) hue-rotate(${-10 * intensity}deg)`;
+                else if(lutVal === 'fuji') lutStyleStr = `sepia(${30 * intensity}%) hue-rotate(${10 * intensity}deg) saturate(${100 - 10 * intensity}%) contrast(${100 - 5 * intensity}%)`;
+                else if(lutVal === 'cinematic') lutStyleStr = `contrast(${100 + 20 * intensity}%) saturate(${100 + 10 * intensity}%) sepia(${40 * intensity}%) hue-rotate(${-15 * intensity}deg)`;
+                
+                this.update();
+            },
+            update: function() {
+                let filterStr = lutStyleStr;
+                if (DOM.sBr.value !== '100' || DOM.sCo.value !== '100' || DOM.sSa.value !== '100') {
+                    if(filterStr === 'none') filterStr = '';
+                    filterStr += ` brightness(${DOM.sBr.value}%) contrast(${DOM.sCo.value}%) saturate(${DOM.sSa.value}%)`;
+                }
+                if(filterStr === '') filterStr = 'none';
+
+                document.querySelectorAll('.preview-img').forEach(img => {
+                    if (!img.closest('[style*="polygon"]')) { img.style.filter = filterStr; } 
+                });
+                const grainOp = (DOM.sGrain.value / 100) * 2.5;
+                document.querySelectorAll('.gallery-grain-overlay').forEach(gr => gr.style.opacity = grainOp);
+            }
+        };
+        window.resetColor = function() { 
+            DOM.sBr.value = 100; DOM.inBr.value = 100; DOM.sCo.value = 100; DOM.inCo.value = 100;
+            DOM.sSa.value = 100; DOM.inSa.value = 100; DOM.sGrain.value = 0; DOM.inGrain.value = 0;
+            document.getElementById('select-lut').value = 'none'; ModuleColor.updateLut();
+        };
+
+        // 🌟 V92.0: 60fps 글로벌 드래그 매니저 (메모리 누수 완전 픽스)
+        const DragState = { active: false, target: null, container: null, gx: null, gy: null };
+        
+        function initGlobalDrag() {
+            function startDrag(e, type, el) {
+                DragState.active = true; DragState.target = type; activeTarget = type;
+                // V92.0 픽스: 타겟 컨테이너를 올바른 부모(layer-glass > div)로 지정
+                DragState.container = el.parentElement; 
+                if(DragState.container) {
+                    DragState.gx = DragState.container.querySelector('.snap-guide-x');
+                    DragState.gy = DragState.container.querySelector('.snap-guide-y');
+                }
+                el.focus();
+            }
+            
+            window.addEventListener('mousedown', e => {
+                let te = e.target.closest('.draggable-text'); let le = e.target.closest('.draggable-logo');
+                if(te) startDrag(e, 'text', te); else if(le) startDrag(e, 'logo', le);
             });
+            window.addEventListener('touchstart', e => {
+                let te = e.target.closest('.draggable-text'); let le = e.target.closest('.draggable-logo');
+                if(te) startDrag(e, 'text', te); else if(le) startDrag(e, 'logo', le);
+            }, {passive: false});
+            
+            function moveDrag(e) {
+                if(!DragState.active || !DragState.container) return;
+                e.preventDefault();
+                const rect = DragState.container.getBoundingClientRect();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                let px = ((clientX - rect.left)/rect.width)*100;
+                let py = ((clientY - rect.top)/rect.height)*100;
+                px = Math.max(0, Math.min(100, px)); py = Math.max(0, Math.min(100, py));
+                const snap = 2.5; let sx = false, sy = false;
+                if(Math.abs(px-50)<snap) { px=50; sx=true; }
+                if(Math.abs(py-50)<snap) { py=50; sy=true; }
+                if(Math.abs(py-94)<snap) { py=94; sy=true; }
+                
+                if(DragState.target==='text') { tPosX=px; tPosY=py; } else { lPosX=px; lPosY=py; }
+                ModuleTypo.updatePositions();
+                
+                if(DragState.gx) { DragState.gx.style.display = sy?'block':'none'; DragState.gx.style.top = `${py}%`; }
+                if(DragState.gy) { DragState.gy.style.display = sx?'block':'none'; DragState.gy.style.left = `${px}%`; }
+            }
+            
+            window.addEventListener('mousemove', moveDrag);
+            window.addEventListener('touchmove', moveDrag, {passive: false});
+            
+            function endDrag() {
+                DragState.active = false;
+                if(DragState.gx) DragState.gx.style.display = 'none';
+                if(DragState.gy) DragState.gy.style.display = 'none';
+            }
+            window.addEventListener('mouseup', endDrag);
+            window.addEventListener('touchend', endDrag);
+        }
+
+        const ModuleTypo = {
+            updateColorFromPicker: function() {
+                textStylePreset = 'none';
+                document.querySelectorAll('.preset-pill').forEach(p => p.classList.remove('active'));
+                this.update();
+            },
+            update: function() {
+                const txt = DOM.wmText.value.trim();
+                const target = DOM.wmTarget.value;
+                const isSingle = currentStrategy === 'single';
+                const slides = isSingle ? 1 : parseInt(DOM.sSlides.value);
+                
+                DOM.valGlow.innerText = DOM.sGlowAmt.value + 'px';
+                const glowAmt = parseInt(DOM.sGlowAmt.value);
+
+                const parentWrap = document.getElementById('preview-wrapper-parent');
+                if(!parentWrap) return;
+                
+                const currentUiHeight = parentWrap.clientHeight;
+                const currentUiWidth = parentWrap.clientWidth / slides; 
+                
+                if(currentUiHeight <= 0 || currentUiWidth <= 0) return;
+
+                const fontScaleMultiplier = DOM.sFontScale.value / 100; 
+                const uiFontSize = Math.floor(currentUiHeight * (isSingle ? 0.025 : 0.018)) * fontScaleMultiplier;
+                const uiLogoWidth = currentUiWidth * (DOM.sLogoScale.value / 100) * 0.5;
+                
+                const showLogo = DOM.toggleLogo ? DOM.toggleLogo.checked : false; 
+
+                for(let i=1; i<=slides; i++) {
+                    const pane = document.getElementById(`glass-pane-${i}`);
+                    if(!pane) continue;
+                    
+                    const shouldShow = isSingle || (target === 'all' || parseInt(target) === i);
+
+                    let te = pane.querySelector('.draggable-text');
+                    if (txt && shouldShow) {
+                        if (!te) {
+                            te = document.createElement('div'); te.className = "draggable-text"; te.tabIndex = 0;
+                            te.style.left = `${tPosX}%`; te.style.top = `${tPosY}%`;
+                            pane.appendChild(te);
+                        }
+                        te.style.display = 'flex';
+
+                        let spanClass = ""; 
+                        let fontVal = DOM.fontSel.value; 
+                        let spanStyle = `font-family: '${fontVal}', sans-serif; font-size:${uiFontSize}px; ${isBold?'font-weight:700;':''} letter-spacing:0.1em;`;
+                        
+                        if (textStylePreset === 'gold') spanClass = "text-preset-gold";
+                        else if (textStylePreset === 'silver') spanClass = "text-preset-silver";
+
+                        if (textStylePreset !== 'none') {
+                            if (isGlow) {
+                                const glowScale = uiFontSize / 50; 
+                                const uiGlowAmt = glowAmt * glowScale;
+                                spanStyle += `filter: drop-shadow(0 0 ${uiGlowAmt}px rgba(0,0,0,0.8));`;
+                            }
+                        } else {
+                            let color = DOM.textColor.value;
+                            spanStyle += ` color: ${color}; `;
+                            if (isGlow) { 
+                                const glowScale = uiFontSize / 50; 
+                                const uiGlowAmt = glowAmt * glowScale;
+                                spanStyle += `text-shadow: 0 0 ${uiGlowAmt/3}px ${color}, 0 0 ${uiGlowAmt}px ${color}, 0 0 ${uiGlowAmt*2}px ${color};`; 
+                            } else { 
+                                spanStyle += `text-shadow: none;`; 
+                            }
+                        }
+                        te.innerHTML = `<span class="${spanClass}" style="display:inline-block; ${spanStyle}">${txt}</span>`;
+                    } else if (te) { te.style.display = 'none'; }
+
+                    let le = pane.querySelector('.draggable-logo');
+                    if (logoObj && logoUrl && shouldShow && showLogo) { 
+                        if (!le) {
+                            le = document.createElement('div'); le.className = "draggable-logo"; le.tabIndex = 0;
+                            le.style.left = `${lPosX}%`; le.style.top = `${lPosY}%`;
+                            pane.appendChild(le);
+                        }
+                        le.style.display = 'flex';
+                        le.innerHTML = `<img src="${logoUrl}" style="opacity:${DOM.sLogoOp.value/100}; width:${uiLogoWidth}px; pointer-events:none;">`;
+                    } else if (le) { le.style.display = 'none'; }
+                }
+            },
+            updatePositions: function() {
+                document.querySelectorAll('.draggable-text').forEach(el => { el.style.left=`${tPosX}%`; el.style.top=`${tPosY}%`; }); 
+                document.querySelectorAll('.draggable-logo').forEach(el => { el.style.left=`${lPosX}%`; el.style.top=`${lPosY}%`; });
+            }
+        };
+
+        window.handleLogoToggleCheckbox = function() {
+            if(!logoUrl && DOM.toggleLogo.checked) {
+                DOM.toggleLogo.checked = false; 
+                DOM.upLogo.click();
+                return;
+            }
+            if(DOM.toggleLogo.checked) {
+                DOM.logoSettings.classList.remove('opacity-30', 'pointer-events-none');
+            } else {
+                DOM.logoSettings.classList.add('opacity-30', 'pointer-events-none');
+            }
+            ModuleTypo.update();
+        };
+
+        DOM.btnExport.addEventListener('click', async () => {
+            if (!cropper) return alert("크롭 엔진을 찾을 수 없습니다. 이미지를 다시 업로드해주세요."); 
+            DOM.btnExport.innerText = "Processing Engine..."; DOM.btnExport.classList.add('opacity-70', 'pointer-events-none');
+            
+            try {
+                const qualitySetting = DOM.exportQuality.value;
+                const isHighRes = qualitySetting === 'native';
+                let slides = currentStrategy === 'seamless' ? parseInt(DOM.sSlides.value) : 1;
+                const activeBorder = DOM.sBorder ? DOM.sBorder.value : 'none';
+
+                let exportBaseWidth = isHighRes ? 12000 : 2160; 
+
+                let masterCanvas = cropper.getCroppedCanvas({
+                    maxWidth: currentStrategy === 'seamless' ? exportBaseWidth * slides : exportBaseWidth,
+                    fillColor: 'transparent',
+                    imageSmoothingEnabled: true, imageSmoothingQuality: 'high'
+                });
+
+                if (!masterCanvas) throw new Error("원본 데이터를 렌더링하는데 실패했습니다.");
+
+                const zip = new JSZip();
+                const imgRatio = masterCanvas.width / masterCanvas.height;
+
+                let singleW = currentStrategy === 'seamless' ? masterCanvas.width / slides : masterCanvas.width;
+                let exportW = currentStrategy === 'seamless' ? singleW * slides : singleW;
+                let exportH = exportW / imgRatio;
+                
+                const marginScale = isMargin ? parseInt(DOM.sMarginScale.value) / 100 : 1;
+                const bWeight = DOM.sBorderWeight ? parseFloat(DOM.sBorderWeight.value) : 3;
+                const gi = parseInt(DOM.sGrain.value); let grainCanvas = null;
+                if (gi > 0) { grainCanvas = document.createElement('canvas'); grainCanvas.width = 512; grainCanvas.height = 512; const gCtx = grainCanvas.getContext('2d'); const id = gCtx.createImageData(512, 512); for (let i = 0; i < id.data.length; i += 4) { const val = Math.random() < 0.5 ? 0 : 255; id.data[i] = id.data[i+1] = id.data[i+2] = val; id.data[i+3] = 255; } gCtx.putImageData(id, 0, 0); }
+
+                for (let i = 0; i < slides; i++) {
+                    await new Promise(resolve => setTimeout(resolve, 50)); 
+                    const workCvs = document.createElement('canvas'); 
+                    const sliceW = singleW; 
+                    workCvs.width = sliceW; workCvs.height = exportH; 
+                    const ctx = workCvs.getContext('2d'); 
+                    
+                    ctx.imageSmoothingEnabled = true;
+                    ctx.imageSmoothingQuality = 'high';
+                    
+                    ctx.fillStyle = bgColor; ctx.fillRect(0, 0, sliceW, exportH); 
+
+                    ctx.save(); 
+                    
+                    let filterStr = lutStyleStr;
+                    if (DOM.sBr.value !== '100' || DOM.sCo.value !== '100' || DOM.sSa.value !== '100') {
+                        if(filterStr === 'none') filterStr = '';
+                        filterStr += ` brightness(${DOM.sBr.value}%) contrast(${DOM.sCo.value}%) saturate(${DOM.sSa.value}%)`;
+                    }
+                    if(filterStr !== 'none' && filterStr !== '') ctx.filter = filterStr;
+                    else ctx.filter = 'none';
+                    
+                    let drawX = 0, drawY = 0, drawW = sliceW, drawH = exportH;
+
+                    if(isMargin) {
+                        if(activeBorder === 'instant') {
+                            const polScale = marginScale * 0.88;
+                            drawW = sliceW * polScale; drawH = exportH * polScale; 
+                            drawX = (sliceW - drawW) / 2; drawY = exportH * 0.06; 
+                        } else {
+                            drawW = sliceW * marginScale; drawH = exportH * marginScale; 
+                            drawX = (sliceW - drawW) / 2; drawY = (exportH - drawH) / 2; 
+                        }
+                        
+                        if(currentStrategy === 'seamless') { ctx.drawImage(masterCanvas, i * singleW, 0, singleW, exportH, drawX, drawY, drawW, drawH); } else { ctx.drawImage(masterCanvas, drawX, drawY, drawW, drawH); }
+                    } else { 
+                        if(currentStrategy === 'seamless') { ctx.drawImage(masterCanvas, i * singleW, 0, singleW, exportH, 0, 0, sliceW, exportH); } else { ctx.drawImage(masterCanvas, 0, 0, sliceW, exportH); }
+                    } 
+                    ctx.restore();
+
+                    // 🌟 V92.0: 정예화된 프로페셔널 렌더링 엔진 (수출용)
+                    if (isMargin) {
+                        if (activeBorder === 'fineart') {
+                            ctx.save();
+                            const strokeW = Math.max(1, exportH * 0.001 * bWeight); 
+                            ctx.strokeStyle = 'rgba(20,20,20,0.95)';
+                            ctx.lineWidth = strokeW;
+                            ctx.strokeRect(drawX + strokeW/2, drawY + strokeW/2, drawW - strokeW, drawH - strokeW);
+                            ctx.restore();
+                        }
+                        else if (activeBorder === 'vnotch') {
+                            ctx.save();
+                            ctx.globalCompositeOperation = 'destination-out';
+                            ctx.beginPath();
+                            const nTop = exportH * 0.45;
+                            const nHeight = exportH * 0.10;
+                            const notchW = sliceW * 0.015; 
+                            
+                            ctx.moveTo(0, nTop);
+                            ctx.lineTo(notchW, nTop + nHeight*0.25);
+                            ctx.lineTo(0, nTop + nHeight*0.4);
+                            ctx.lineTo(0, nTop + nHeight*0.6); 
+                            ctx.lineTo(notchW, nTop + nHeight*0.75);
+                            ctx.lineTo(0, nTop + nHeight);
+                            ctx.closePath();
+                            ctx.fill();
+                            ctx.restore();
+                        }
+                    }
+
+                    if (grainCanvas) { ctx.save(); ctx.globalAlpha = (gi / 100) * 1.5; ctx.globalCompositeOperation = 'soft-light'; ctx.fillStyle = ctx.createPattern(grainCanvas, 'repeat'); ctx.fillRect(0, 0, sliceW, exportH); ctx.restore(); }
+                    
+                    const txt = DOM.wmText.value.trim(); const target = DOM.wmTarget.value;
+                    const glowAmt = parseInt(DOM.sGlowAmt.value);
+                    const showLogo = DOM.toggleLogo ? DOM.toggleLogo.checked : false;
+
+                    if (txt && (currentStrategy === 'single' || target === 'all' || parseInt(target) === i + 1)) {
+                        ctx.save(); 
+                        const fontWeight = isBold ? 'bold ' : ''; 
+                        const fontScaleMultiplier = DOM.sFontScale.value / 100; 
+                        const exportFontSize = Math.floor(exportH * (currentStrategy === 'single' ? 0.025 : 0.018)) * fontScaleMultiplier;
+                        
+                        let fontVal = DOM.fontSel.value; 
+                        ctx.font = `${fontWeight} ${exportFontSize}px '${fontVal}', sans-serif`; 
+                        ctx.textBaseline = 'middle'; ctx.textAlign = 'center'; ctx.letterSpacing = "2px"; 
+                        
+                        const textDrawX = sliceW * (tPosX / 100); const textDrawY = exportH * (tPosY / 100);
+                        const textWidth = ctx.measureText(txt).width;
+                        
+                        if (textStylePreset !== 'none') {
+                            const gradient = ctx.createLinearGradient(
+                                textDrawX - textWidth/2, textDrawY - exportFontSize/2, 
+                                textDrawX + textWidth/2, textDrawY + exportFontSize/2
+                            );
+                            if (textStylePreset === 'gold') {
+                                gradient.addColorStop(0, "#BF953F"); gradient.addColorStop(0.25, "#FCF6BA"); gradient.addColorStop(0.5, "#B38728"); gradient.addColorStop(0.75, "#FBF5B7"); gradient.addColorStop(1, "#AA771C");
+                            } else {
+                                gradient.addColorStop(0, "#8A9097"); gradient.addColorStop(0.25, "#E0E5EC"); gradient.addColorStop(0.5, "#8A9097"); gradient.addColorStop(0.75, "#B0B5BB"); gradient.addColorStop(1, "#595F66");
+                            }
+                            ctx.fillStyle = gradient;
+                        } else {
+                            ctx.fillStyle = DOM.textColor.value;
+                        }
+                        
+                        if (isGlow) { 
+                            const glowScale = exportFontSize / 50; 
+                            const currentGlow = glowAmt * glowScale;
+                            ctx.shadowColor = (textStylePreset === 'none') ? DOM.textColor.value : 'rgba(0,0,0,0.8)'; 
+                            ctx.shadowBlur = currentGlow * 1.5; 
+                        } else { 
+                            ctx.shadowColor = 'transparent'; 
+                        }
+                        
+                        ctx.fillText(txt, textDrawX, textDrawY); ctx.restore(); 
+                    }
+                    if (logoObj && logoUrl && showLogo && (currentStrategy === 'single' || target === 'all' || parseInt(target) === i + 1)) {
+                        ctx.save(); ctx.globalAlpha = DOM.sLogoOp.value / 100; 
+                        const drawLogoW = sliceW * (DOM.sLogoScale.value / 100) * 0.5; 
+                        const drawLogoH = (drawLogoW / logoObj.width) * logoObj.height;
+                        ctx.drawImage(logoObj, (sliceW * (lPosX / 100)) - (drawLogoW/2), (exportH * (lPosY / 100)) - (drawLogoH/2), drawLogoW, drawLogoH); ctx.restore();
+                    }
+                    
+                    const outputQuality = isHighRes ? 1.0 : 0.95; 
+                    await new Promise((resolve, reject) => { 
+                        workCvs.toBlob((blob) => { 
+                            if(blob) { zip.file(currentStrategy === 'seamless' ? `cineRoll_pan_${i+1}.jpg` : `cineRoll_single.jpg`, blob); resolve(); }
+                            else { reject(new Error("Canvas to Blob failed. Image might be too large.")); }
+                        }, 'image/jpeg', outputQuality); 
+                        workCvs.width = 0; workCvs.height = 0;
+                    });
+                }
+                const content = await zip.generateAsync({type:"blob"}); masterCanvas.width = 0; masterCanvas.height = 0; const link = document.createElement('a'); link.href = URL.createObjectURL(content); link.download = `cineRoll_Gallery.zip`; document.body.appendChild(link); link.click(); document.body.removeChild(link); DOM.btnExport.innerText = "✅ Download Complete!";
+            } catch (err) { alert("Export Failed: " + err.message); console.error(err); } finally { DOM.btnExport.classList.remove('opacity-70', 'pointer-events-none'); setTimeout(() => { DOM.btnExport.innerText = "Export Gallery"; }, 3000); }
         });
+
+        function setBG(el) { document.querySelectorAll('[data-bg]').forEach(b=>b.classList.remove('active')); el.classList.add('active'); bgColor=el.dataset.bg; document.querySelectorAll('.slide-container').forEach(sc => { if(!sc.closest('[style*="polygon"]')) { sc.style.backgroundColor = bgColor; } }); ModuleTypo.update(); }
+        function setMargin(val) { isMargin=val; document.getElementById('btn-edge').classList.toggle('active', !val); document.getElementById('btn-margin').classList.toggle('active', val); DOM.marginScaleWrapper.classList.toggle('hidden', !val); ModuleFrame.build(); }
+        function toggleSafeZone() { isSafeZone=!isSafeZone; document.getElementById('btn-safezone').innerText=isSafeZone?'ON':'OFF'; document.getElementById('btn-safezone').classList.toggle('active', isSafeZone); DOM.previewArea.classList.toggle('show-safe-zone', isSafeZone); }
+        
+        window.applyCinePreset = function(type) { 
+            textStylePreset = type; 
+            document.querySelectorAll('.preset-pill').forEach(p => p.classList.remove('active')); 
+            if(type==='gold') { document.getElementById('btn-preset-gold').classList.add('active'); } 
+            else if(type==='silver') { document.getElementById('btn-preset-silver').classList.add('active'); } 
+            ModuleTypo.update(); 
+        }
+        
+        window.saveCurrentPreset = function() { 
+            const txt = DOM.wmText.value.trim(); 
+            if(!txt) return alert("프리셋으로 저장할 텍스트를 입력해주세요."); 
+            const preset = { id: Date.now(), text: txt, color: DOM.textColor.value, bold: isBold, glow: isGlow, font: DOM.fontSel.value, glowAmt: DOM.sGlowAmt.value, type: textStylePreset }; 
+            savedCustomPresets.push(preset); 
+            localStorage.setItem('cineroll_presets_v2', JSON.stringify(savedCustomPresets)); 
+            
+            const saveBtn = document.getElementById('btn-save-preset'); 
+            saveBtn.innerText = "✔️ Saved"; 
+            saveBtn.classList.add('text-green-400'); 
+            setTimeout(() => { saveBtn.innerText = "SAVE PRESET"; saveBtn.classList.remove('text-green-400'); }, 1000); 
+            
+            renderPresetChips(); 
+        }
+        
+        function renderPresetChips() { 
+            const container = document.getElementById('custom-presets-container');
+            if(!container) return;
+            container.innerHTML = ''; 
+            savedCustomPresets.forEach(p => { 
+                const chip = document.createElement('div'); chip.className = "preset-chip flex items-center bg-[#1a1a1c] border border-border rounded text-[10px] text-neutral-400 cursor-pointer hover:border-coral-500/50 transition-colors"; 
+                const nameBtn = document.createElement('div'); nameBtn.className = "px-3 py-1.5 truncate max-w-[120px]"; nameBtn.innerText = p.text; nameBtn.onclick = () => loadPreset(p); 
+                const delBtn = document.createElement('div'); delBtn.className = "px-2 py-1.5 border-l border-border hover:bg-coral-500 hover:text-white transition-colors"; delBtn.innerText = "×"; delBtn.onclick = (e) => { e.stopPropagation(); deletePreset(p.id); }; 
+                chip.appendChild(nameBtn); chip.appendChild(delBtn); container.appendChild(chip); 
+            }); 
+        }
+        
+        function loadPreset(p) { 
+            DOM.wmText.value = p.text; 
+            DOM.textColor.value = p.color; 
+            isBold = p.bold; 
+            isGlow = p.glow; 
+            DOM.fontSel.value = p.font; 
+            DOM.sGlowAmt.value = p.glowAmt || 15; 
+            textStylePreset = p.type; 
+            
+            document.getElementById('btnBold').classList.toggle('active', isBold); 
+            document.getElementById('btnGlow').classList.toggle('active', isGlow); 
+            
+            document.querySelectorAll('.preset-pill').forEach(btn => btn.classList.remove('active')); 
+            if(p.type === 'gold') document.getElementById('btn-preset-gold').classList.add('active'); 
+            if(p.type === 'silver') document.getElementById('btn-preset-silver').classList.add('active'); 
+            
+            ModuleTypo.update(); 
+        }
+        
+        function deletePreset(id) { savedCustomPresets = savedCustomPresets.filter(p => p.id !== id); localStorage.setItem('cineroll_presets_v2', JSON.stringify(savedCustomPresets)); renderPresetChips(); }
+        window.exportPresets = function() { if(savedCustomPresets.length === 0) return alert("내보낼 프리셋이 없습니다."); const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(savedCustomPresets)); const downloadAnchorNode = document.createElement('a'); downloadAnchorNode.setAttribute("href", dataStr); downloadAnchorNode.setAttribute("download", "cineroll_presets.json"); document.body.appendChild(downloadAnchorNode); downloadAnchorNode.click(); downloadAnchorNode.remove(); }
+        window.importPresets = function(e) { const file = e.target.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = (event) => { try { const imported = JSON.parse(event.target.result); if(Array.isArray(imported)) { savedCustomPresets = imported; localStorage.setItem('cineroll_presets_v2', JSON.stringify(savedCustomPresets)); renderPresetChips(); alert("프리셋을 성공적으로 불러왔습니다!"); } else { throw new Error(); } } catch(err) { alert("잘못된 프리셋 파일입니다."); } }; reader.readAsText(file); e.target.value = ''; }
+        
+        function toggleBold() { isBold=!isBold; document.getElementById('btnBold').classList.toggle('active', isBold); ModuleTypo.update(); }
+        function toggleGlow() { isGlow=!isGlow; document.getElementById('btnGlow').classList.toggle('active', isGlow); ModuleTypo.update(); }
+        
+        DOM.upLogo.addEventListener('change', e => { 
+            const file = e.target.files[0]; if(!file) return; 
+            const reader = new FileReader(); 
+            reader.onload = ev => { 
+                logoUrl = ev.target.result; 
+                logoObj = new Image(); 
+                logoObj.onload = () => { 
+                    DOM.toggleLogo.checked = true;
+                    DOM.logoStatus.classList.remove('hidden'); 
+                    DOM.logoSettings.classList.remove('opacity-30', 'pointer-events-none');
+                    ModuleTypo.update(); 
+                }; 
+                logoObj.src = logoUrl; 
+            }; 
+            reader.readAsDataURL(file); 
+        });
+
+        function extractExif() { 
+            if(!rawFile) return alert("사진을 먼저 업로드해주세요."); 
+            if(isExifOn) { isExifOn=false; DOM.wmText.value=manualBackupText; ModuleTypo.update(); return; } 
+            
+            exifr.parse(rawFile, {tiff: true, exif: true}).then(exif => { 
+                if(exif && Object.keys(exif).length > 0) { 
+                    let t = []; 
+                    
+                    let make = exif.Make || "";
+                    let model = exif.Model || "";
+                    let cameraStr = "";
+                    if (make && model) {
+                        if (model.toLowerCase().startsWith(make.toLowerCase())) cameraStr = model;
+                        else cameraStr = `${make} ${model}`;
+                    } else {
+                        cameraStr = make || model || "";
+                    }
+                    if (cameraStr) t.push(cameraStr);
+
+                    let aperture = exif.FNumber || exif.ApertureValue;
+                    if(aperture && Number(aperture) > 0) t.push(`f/${Number(aperture).toFixed(1).replace('.0', '')}`); 
+                    
+                    if(exif.ExposureTime) t.push(`${exif.ExposureTime>=1 ? exif.ExposureTime : `1/${Math.round(1/exif.ExposureTime)}`}s`); 
+                    if(exif.ISO) t.push(`ISO ${exif.ISO}`); 
+                    if(exif.LensModel) t.push(exif.LensModel);
+
+                    if(t.length) { manualBackupText=DOM.wmText.value; DOM.wmText.value=t.join(' | '); isExifOn=true; ModuleTypo.update(); } 
+                } else { 
+                    let oldVal = DOM.wmText.value; DOM.wmText.value = "No EXIF Data"; setTimeout(() => { DOM.wmText.value = oldVal; ModuleTypo.update(); }, 1500);
+                    ModuleTypo.update();
+                } 
+            }).catch(err => { 
+                let oldVal = DOM.wmText.value; DOM.wmText.value = "No EXIF Data"; setTimeout(() => { DOM.wmText.value = oldVal; ModuleTypo.update(); }, 1500); 
+                ModuleTypo.update();
+            }); 
+        }
+
+        function setZoom(mode) { zoomMode = mode; if(mode === 'fit') { DOM.sliderZoom.value = 100; DOM.inZoom.value = 100; } applyZoom(); }
+        function applyZoom() { requestAnimationFrame(() => { const parentWrap = document.getElementById('preview-wrapper-parent'); if(!parentWrap) return; const parentW = DOM.previewArea.clientWidth - 64; const parentH = DOM.previewArea.clientHeight - 100; if (parentW <= 0 || parentH <= 0) return; if (zoomMode === 'fit') { let targetH = Math.min(parentH, parentW / activeGlobalRatio); parentWrap.style.height = targetH + 'px'; parentWrap.style.width = (targetH * activeGlobalRatio) + 'px'; DOM.inZoom.value = 100; DOM.sliderZoom.value = 100; } else { let val = DOM.sliderZoom.value; let baseHeightForZoom = Math.min(parentH, parentW / activeGlobalRatio); let zoomedH = baseHeightForZoom * (val / 100); parentWrap.style.height = zoomedH + 'px'; parentWrap.style.width = (zoomedH * activeGlobalRatio) + 'px'; DOM.inZoom.value = val; } ModuleTypo.update(); }); }
+        window.addEventListener('resize', () => { if(zoomMode === 'fit') applyZoom(); });
     </script>
 </body>
 </html>
