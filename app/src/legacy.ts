@@ -717,7 +717,10 @@ DOM.btnExport.addEventListener('click', async () => {
       targetW = (currentStrategy === 'seamless') ? bW * slides : bW;
     } else if (qualMode === 'png') {
       mimeType = 'image/png';
-      targetW = SAFE_MAX_DIM;
+      // Lossless means "the true native resolution of the crop", not an
+      // arbitrary upscale target -- cap by the actual desqueezed source
+      // pixels (cropPxW) rather than always reaching for SAFE_MAX_DIM.
+      targetW = Math.min(cropPxW, SAFE_MAX_DIM);
     }
 
     targetH = targetW / activeGlobalRatio;

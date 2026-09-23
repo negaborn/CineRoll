@@ -7,6 +7,9 @@ test('6000x4000 @ 1.33x squeeze, Lossless export targets a 7980px-based width', 
   await uploadTestImage(page, page.context().browser()!, 6000, 4000);
 
   await page.click('#strategy-btns [data-val="single"]');
+  // Free ratio, so the full-frame rect below isn't coerced by Cropper.js's
+  // locked-aspect-ratio enforcement (single strategy defaults to a 4:5 lock).
+  await page.selectOption('#select-ratio', 'NaN');
   await page.selectOption('#select-squeeze', '133');
   await page.waitForTimeout(400);
 
