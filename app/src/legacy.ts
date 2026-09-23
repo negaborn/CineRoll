@@ -1,7 +1,9 @@
 import JSZip from 'jszip';
 import UTIF from 'utif';
-import { editState, loadPresets, savePresets, installDebugHook, type EditState } from './state';
+import { editState, loadPresets, savePresets, installDebugHook, type EditState, type BorderStyle } from './state';
 import { CropController, getDesqueezedPlaneSize, renderCroppedRegionFromOriginal } from './crop';
+import { buildToneFilterString, createGrainTile, Engine3D } from './compose';
+import { renderSlideBase, computeFontSizePx, computeGlowPx, drawWatermarkText, drawLogo, drawAppWatermark } from './render';
 
 function el<T extends HTMLElement = HTMLElement>(id: string): T {
   const e = document.getElementById(id);
@@ -39,7 +41,9 @@ const DOM = {
 
 let originalImg: HTMLImageElement | null = null; let currentStrategy = 'seamless';
 let baseProxyCropUrl: string | null = null; let proxyCropUrl: string | null = null;
-let staticGrainDataUrl = ''; let activeGlobalRatio = 1; let zoomMode = 'fit';
+let sourceImg: HTMLImageElement | null = null;
+const grainTile = createGrainTile();
+let activeGlobalRatio = 1; let zoomMode = 'fit';
 let isMargin = false; let bgColor = '#000000';
 let isBold = false; let isGlow = true;
 let tPosX = 50, tPosY = 94, lPosX = 50, lPosY = 80; let logoObj: HTMLImageElement | null = null; let logoUrl: string | null = null; let activeTarget: 'text' | 'logo' | null = null;
@@ -84,13 +88,6 @@ function syncAspectToCropper() {
   if (!cropCtrl.isReady) return;
   cropCtrl.retarget(currentTargetAspect());
 }
-
-function initGrain() {
-  const c = document.createElement('canvas'); c.width = 256; c.height = 256; const ctx = c.getContext('2d')!; const id = ctx.createImageData(256, 256);
-  for (let i = 0; i < id.data.length; i += 4) { const v = Math.random() < 0.5 ? 0 : 255; id.data[i] = id.data[i + 1] = id.data[i + 2] = v; id.data[i + 3] = 40; }
-  ctx.putImageData(id, 0, 0); staticGrainDataUrl = c.toDataURL('image/png');
-}
-initGrain();
 
 window.addEventListener('DOMContentLoaded', () => {
   loadPresetsFromStorage();
@@ -296,122 +293,6 @@ function initGlobalDrag() {
   window.addEventListener('mouseup', endDrag); window.addEventListener('touchend', endDrag);
 }
 
-const Engine3D = {
-  canvas: document.createElement('canvas'), gl: null as WebGL2RenderingContext | null, program: null as WebGLProgram | null, posBuf: null as WebGLBuffer | null,
-  lutData: null as { size: number; data: Uint8Array } | null, identityLut: null as { size: number; data: Uint8Array } | null,
-  initIdentityLut: function () {
-    const size = 16; const data = new Uint8Array(size * size * size * 4); let i = 0;
-    for (let z = 0; z < size; z++) { for (let y = 0; y < size; y++) { for (let x = 0; x < size; x++) { data[i++] = Math.round((x / (size - 1)) * 255); data[i++] = Math.round((y / (size - 1)) * 255); data[i++] = Math.round((z / (size - 1)) * 255); data[i++] = 255; } } }
-    this.identityLut = { size, data };
-  },
-  parseCube: function (text: string) {
-    const lines = text.split('\n'); let size = 0; const vals: number[] = [];
-    for (let line of lines) { line = line.trim(); if (line.startsWith('LUT_3D_SIZE')) { size = parseInt(line.split(/\s+/)[1]); } else if (line && !line.startsWith('#') && /^[0-9.-]/.test(line)) { const parts = line.split(/\s+/).map(Number); vals.push(parts[0], parts[1], parts[2]); } }
-    const data = new Uint8Array(size * size * size * 4); let vIdx = 0;
-    for (let i = 0; i < data.length; i += 4) { data[i] = Math.max(0, Math.min(255, Math.round(vals[vIdx] * 255))); data[i + 1] = Math.max(0, Math.min(255, Math.round(vals[vIdx + 1] * 255))); data[i + 2] = Math.max(0, Math.min(255, Math.round(vals[vIdx + 2] * 255))); data[i + 3] = 255; vIdx += 3; }
-    this.lutData = { size, data };
-  },
-  apply: async function (sourceCanvas: HTMLCanvasElement, intensity: number, hl: number, sh: number, hasCustomLut: boolean): Promise<HTMLCanvasElement> {
-    if (!this.gl) { this.gl = this.canvas.getContext('webgl2', { preserveDrawingBuffer: true }); this.initIdentityLut(); }
-    const gl = this.gl; if (!gl) return sourceCanvas;
-
-    if (!this.program) {
-      const vsSource = `#version 300 es\n in vec2 a_position; out vec2 v_texCoord; void main() { gl_Position = vec4(a_position, 0.0, 1.0); v_texCoord = vec2((a_position.x + 1.0) / 2.0, 1.0 - (a_position.y + 1.0) / 2.0); }`;
-      const fsSource = `#version 300 es\n precision highp float; precision highp sampler3D; in vec2 v_texCoord; uniform sampler2D u_image; uniform sampler3D u_lut; uniform float u_intensity; uniform float u_hl; uniform float u_sh; uniform int u_hasLut; out vec4 outColor; float getLum(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); } void main() { vec4 texColor = texture(u_image, v_texCoord); vec3 color = texColor.rgb; float lum = getLum(color); float shadowMask = pow(clamp(1.0 - (lum / 0.5), 0.0, 1.0), 1.5); float hlMask = pow(clamp((lum - 0.5) / 0.5, 0.0, 1.0), 1.5); color *= 1.0 + (u_sh - 1.0) * shadowMask; color *= 1.0 + (u_hl - 1.0) * hlMask; color = clamp(color, 0.0, 1.0); vec3 finalColor = color; if (u_hasLut == 1) { vec3 lutColor = texture(u_lut, color).rgb; finalColor = mix(color, lutColor, u_intensity); } outColor = vec4(finalColor, texColor.a); }`;
-      const createShader = (type: number, source: string) => { const s = gl.createShader(type)!; gl.shaderSource(s, source); gl.compileShader(s); return s; };
-      this.program = gl.createProgram()!; gl.attachShader(this.program, createShader(gl.VERTEX_SHADER, vsSource)); gl.attachShader(this.program, createShader(gl.FRAGMENT_SHADER, fsSource)); gl.linkProgram(this.program);
-      this.posBuf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, this.posBuf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]), gl.STATIC_DRAW);
-    }
-
-    gl.useProgram(this.program);
-    const posLoc = gl.getAttribLocation(this.program, 'a_position');
-    gl.enableVertexAttribArray(posLoc);
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.posBuf);
-    gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
-
-    const lutTex = gl.createTexture();
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_3D, lutTex);
-    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    const activeLut = (hasCustomLut && this.lutData) ? this.lutData : this.identityLut!;
-    gl.texImage3D(gl.TEXTURE_3D, 0, gl.RGBA, activeLut.size, activeLut.size, activeLut.size, 0, gl.RGBA, gl.UNSIGNED_BYTE, activeLut.data);
-
-    gl.uniform1i(gl.getUniformLocation(this.program, 'u_lut'), 1);
-    gl.uniform1f(gl.getUniformLocation(this.program, 'u_intensity'), intensity);
-    gl.uniform1f(gl.getUniformLocation(this.program, 'u_hl'), hl);
-    gl.uniform1f(gl.getUniformLocation(this.program, 'u_sh'), sh);
-    gl.uniform1i(gl.getUniformLocation(this.program, 'u_hasLut'), hasCustomLut ? 1 : 0);
-
-    const isHuge = sourceCanvas.width > 4096 || sourceCanvas.height > 4096;
-
-    if (!isHuge) {
-      this.canvas.width = sourceCanvas.width; this.canvas.height = sourceCanvas.height;
-      gl.viewport(0, 0, this.canvas.width, this.canvas.height);
-
-      const imgTex = gl.createTexture();
-      gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, imgTex);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, sourceCanvas);
-      gl.uniform1i(gl.getUniformLocation(this.program, 'u_image'), 0);
-
-      gl.drawArrays(gl.TRIANGLES, 0, 6);
-
-      const outCvs = document.createElement('canvas');
-      outCvs.width = this.canvas.width; outCvs.height = this.canvas.height;
-      outCvs.getContext('2d')!.drawImage(this.canvas, 0, 0);
-
-      gl.deleteTexture(imgTex);
-      gl.deleteTexture(lutTex);
-      return outCvs;
-    } else {
-      const outCvs = document.createElement('canvas');
-      outCvs.width = sourceCanvas.width; outCvs.height = sourceCanvas.height;
-      const outCtx = outCvs.getContext('2d')!;
-      const TILE_SIZE = 2048;
-
-      for (let y = 0; y < sourceCanvas.height; y += TILE_SIZE) {
-        for (let x = 0; x < sourceCanvas.width; x += TILE_SIZE) {
-          const w = Math.min(TILE_SIZE, sourceCanvas.width - x);
-          const h = Math.min(TILE_SIZE, sourceCanvas.height - y);
-
-          const tileCvs = document.createElement('canvas');
-          tileCvs.width = w; tileCvs.height = h;
-          tileCvs.getContext('2d')!.drawImage(sourceCanvas, x, y, w, h, 0, 0, w, h);
-
-          this.canvas.width = w; this.canvas.height = h;
-          gl.viewport(0, 0, w, h);
-
-          const imgTex = gl.createTexture();
-          gl.activeTexture(gl.TEXTURE0);
-          gl.bindTexture(gl.TEXTURE_2D, imgTex);
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, tileCvs);
-          gl.uniform1i(gl.getUniformLocation(this.program, 'u_image'), 0);
-
-          gl.drawArrays(gl.TRIANGLES, 0, 6);
-
-          outCtx.drawImage(this.canvas, x, y);
-          gl.deleteTexture(imgTex);
-          tileCvs.width = 0; tileCvs.height = 0;
-        }
-      }
-      gl.deleteTexture(lutTex);
-      return outCvs;
-    }
-  },
-};
-
 const updateLoadingText = (text: string) => { const e = document.getElementById('loading-text'); if (e) e.innerText = text; };
 const showLoading = (msg: string) => { updateLoadingText(msg); document.getElementById('loading-overlay')!.classList.remove('hidden'); document.getElementById('loading-overlay')!.classList.add('flex'); };
 const hideLoading = () => { document.getElementById('loading-overlay')!.classList.add('hidden'); document.getElementById('loading-overlay')!.classList.remove('flex'); };
@@ -542,16 +423,133 @@ function applyCropAndRender() {
   } catch (_err) { alert('오류가 발생했습니다.'); }
 }
 
+function loadImage(url: string): Promise<HTMLImageElement> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.src = url;
+  });
+}
+
+function currentToneFilterString(): string {
+  return buildToneFilterString({
+    lut: el<HTMLSelectElement>('select-lut').value as EditState['tone']['lut'],
+    lutIntensity: Number(el<HTMLInputElement>('slider-lut-intensity').value),
+    brightness: Number(DOM.sBr.value),
+    contrast: Number(DOM.sCo.value),
+    saturation: Number(DOM.sSa.value),
+  });
+}
+
+/** Redraws every visible slide's canvas (background/image/border/grain/text/logo/watermark) without touching DOM structure. Shared by every color/typo/frame control that doesn't change slide count. */
+function redrawSlides() {
+  if (!sourceImg) return;
+  const pW = document.getElementById('preview-wrapper-parent'); if (!pW) return;
+  const slides = (currentStrategy === 'seamless' || currentStrategy === 'triptych') ? parseInt(DOM.sSlides.value) : 1;
+  const isSingle = currentStrategy === 'single';
+  const isPanned = currentStrategy === 'seamless' || currentStrategy === 'triptych';
+  const filterString = currentToneFilterString();
+  const dpr = window.devicePixelRatio || 1;
+
+  const cssH = pW.clientHeight;
+  const cssW = pW.clientWidth / slides;
+  const fontSizePx = computeFontSizePx(cssH, isSingle, Number(DOM.sFontScale.value));
+  const glowPx = computeGlowPx(parseInt(DOM.sGlowAmt.value), fontSizePx);
+  const target = DOM.wmTarget ? DOM.wmTarget.value : 'all';
+  const txt = DOM.wmText.value.trim();
+  const showAppLogo = DOM.toggleAppLogo ? DOM.toggleAppLogo.checked : false;
+  const uiLogoWidth = cssW * (Number(DOM.sLogoScale.value) / 100) * 0.2;
+
+  const frame = {
+    bgColor,
+    isMargin,
+    marginScale: isMargin ? parseInt(DOM.sMarginScale.value) / 100 : 1,
+    border: DOM.sBorder.value as BorderStyle,
+    borderWeight: parseFloat(DOM.sBorderWeight.value),
+  };
+
+  document.querySelectorAll<HTMLCanvasElement>('.preview-slide-canvas').forEach((canvas) => {
+    const i = Number(canvas.dataset.slideIndex);
+    canvas.width = Math.max(1, Math.round(cssW * dpr));
+    canvas.height = Math.max(1, Math.round(cssH * dpr));
+    const ctx = canvas.getContext('2d')!;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    renderSlideBase({
+      ctx, width: cssW, height: cssH, slideIndex: i, slidesCount: slides, isPanned,
+      source: { image: sourceImg!, naturalWidth: sourceImg!.naturalWidth, naturalHeight: sourceImg!.naturalHeight },
+      filterString, frame, grain: { tile: grainTile, amountPct: Number(DOM.sGrain.value) },
+    });
+
+    const shouldShow = isSingle || target === 'all' || parseInt(target) === i + 1;
+    if (txt && shouldShow) {
+      drawWatermarkText({
+        ctx, text: txt, x: cssW * (tPosX / 100), y: cssH * (tPosY / 100),
+        fontSizePx, fontFamily: DOM.fontSel.value, bold: isBold, preset: textStylePreset,
+        plainColor: DOM.textColor.value, glow: isGlow, glowPx,
+      });
+    }
+    if (logoObj && logoUrl && shouldShow && DOM.toggleLogo.checked) {
+      drawLogo({
+        ctx, image: logoObj, naturalWidth: logoObj.naturalWidth, naturalHeight: logoObj.naturalHeight,
+        x: cssW * (lPosX / 100), y: cssH * (lPosY / 100), width: uiLogoWidth, opacityPct: Number(DOM.sLogoOp.value),
+      });
+    }
+    if (showAppLogo) drawAppWatermark({ ctx, width: cssW, height: cssH });
+  });
+
+  updateDragHitTargets(slides, isSingle, cssW, cssH, fontSizePx, uiLogoWidth);
+}
+
+/** Keeps the invisible drag hit-target overlays (for text/logo pointer interaction) in sync with what redrawSlides() just painted. */
+function updateDragHitTargets(slides: number, isSingle: boolean, cssW: number, cssH: number, fontSizePx: number, uiLogoWidth: number) {
+  const txt = DOM.wmText.value.trim();
+  const target = DOM.wmTarget ? DOM.wmTarget.value : 'all';
+  const showLogo = logoObj && logoUrl && DOM.toggleLogo.checked;
+
+  for (let i = 1; i <= slides; i++) {
+    const pane = document.getElementById(`glass-pane-${i}`); if (!pane) continue;
+    const shouldShow = isSingle || target === 'all' || parseInt(target) === i;
+
+    let te = pane.querySelector<HTMLElement>('.draggable-text');
+    if (txt && shouldShow) {
+      if (!te) { te = document.createElement('div'); te.className = 'draggable-text'; te.tabIndex = 0; pane.appendChild(te); }
+      te.style.left = `${tPosX}%`; te.style.top = `${tPosY}%`; te.style.display = 'flex';
+      te.innerHTML = `<span style="visibility:hidden; display:inline-block; font-family:'${DOM.fontSel.value}', sans-serif; font-size:${fontSizePx}px; ${isBold ? 'font-weight:700;' : ''} letter-spacing:0.1em;">${txt}</span>`;
+    } else if (te) { te.style.display = 'none'; }
+
+    let le = pane.querySelector<HTMLElement>('.draggable-logo');
+    if (showLogo && shouldShow) {
+      if (!le) { le = document.createElement('div'); le.className = 'draggable-logo'; le.tabIndex = 0; pane.appendChild(le); }
+      le.style.left = `${lPosX}%`; le.style.top = `${lPosY}%`; le.style.display = 'flex';
+      le.innerHTML = `<img src="${logoUrl}" style="opacity:0; width:${uiLogoWidth}px; min-width:${uiLogoWidth}px; pointer-events:none; max-width:none !important; flex-shrink:0;">`;
+    } else if (le) { le.style.display = 'none'; }
+  }
+  void cssW; void cssH;
+}
+
 const ModuleFrame = {
   updateBorderOptions: function () { DOM.borderWeightWrapper.classList.toggle('hidden', DOM.sBorder.value !== 'fineart'); this.build(); },
-  build: function () {
+  build: async function () {
     if (!proxyCropUrl) return;
+    sourceImg = await loadImage(proxyCropUrl);
+
     DOM.previewInner.innerHTML = '';
     const p = document.createElement('div'); p.id = 'preview-wrapper-parent'; p.className = 'flex relative m-auto'; p.style.aspectRatio = String(activeGlobalRatio); p.style.flexShrink = '0'; p.style.boxShadow = '0 40px 100px rgba(0,0,0,0.95)';
-    p.appendChild(this.createLayer('after'));
+
+    const slides = (currentStrategy === 'seamless' || currentStrategy === 'triptych') ? parseInt(DOM.sSlides.value) : 1;
+    const afterLayer = document.createElement('div'); afterLayer.className = 'preview-layer flex w-full h-full absolute inset-0'; afterLayer.id = 'layer-images-after';
+    for (let i = 0; i < slides; i++) {
+      const col = document.createElement('div'); col.className = 'flex flex-col flex-1 h-full relative';
+      const sc = document.createElement('div'); sc.className = 'slide-container w-full h-full flex-1 relative shadow-inner border-[#111] last:border-r-0';
+      if (currentStrategy === 'seamless' || currentStrategy === 'triptych') sc.style.borderRightWidth = '4px';
+      const canvas = document.createElement('canvas'); canvas.className = 'preview-slide-canvas absolute inset-0 w-full h-full'; canvas.dataset.slideIndex = String(i);
+      sc.appendChild(canvas);
+      col.appendChild(sc); afterLayer.appendChild(col);
+    }
+    p.appendChild(afterLayer);
 
     const lg = document.createElement('div'); lg.className = 'layer-glass absolute inset-0 flex z-50 pointer-events-none';
-    const slides = (currentStrategy === 'seamless' || currentStrategy === 'triptych') ? parseInt(DOM.sSlides.value) : 1;
     for (let i = 0; i < slides; i++) {
       const gp = document.createElement('div'); gp.className = 'flex-1 relative h-full pointer-events-none overflow-hidden'; gp.id = `glass-pane-${i + 1}`;
       gp.innerHTML = `<div class="snap-guide snap-guide-x hidden"></div><div class="snap-guide snap-guide-y hidden"></div>`; lg.appendChild(gp);
@@ -559,47 +557,28 @@ const ModuleFrame = {
     p.appendChild(lg); DOM.previewInner.appendChild(p); DOM.btnExport.classList.remove('opacity-50', 'cursor-not-allowed');
 
     if (isSplitView) {
-      const layerImagesBefore = this.createLayer('before'); layerImagesBefore.id = 'layer-images-before';
+      const layerImagesBefore = this.createBeforeLayer(); layerImagesBefore.id = 'layer-images-before';
       layerImagesBefore.style.clipPath = `polygon(0 0, ${splitPos}% 0, ${splitPos}% 100%, 0 100%)`; layerImagesBefore.style.zIndex = '20'; p.appendChild(layerImagesBefore);
       const handle = document.createElement('div'); handle.id = 'split-handle'; handle.className = 'absolute top-0 bottom-0 cursor-ew-resize border-r-[3px] border-white shadow-[0_0_10px_rgba(0,0,0,0.5)]'; handle.style.zIndex = '60'; handle.style.left = `${splitPos}%`; handle.style.transform = 'translateX(-1.5px)';
       const handleCircle = document.createElement('div'); handleCircle.className = 'absolute top-1/2 left-1/2 w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-lg transform -translate-x-1/2 -translate-y-1/2'; handleCircle.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2"><path d="M13 5l7 7-7 7M11 5l-7 7 7 7"/></svg>`; handle.appendChild(handleCircle);
       handle.addEventListener('mousedown', (e) => { isDraggingSplit = true; e.preventDefault(); e.stopPropagation(); }); p.appendChild(handle);
     }
 
-    ModuleColor.updateCSSFilters(); ModuleTypo.update(); applyZoom();
+    redrawSlides(); applyZoom();
   },
-  createLayer: function (type: 'before' | 'after') {
+  /** The raw, unedited comparison layer for Split View -- intentionally plain (no filter/border/grain/text), unlike the canvas-rendered "after" layer. */
+  createBeforeLayer: function (): HTMLDivElement {
     const slides = (currentStrategy === 'seamless' || currentStrategy === 'triptych') ? parseInt(DOM.sSlides.value) : 1;
     const layer = document.createElement('div'); layer.className = 'preview-layer flex w-full h-full absolute inset-0';
-
-    const intensity = Number(el<HTMLInputElement>('slider-lut-intensity').value) / 100;
-    const lutVal = el<HTMLSelectElement>('select-lut').value;
-    const filters: Record<string, string> = { kodak: `sepia(${50 * intensity}%) contrast(${100 + 15 * intensity}%) saturate(${100 + 20 * intensity}%) hue-rotate(${-10 * intensity}deg)`, fuji: `sepia(${30 * intensity}%) hue-rotate(${10 * intensity}deg) saturate(${100 - 10 * intensity}%) contrast(${100 - 5 * intensity}%)`, cinematic: `contrast(${100 + 20 * intensity}%) saturate(${100 + 10 * intensity}%) sepia(${40 * intensity}%) hue-rotate(${-15 * intensity}deg)` };
-    const cssLutStr = (lutVal !== 'none' && lutVal !== 'custom') ? filters[lutVal] : 'none';
-
-    let f = cssLutStr;
-    if (type === 'after' && (DOM.sBr.value !== '100' || DOM.sCo.value !== '100' || DOM.sSa.value !== '100')) { if (f === 'none') f = ''; f += ` brightness(${DOM.sBr.value}%) contrast(${DOM.sCo.value}%) saturate(${DOM.sSa.value}%)`; }
-    const mScale = isMargin ? parseInt(DOM.sMarginScale.value) / 100 : 1;
-    const bType = DOM.sBorder.value; const bWt = parseFloat(DOM.sBorderWeight.value);
-
     for (let i = 0; i < slides; i++) {
       const col = document.createElement('div'); col.className = 'flex flex-col flex-1 h-full relative';
       const sc = document.createElement('div'); sc.className = 'slide-container w-full h-full flex-1 relative shadow-inner border-[#111] last:border-r-0';
       if (currentStrategy === 'seamless' || currentStrategy === 'triptych') sc.style.borderRightWidth = '4px';
-      sc.style.backgroundColor = type === 'after' ? bgColor : '#000000';
-      if (isMargin && type === 'after' && bType === 'vnotch') sc.classList.add('border-vnotch');
-
-      const iw = document.createElement('div'); iw.className = 'absolute overflow-hidden pointer-events-none preview-img-wrapper';
-      if (isMargin && type === 'after') {
-        if (bType === 'instant') { const pS = mScale * 0.88; iw.style.width = `${pS * 100}%`; iw.style.height = `${pS * 100}%`; iw.style.left = `${(1 - pS) / 2 * 100}%`; iw.style.top = '6%'; }
-        else { iw.style.width = `${mScale * 100}%`; iw.style.height = `${mScale * 100}%`; iw.style.left = `${(1 - mScale) / 2 * 100}%`; iw.style.top = `${(1 - mScale) / 2 * 100}%`; if (bType === 'fineart') iw.style.border = `${Math.max(1, bWt)}px solid rgba(20,20,20,0.95)`; }
-      } else { iw.style.width = '100%'; iw.style.height = '100%'; iw.style.left = '0'; iw.style.top = '0'; }
-
-      const img = document.createElement('img'); img.src = proxyCropUrl!; img.style.filter = f;
+      sc.style.backgroundColor = '#000000';
+      const iw = document.createElement('div'); iw.className = 'absolute overflow-hidden pointer-events-none preview-img-wrapper'; iw.style.width = '100%'; iw.style.height = '100%'; iw.style.left = '0'; iw.style.top = '0';
+      const img = document.createElement('img'); img.src = proxyCropUrl!;
       if (currentStrategy === 'seamless' || currentStrategy === 'triptych') { img.className = 'preview-img absolute max-w-none h-full'; img.style.width = `${slides * 100}%`; img.style.transform = `translateX(-${(i / slides) * 100}%)`; } else { img.className = 'preview-img absolute w-full h-full object-cover'; }
-
       iw.appendChild(img); sc.appendChild(iw);
-      if (type === 'after') { const grain = document.createElement('div'); grain.className = 'gallery-grain-overlay'; grain.style.backgroundImage = `url(${staticGrainDataUrl})`; grain.style.opacity = String((Number(DOM.sGrain.value) / 100) * 2.5); sc.appendChild(grain); }
       col.appendChild(sc); layer.appendChild(col);
     }
     return layer;
@@ -638,81 +617,27 @@ const ModuleColor = {
         const hlF = 1.0 + (hlVal / 100.0); const shF = 1.0 + (shVal / 100.0);
         const processedCanvas = await Engine3D.apply(cvs, intensity, hlF, shF, hasCustomLut);
         proxyCropUrl = processedCanvas.toDataURL('image/jpeg', 0.95);
-        setTimeout(() => { hideLoading(); if (isFirstLoad) { switchTab('frame'); ModuleFrame.build(); } else { ModuleFrame.build(); } }, 50);
+        setTimeout(async () => {
+          hideLoading();
+          if (isFirstLoad) { switchTab('frame'); await ModuleFrame.build(); } else { sourceImg = await loadImage(proxyCropUrl!); redrawSlides(); }
+        }, 50);
       }, 50);
       return;
     }
 
     proxyCropUrl = baseProxyCropUrl;
-    if (isFirstLoad) { switchTab('frame'); ModuleFrame.build(); } else { ModuleFrame.build(); }
+    if (isFirstLoad) { switchTab('frame'); ModuleFrame.build(); } else { loadImage(proxyCropUrl!).then((img) => { sourceImg = img; redrawSlides(); }); }
   },
-  updateCSSFilters: function () {
-    const intensity = Number(el<HTMLInputElement>('slider-lut-intensity').value) / 100;
-    const lutVal = el<HTMLSelectElement>('select-lut').value;
-    const filters: Record<string, string> = { kodak: `sepia(${50 * intensity}%) contrast(${100 + 15 * intensity}%) saturate(${100 + 20 * intensity}%) hue-rotate(${-10 * intensity}deg)`, fuji: `sepia(${30 * intensity}%) hue-rotate(${10 * intensity}deg) saturate(${100 - 10 * intensity}%) contrast(${100 - 5 * intensity}%)`, cinematic: `contrast(${100 + 20 * intensity}%) saturate(${100 + 10 * intensity}%) sepia(${40 * intensity}%) hue-rotate(${-15 * intensity}deg)` };
-    let cssLutStr = (lutVal !== 'none' && lutVal !== 'custom') ? filters[lutVal] : 'none';
-
-    let f = cssLutStr;
-    if (DOM.sBr.value !== '100' || DOM.sCo.value !== '100' || DOM.sSa.value !== '100') { if (f === 'none') f = ''; f += ` brightness(${DOM.sBr.value}%) contrast(${DOM.sCo.value}%) saturate(${DOM.sSa.value}%)`; }
-    if (f === '') f = 'none';
-
-    document.querySelectorAll<HTMLElement>('.preview-img').forEach(img => { if (!img.closest('[style*="polygon"]')) { img.style.filter = f; } });
-    document.querySelectorAll<HTMLElement>('.gallery-grain-overlay').forEach(gr => gr.style.opacity = String((Number(DOM.sGrain.value) / 100) * 2.5));
-  },
+  updateCSSFilters: function () { redrawSlides(); },
 };
 
 function resetTone() { DOM.sHl.value = '0'; DOM.inHl.value = '0'; DOM.sSh.value = '0'; DOM.inSh.value = '0'; el<HTMLSelectElement>('select-lut').value = 'none'; ModuleColor.triggerEngine(); }
 function resetColor() { DOM.sBr.value = '100'; DOM.inBr.value = '100'; DOM.sCo.value = '100'; DOM.inCo.value = '100'; DOM.sSa.value = '100'; DOM.inSa.value = '100'; DOM.sGrain.value = '0'; DOM.inGrain.value = '0'; ModuleColor.updateCSSFilters(); }
 
 const ModuleTypo = {
-  updateColorFromPicker: function () { textStylePreset = 'none'; document.querySelectorAll('.preset-pill').forEach(p => p.classList.remove('active')); this.update(); },
-  update: function () {
-    const txt = DOM.wmText.value.trim();
-    const target = DOM.wmTarget ? DOM.wmTarget.value : 'all';
-    const isSingle = currentStrategy === 'single';
-    const slides = (currentStrategy === 'seamless' || currentStrategy === 'triptych') ? parseInt(DOM.sSlides.value) : 1;
-    const gAmt = parseInt(DOM.sGlowAmt.value); const pW = document.getElementById('preview-wrapper-parent'); if (!pW) return;
-    const fSc = Number(DOM.sFontScale.value) / 100; const fs = Math.floor(pW.clientHeight * (isSingle ? 0.025 : 0.018)) * fSc;
-
-    const showAppLogo = DOM.toggleAppLogo ? DOM.toggleAppLogo.checked : false;
-    const currentUiWidth = pW.clientWidth / slides;
-    const uiLogoWidth = currentUiWidth * (Number(DOM.sLogoScale.value) / 100) * 0.2;
-
-    for (let i = 1; i <= slides; i++) {
-      const pane = document.getElementById(`glass-pane-${i}`); if (!pane) continue;
-      const shouldShow = isSingle || (target === 'all' || parseInt(target) === i);
-
-      let te = pane.querySelector<HTMLElement>('.draggable-text');
-      if (txt && shouldShow) {
-        if (!te) { te = document.createElement('div'); te.className = 'draggable-text'; te.tabIndex = 0; pane.appendChild(te); }
-        te.style.left = `${tPosX}%`; te.style.top = `${tPosY}%`; te.style.display = 'flex';
-        let spanClass = ''; let spanStyle = `font-family: '${DOM.fontSel.value}', sans-serif; font-size:${fs}px; ${isBold ? 'font-weight:700;' : ''} letter-spacing:0.1em;`;
-        if (textStylePreset === 'gold') spanClass = 'text-preset-gold'; else if (textStylePreset === 'silver') spanClass = 'text-preset-silver';
-        if (textStylePreset !== 'none') { if (isGlow) spanStyle += `filter: drop-shadow(0 0 ${gAmt * (fs / 50)}px rgba(0,0,0,0.8));`; }
-        else { spanStyle += ` color: ${DOM.textColor.value}; `; if (isGlow) spanStyle += `text-shadow: 0 0 ${gAmt * (fs / 50)}px ${DOM.textColor.value};`; }
-        te.innerHTML = `<span class="${spanClass}" style="display:inline-block; ${spanStyle}">${txt}</span>`;
-      } else if (te) { te.style.display = 'none'; }
-
-      let le = pane.querySelector<HTMLElement>('.draggable-logo');
-      if (logoObj && logoUrl && shouldShow && DOM.toggleLogo.checked) {
-        if (!le) { le = document.createElement('div'); le.className = 'draggable-logo'; le.tabIndex = 0; pane.appendChild(le); }
-        le.style.left = `${lPosX}%`; le.style.top = `${lPosY}%`; le.style.display = 'flex';
-        le.innerHTML = `<img src="${logoUrl}" style="opacity:${Number(DOM.sLogoOp.value) / 100}; width:${uiLogoWidth}px; min-width:${uiLogoWidth}px; pointer-events:none; max-width:none !important; flex-shrink:0;">`;
-      } else if (le) { le.style.display = 'none'; }
-
-      let appWm = pane.querySelector<HTMLElement>('.app-watermark-preview');
-      if (showAppLogo) {
-        if (!appWm) {
-          appWm = document.createElement('div'); appWm.className = 'app-watermark-preview absolute bottom-4 right-4 pointer-events-none z-50 text-[9px] md:text-[10px] text-white/90 font-bold tracking-widest';
-          appWm.style.fontFamily = "'Outfit', sans-serif";
-          appWm.innerText = 'cineRoll.studio'; pane.appendChild(appWm);
-        }
-        appWm.style.textShadow = '0 2px 4px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,0.8)';
-        appWm.style.display = 'block';
-      } else if (appWm) { appWm.style.display = 'none'; }
-    }
-  },
-  updatePositions: function () { document.querySelectorAll<HTMLElement>('.draggable-text').forEach(elx => { elx.style.left = `${tPosX}%`; elx.style.top = `${tPosY}%`; }); document.querySelectorAll<HTMLElement>('.draggable-logo').forEach(elx => { elx.style.left = `${lPosX}%`; elx.style.top = `${lPosY}%`; }); },
+  updateColorFromPicker: function () { textStylePreset = 'none'; document.querySelectorAll('.preset-pill').forEach(p => p.classList.remove('active')); redrawSlides(); },
+  update: function () { redrawSlides(); },
+  updatePositions: function () { redrawSlides(); },
 };
 
 function handleLogoToggleCheckbox() {
@@ -816,85 +741,67 @@ DOM.btnExport.addEventListener('click', async () => {
     let mCvs: HTMLCanvasElement = renderCroppedRegionFromOriginal(originalImg, exportState.squeeze, exportState.rotation.base, exportState.crop, targetW);
 
     const lutSelect = document.getElementById('select-lut') as HTMLSelectElement | null;
-    const lutVal = lutSelect ? lutSelect.value : 'none';
+    const lutVal = (lutSelect ? lutSelect.value : 'none') as EditState['tone']['lut'];
     const hlVal = parseFloat(DOM.sHl.value); const shVal = parseFloat(DOM.sSh.value); const hasCustomLut = lutVal === 'custom' && !!Engine3D.lutData;
-
     const intensity = Number(el<HTMLInputElement>('slider-lut-intensity').value) / 100;
-    const filters: Record<string, string> = { kodak: `sepia(${50 * intensity}%) contrast(${100 + 15 * intensity}%) saturate(${100 + 20 * intensity}%) hue-rotate(${-10 * intensity}deg)`, fuji: `sepia(${30 * intensity}%) hue-rotate(${10 * intensity}deg) saturate(${100 - 10 * intensity}%) contrast(${100 - 5 * intensity}%)`, cinematic: `contrast(${100 + 20 * intensity}%) saturate(${100 + 10 * intensity}%) sepia(${40 * intensity}%) hue-rotate(${-15 * intensity}deg)` };
-    const cssLutStr = (lutVal !== 'none' && lutVal !== 'custom') ? filters[lutVal] : 'none';
 
-    if (hasCustomLut || hlVal !== 0 || shVal !== 0 || cssLutStr !== 'none') {
-      if (cssLutStr !== 'none') {
-        const tempCvs = document.createElement('canvas'); tempCvs.width = mCvs.width; tempCvs.height = mCvs.height;
-        const ctx = tempCvs.getContext('2d')!; ctx.filter = cssLutStr; ctx.drawImage(mCvs, 0, 0); mCvs = tempCvs;
-      }
+    // brightness/contrast/saturation + the kodak/fuji/cinematic CSS-emulated LUTs are baked into
+    // the base composite via the same filterString the live preview uses (renderSlideBase below);
+    // only the WebGL-only custom-LUT/highlight-shadow pass needs a separate pre-processing step here.
+    if (hasCustomLut || hlVal !== 0 || shVal !== 0) {
       const hlF = 1.0 + (hlVal / 100.0); const shF = 1.0 + (shVal / 100.0);
       mCvs = await Engine3D.apply(mCvs, intensity, hlF, shF, hasCustomLut);
     }
 
-    const sW = mCvs.width / slides;
-    const eH = mCvs.height;
-
-    const mS = isMargin ? parseInt(DOM.sMarginScale.value) / 100 : 1; const bWt = parseFloat(DOM.sBorderWeight.value); const bTy = DOM.sBorder.value;
-    const gi = parseInt(DOM.sGrain.value); let gCvs: HTMLCanvasElement | null = null;
-    if (gi > 0) { gCvs = document.createElement('canvas'); gCvs.width = 512; gCvs.height = 512; const gx = gCvs.getContext('2d')!; const id = gx.createImageData(512, 512); for (let i = 0; i < id.data.length; i += 4) { id.data[i] = id.data[i + 1] = id.data[i + 2] = Math.random() < 0.5 ? 0 : 255; id.data[i + 3] = 255; } gx.putImageData(id, 0, 0); }
+    const filterString = currentToneFilterString();
+    const gi = parseInt(DOM.sGrain.value);
+    const frame = { bgColor, isMargin, marginScale: isMargin ? parseInt(DOM.sMarginScale.value) / 100 : 1, border: DOM.sBorder.value as BorderStyle, borderWeight: parseFloat(DOM.sBorderWeight.value) };
 
     const gCon = el('export-gallery-container'); gCon.innerHTML = ''; const fArr: File[] = []; let sBlb: Blob | null = null; const zip = new JSZip();
 
     const showAppLogo = DOM.toggleAppLogo ? DOM.toggleAppLogo.checked : false;
     const target = DOM.wmTarget ? DOM.wmTarget.value : 'all';
+    const isSingle = currentStrategy === 'single';
+    const isPanned = currentStrategy === 'seamless' || currentStrategy === 'triptych';
+    const eH = mCvs.height;
+    const sliceW = mCvs.width / slides;
+    const fontSizePx = computeFontSizePx(eH, isSingle, Number(DOM.sFontScale.value));
+    const glowPx = computeGlowPx(parseInt(DOM.sGlowAmt.value), fontSizePx);
 
     for (let i = 0; i < slides; i++) {
       updateLoadingText(`Encoding File ${i + 1} / ${slides}...`);
       await new Promise(r => setTimeout(r, 50));
 
-      const wCv = document.createElement('canvas');
-      const finalSliceW = Math.floor(sW); const finalExportH = Math.floor(eH);
-      wCv.width = finalSliceW; wCv.height = finalExportH;
+      const finalSliceW = Math.floor(sliceW); const finalExportH = Math.floor(eH);
+      const wCv = document.createElement('canvas'); wCv.width = finalSliceW; wCv.height = finalExportH;
       const ctx = wCv.getContext('2d')!; ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
-      ctx.fillStyle = isMargin ? bgColor : '#000000'; ctx.fillRect(0, 0, finalSliceW, finalExportH); ctx.save();
 
-      let dx = 0, dy = 0, dw = sW, dh = eH;
-      if (isMargin) {
-        if (bTy === 'instant') { const pS = mS * 0.88; dw = sW * pS; dh = eH * pS; dx = (sW - dw) / 2; dy = eH * 0.06; } else { dw = sW * mS; dh = eH * mS; dx = (sW - dw) / 2; dy = (eH - dh) / 2; }
-        if (currentStrategy === 'seamless' || currentStrategy === 'triptych') ctx.drawImage(mCvs, i * sW, 0, sW, eH, dx, dy, dw, dh); else ctx.drawImage(mCvs, dx, dy, dw, dh);
-      } else { if (currentStrategy === 'seamless' || currentStrategy === 'triptych') ctx.drawImage(mCvs, i * sW, 0, sW, eH, 0, 0, finalSliceW, finalExportH); else ctx.drawImage(mCvs, 0, 0, finalSliceW, finalExportH); }
-      ctx.restore();
-
-      if (isMargin && bTy === 'fineart') { ctx.save(); const strokeW = Math.max(1, eH * 0.001 * bWt); ctx.strokeStyle = 'rgba(20,20,20,0.95)'; ctx.lineWidth = strokeW; ctx.strokeRect(dx + strokeW / 2, dy + strokeW / 2, dw - strokeW, dh - strokeW); ctx.restore(); }
-      if (gCvs) { ctx.save(); ctx.globalAlpha = (gi / 100) * 1.5; ctx.globalCompositeOperation = 'soft-light'; ctx.fillStyle = ctx.createPattern(gCvs, 'repeat')!; ctx.fillRect(0, 0, finalSliceW, finalExportH); ctx.restore(); }
+      renderSlideBase({
+        ctx, width: finalSliceW, height: finalExportH, slideIndex: i, slidesCount: slides, isPanned,
+        source: { image: mCvs, naturalWidth: mCvs.width, naturalHeight: mCvs.height },
+        filterString, frame, grain: { tile: grainTile, amountPct: gi },
+      });
 
       const txt = DOM.wmText.value.trim();
-      const shouldShowTypo = currentStrategy === 'single' || target === 'all' || parseInt(target) === i + 1;
+      const shouldShowTypo = isSingle || target === 'all' || parseInt(target) === i + 1;
 
       if (txt && shouldShowTypo) {
-        ctx.save(); ctx.font = `${isBold ? 'bold ' : ''} ${Math.floor(eH * (currentStrategy === 'single' ? 0.025 : 0.018) * (Number(DOM.sFontScale.value) / 100))}px '${DOM.fontSel.value}', sans-serif`; ctx.textBaseline = 'middle'; ctx.textAlign = 'center'; (ctx as any).letterSpacing = '2px';
-        if (textStylePreset !== 'none') {
-          const gradient = ctx.createLinearGradient(sW * (tPosX / 100) - 100, eH * (tPosY / 100) - 20, sW * (tPosX / 100) + 100, eH * (tPosY / 100) + 20);
-          if (textStylePreset === 'gold') { gradient.addColorStop(0, '#BF953F'); gradient.addColorStop(0.25, '#FCF6BA'); gradient.addColorStop(0.5, '#B38728'); gradient.addColorStop(0.75, '#FBF5B7'); gradient.addColorStop(1, '#AA771C'); } else { gradient.addColorStop(0, '#8A9097'); gradient.addColorStop(0.25, '#E0E5EC'); gradient.addColorStop(0.5, '#8A9097'); gradient.addColorStop(0.75, '#B0B5BB'); gradient.addColorStop(1, '#595F66'); }
-          ctx.fillStyle = gradient;
-        } else { ctx.fillStyle = DOM.textColor.value; }
-        if (isGlow) { ctx.shadowColor = textStylePreset !== 'none' ? 'rgba(0,0,0,0.8)' : DOM.textColor.value; ctx.shadowBlur = parseInt(DOM.sGlowAmt.value) * 1.5; }
-        ctx.fillText(txt, sW * (tPosX / 100), eH * (tPosY / 100)); ctx.restore();
+        drawWatermarkText({
+          ctx, text: txt, x: finalSliceW * (tPosX / 100), y: finalExportH * (tPosY / 100),
+          fontSizePx, fontFamily: DOM.fontSel.value, bold: isBold, preset: textStylePreset,
+          plainColor: DOM.textColor.value, glow: isGlow, glowPx,
+        });
       }
 
       if (logoObj && logoUrl && DOM.toggleLogo.checked && shouldShowTypo) {
-        ctx.save(); ctx.globalAlpha = Number(DOM.sLogoOp.value) / 100; const lgScale = Number(DOM.sLogoScale.value) / 100; const maxW = sW * 0.2 * lgScale; const ratio = logoObj.height / logoObj.width; const finalW = maxW; const finalH = maxW * ratio; ctx.drawImage(logoObj, sW * (lPosX / 100) - finalW / 2, eH * (lPosY / 100) - finalH / 2, finalW, finalH); ctx.restore();
+        const logoWidth = finalSliceW * 0.2 * (Number(DOM.sLogoScale.value) / 100);
+        drawLogo({
+          ctx, image: logoObj, naturalWidth: logoObj.naturalWidth, naturalHeight: logoObj.naturalHeight,
+          x: finalSliceW * (lPosX / 100), y: finalExportH * (lPosY / 100), width: logoWidth, opacityPct: Number(DOM.sLogoOp.value),
+        });
       }
 
-      if (showAppLogo) {
-        ctx.save();
-        const appWmSize = Math.max(16, eH * 0.012);
-        ctx.font = `700 ${appWmSize}px 'Outfit', sans-serif`;
-        ctx.shadowColor = 'rgba(0,0,0,0.9)';
-        ctx.shadowBlur = 8;
-        ctx.shadowOffsetY = 1;
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-        ctx.textAlign = 'right';
-        ctx.textBaseline = 'bottom';
-        ctx.fillText('cineRoll.studio', finalSliceW - (eH * 0.015), finalExportH - (eH * 0.015));
-        ctx.restore();
-      }
+      if (showAppLogo) drawAppWatermark({ ctx, width: finalSliceW, height: finalExportH });
 
       const ext = mimeType === 'image/png' ? 'png' : 'jpg';
       const fn = (currentStrategy === 'seamless' || currentStrategy === 'triptych') ? `cineRoll_pan_${i + 1}.${ext}` : `cineRoll_output.${ext}`;
