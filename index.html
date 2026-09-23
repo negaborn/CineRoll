@@ -3,245 +3,205 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>cineRoll 103.0 | Stabilizer</title>
+    <title>cineRoll 150.0 | Final Unlock</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        tailwind.config = { darkMode: 'class', theme: { extend: { colors: { 
-            background: '#111111', panel: '#1c1c1e', border: '#2d2d30', coral: { 400: '#fb7185', 500: '#f43f5e', 600: '#e11d48' } 
+        tailwind.config = { darkMode: 'class', theme: { extend: { colors: {
+            background: '#09090b', panel: '#18181b', border: '#27272a', coral: { 400: '#fb7185', 500: '#f43f5e', 600: '#e11d48' }
         } } } }
     </script>
-    
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/exifr/dist/full.umd.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.js"></script>
 
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700&family=Inter:wght@400;700&family=Cinzel:wght@400;700&family=Cormorant+Garamond:wght@400;700&family=Montserrat:wght@400;700&family=Playfair+Display:wght@400;700&family=Oswald:wght@400;700&family=Lato:wght@400;700&family=Bebas+Neue&family=Lora:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-    
-    <style>
-        body { font-family: 'Inter', sans-serif; background-color: #111111; color: #a3a3a3; transition: background-color 0.3s; }
-        .logo-font { font-family: 'Outfit', sans-serif; }
-        
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: #111; }
-        ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 4px; border: 2px solid #111; }
-        ::-webkit-scrollbar-corner { background: #111; }
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;700&family=Inter:wght@400;500;700&family=Cinzel:wght@400;700&family=Cormorant+Garamond:wght@400;700&family=Montserrat:wght@400;700&family=Playfair+Display:wght@400;700&family=Oswald:wght@400;700&family=Lato:wght@400;700&family=Bebas+Neue&family=Lora:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 
-        .tab-btn { padding: 12px 0; font-size: 10px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #737373; border-bottom: 2px solid transparent; transition: all 0.2s; outline: none; flex: 1; text-align: center; }
-        .tab-btn:hover { color: #d4d4d4; }
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #09090b; color: #a1a1aa; transition: background-color 0.3s; }
+        .logo-font { font-family: 'Outfit', sans-serif; }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #09090b; }
+        ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
+
+        .tab-btn { padding: 10px 0; font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #71717a; border-bottom: 2px solid transparent; transition: all 0.2s; outline: none; flex: 1; text-align: center; }
+        .tab-btn:hover { color: #e4e4e7; }
         .tab-btn.active { color: #fff; border-bottom-color: #f43f5e; }
 
-        .min-label { display: flex; justify-content: space-between; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: #888; margin-bottom: 8px; font-weight: 600; }
-        .min-select, .min-input { width: 100%; background: #111; border: 1px solid #2d2d30; color: #e5e5e5; font-size: 12px; padding: 8px 10px; border-radius: 4px; outline: none; transition: border-color 0.2s; appearance: none; }
-        .min-select:focus, .min-input:focus { border-color: #555; }
-        
-        .min-btn { background: #1c1c1e; border: 1px solid #2d2d30; color: #d4d4d4; font-size: 11px; padding: 8px 12px; border-radius: 4px; font-weight: 500; transition: all 0.1s; cursor: pointer; text-align: center; }
-        .min-btn:hover { background: #2d2d30; border-color: #404040; color: #fff; }
-        .min-btn.active { background: #2d2d30; border-color: #f43f5e; color: #fff; }
+        .min-label { display: flex; justify-content: space-between; font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: #71717a; margin-bottom: 6px; font-weight: 600; }
+        .min-select, .min-input { width: 100%; background: transparent; border: 1px solid #27272a; color: #e4e4e7; font-size: 11px; padding: 6px 10px; border-radius: 4px; outline: none; transition: border-color 0.2s; appearance: none; }
+        .min-select:focus, .min-input:focus { border-color: #52525b; }
 
-        .min-btn-primary { background: #f43f5e; color: #fff; border: none; font-weight: 600; padding: 12px; border-radius: 4px; cursor: pointer; transition: background 0.2s; width: 100%; text-transform: uppercase; letter-spacing: 0.05em; font-size: 11px;}
-        .min-btn-primary:hover { background: #e11d48; }
+        .min-btn { background: #18181b; border: 1px solid #27272a; color: #a1a1aa; font-size: 10px; padding: 6px 10px; border-radius: 4px; font-weight: 500; transition: all 0.15s; cursor: pointer; text-align: center; }
+        .min-btn:hover { background: #27272a; border-color: #3f3f46; color: #fff; }
+        .min-btn.active { background: #27272a; border-color: #f43f5e; color: #fff; }
 
         input[type=range] { -webkit-appearance: none; background: transparent; width: 100%; height: 16px; cursor: pointer; }
-        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 2px; background: #3f3f46; border-radius: 1px; }
-        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 12px; width: 12px; border-radius: 50%; background: #d4d4d4; margin-top: -5px; transition: transform 0.1s; }
-        input[type=range]:active::-webkit-slider-thumb { background: #f43f5e; transform: scale(1.2); }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 1px; background: #3f3f46; border-radius: 1px; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 10px; width: 10px; border-radius: 50%; background: #e4e4e7; margin-top: -4.5px; transition: transform 0.1s, background 0.1s; }
+        input[type=range]:active::-webkit-slider-thumb { background: #f43f5e; transform: scale(1.3); }
 
         input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         input[type="number"] { -moz-appearance: textfield; cursor: text;}
 
-        .cropper-view-box, .cropper-face { border-radius: 0px; outline: 0; }
         .cropper-line, .cropper-point { background-color: #f43f5e !important; }
         .cropper-view-box { outline: 1px solid #f43f5e !important; }
-        .cropper-snap .cropper-line, .cropper-snap .cropper-point { background-color: #22c55e !important; }
-        .cropper-snap .cropper-view-box { outline: 2px solid #22c55e !important; }
-        .cropper-modal { background-color: rgba(0,0,0,0.85); }
 
         #preview-area { position: absolute; inset: 0; overflow: auto; user-select: none; -webkit-user-select: none; }
-        
-        /* 🌟 V103: 사파리 젠모드 상단 쏠림 해결을 위한 Grid 정렬 체계 도입 */
-        #preview-area-inner { 
-            display: grid; place-items: center; /* 핵심 정렬 속성 */
-            min-width: 100%; min-height: 100%; 
-            padding: 2rem 1rem 8rem 1rem; /* 하단 패딩 늘려 FIT 메뉴 가림 방지 */
-            transition: padding 0.3s ease; user-select: none;
-        }
+        #preview-area-inner { display: grid; place-items: center; min-width: 100%; min-height: 100%; padding: 2rem 1rem 8rem 1rem; transition: padding 0.3s ease; user-select: none; }
         @media (min-width: 768px) { #preview-area-inner { padding: 4rem 2rem; } }
-        
-        /* 🌟 V103: 젠 모드에서는 패딩을 없애서 Grid가 완벽한 화면 중앙에 액자를 놓도록 함 */
         body.zen-mode #preview-area-inner { padding: 1rem !important; }
-        
+
         #preview-wrapper-parent { position: relative; flex-shrink: 0; box-shadow: 0 40px 100px rgba(0,0,0,0.95); margin: auto; }
-        
         .preview-layer { display: flex; width: 100%; height: 100%; position: absolute; inset: 0; pointer-events: none; }
+
         .layer-glass { z-index: 50; pointer-events: none; }
         .layer-glass > div { pointer-events: auto; }
-        
-        .preview-img { image-rendering: high-quality; image-rendering: -webkit-optimize-contrast; transition: filter 0.2s; display: block; width: 100%; height: 100%; object-fit: cover;}
-        
-        .border-vnotch { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 0 60%, 1.8% 57.5%, 0 55%, 0 51%, 1.8% 48.5%, 0 46%); }
 
+        .preview-img { image-rendering: high-quality; image-rendering: -webkit-optimize-contrast; transition: filter 0.2s; display: block; width: 100%; height: 100%; object-fit: cover;}
+        .border-vnotch { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 0 60%, 1.8% 57.5%, 0 55%, 0 51%, 1.8% 48.5%, 0 46%); }
         .slide-container { position: relative; overflow: hidden; transition: background-color 0.1s; }
         .gallery-grain-overlay { mix-blend-mode: overlay; pointer-events: none; z-index: 10; position: absolute; inset: 0; }
-        
-        .draggable-text, .draggable-logo { position: absolute; cursor: grab; z-index: 50; transform: translate(-50%, -50%); padding: 10px; outline: none; border: none; white-space: nowrap; display: flex; align-items: center; justify-content: center; }
-        .draggable-logo img { flex-shrink: 0; max-width: none !important; pointer-events: none; display: block; }
-        .draggable-text:focus, .draggable-logo:focus { outline: 1px dashed rgba(255,255,255,0.4); outline-offset: 2px; }
-        
+
+        .draggable-text, .draggable-logo { position: absolute; cursor: grab; z-index: 9999; transform: translate(-50%, -50%); padding: 12px; outline: none; border: none; white-space: nowrap; display: flex; align-items: center; justify-content: center; pointer-events: auto !important; background: rgba(0,0,0,0.01); flex-shrink: 0 !important; }
+        .draggable-logo img { pointer-events: none; display: block; flex-shrink: 0 !important; max-width: none !important; }
+        .draggable-text:active, .draggable-logo:active { cursor: grabbing; }
+        .is-active-target { outline: 1px dashed rgba(244,63,94,0.6); outline-offset: 2px; }
+
         .snap-guide { position: absolute; background-color: #f43f5e; z-index: 40; pointer-events: none; display: none; }
         .snap-guide-x { left: 0; right: 0; height: 1px; }
         .snap-guide-y { top: 0; bottom: 0; width: 1px; }
+        .disabled-block { display: none !important; }
 
-        .disabled-block { opacity: 0.3; pointer-events: none; filter: grayscale(100%); display: none; }
-        .safe-zone-overlay { pointer-events: none; }
-        .show-safe-zone .safe-zone-overlay { display: flex !important; }
-
-        input[type="color"] { -webkit-appearance: none; border: none; width: 20px; height: 20px; border-radius: 50%; cursor: pointer; padding: 0; background: transparent; outline: 1px solid #52525b; outline-offset: 2px; transition: transform 0.1s;}
+        input[type="color"] { flex-shrink: 0; -webkit-appearance: none; border: none; width: 18px; height: 18px; border-radius: 50%; cursor: pointer; padding: 0; background: transparent; outline: 1px solid #52525b; outline-offset: 2px; transition: transform 0.1s;}
         input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
         input[type="color"]::-webkit-color-swatch { border: none; border-radius: 50%; }
 
         .style-btn { transition: all 0.1s; }
-        .style-btn.active { background-color: #f43f5e; color: white; border-color: #f43f5e; }
+        .style-btn.active { background: rgba(244, 63, 94, 0.2); color: #fca5a5; border-color: #f43f5e; }
 
-        .preset-pill { background: #111; border: 1px solid #2d2d30; padding: 4px 8px; border-radius: 4px; font-size: 9px; font-weight: 700; text-transform: uppercase; cursor: pointer; transition: all 0.2s; color: #888; }
-        .preset-pill:hover { border-color: #555; color: #fff; }
-        .preset-pill.active { background: #f43f5e; border-color: #f43f5e; color: #fff; }
-        
-        .preset-chip { background: #222; border: 1px solid #333; border-radius: 6px; font-size: 10px; color: #ccc; display: flex; align-items: center; overflow: hidden; transition: all 0.2s; cursor: pointer; }
-        .preset-chip:hover { border-color: #555; color: #fff; }
-        .preset-chip .chip-name { padding: 4px 8px; }
-        .preset-chip .chip-del { padding: 4px 6px; background: #1a1a1a; color: #888; transition: background 0.2s, color 0.2s; }
+        .preset-chip { background: #18181b; border: 1px solid #27272a; border-radius: 4px; font-size: 9px; color: #a1a1aa; display: flex; align-items: center; overflow: hidden; transition: all 0.2s; cursor: pointer; margin-bottom: 4px; font-weight: 500;}
+        .preset-chip:hover { border-color: #3f3f46; color: #fff; }
+        .preset-chip .chip-name { padding: 5px 8px; flex: 1; }
+        .preset-chip .chip-del { padding: 5px 6px; background: #09090b; color: #71717a; transition: background 0.2s, color 0.2s; }
         .preset-chip .chip-del:hover { background: #f43f5e; color: #fff; }
 
-        .text-preset-gold {
-            background-image: linear-gradient(135deg, #BF953F 0%, #FCF6BA 25%, #B38728 50%, #FBF5B7 75%, #AA771C 100%);
-            -webkit-background-clip: text; background-clip: text;
-            -webkit-text-fill-color: transparent; color: transparent;
-        }
-        .text-preset-silver {
-            background-image: linear-gradient(135deg, #8A9097 0%, #E0E5EC 25%, #8A9097 50%, #B0B5BB 75%, #595F66 100%);
-            -webkit-background-clip: text; background-clip: text;
-            -webkit-text-fill-color: transparent; color: transparent;
-        }
+        .preset-pill { background: transparent; border: 1px solid #27272a; padding: 4px 8px; border-radius: 4px; font-size: 8px; font-weight: 700; text-transform: uppercase; cursor: pointer; transition: all 0.2s; color: #71717a; letter-spacing: 0.05em; }
+        .preset-pill:hover { border-color: #52525b; color: #fff; }
+        .preset-pill.active { background: #f43f5e; border-color: #f43f5e; color: #fff; }
+        .text-preset-gold { background-image: linear-gradient(135deg, #BF953F 0%, #FCF6BA 25%, #B38728 50%, #FBF5B7 75%, #AA771C 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
+        .text-preset-silver { background-image: linear-gradient(135deg, #8A9097 0%, #E0E5EC 25%, #8A9097 50%, #B0B5BB 75%, #595F66 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
 
         body.zen-mode header, body.zen-mode aside { display: none !important; }
         body.zen-mode #main-stage { background-color: #000000 !important; }
         body.zen-mode #zoom-controls { display: none !important; }
-        
-        .zen-tooltip { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: #fff; padding: 8px 16px; border-radius: 20px; font-size: 11px; z-index: 9999; pointer-events: none; opacity: 0; transition: opacity 0.5s; letter-spacing: 0.05em;}
-        .zen-mode .zen-tooltip { opacity: 1; animation: fadeOut 3s forwards; animation-delay: 2s; }
-        @keyframes fadeOut { to { opacity: 0; } }
 
-        #btn-exit-zen { display: none; }
-        body.zen-mode #btn-exit-zen { display: flex; }
+        #export-modal { opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+        #export-modal.show { opacity: 1; pointer-events: auto; }
+        .export-img-item { box-shadow: 0 20px 50px rgba(0,0,0,0.5); max-width: 100%; height: auto; border-radius: 2px; }
     </style>
 </head>
 <body class="fixed inset-0 w-full h-[100dvh] flex flex-col overflow-hidden overscroll-none bg-background">
-    
+
     <div style="position: absolute; width: 0; height: 0; overflow: hidden; visibility: hidden; pointer-events: none; z-index: -1;">
         <span style="font-family: 'Inter'; font-weight: 400;">preload</span>
-        <span style="font-family: 'Inter'; font-weight: 700;">preload</span>
         <span style="font-family: 'Outfit'; font-weight: 700;">preload</span>
-        <span style="font-family: 'Cinzel'; font-weight: 700;">preload</span>
-        <span style="font-family: 'Cormorant Garamond'; font-weight: 700;">preload</span>
-        <span style="font-family: 'Montserrat'; font-weight: 700;">preload</span>
-        <span style="font-family: 'Playfair Display'; font-weight: 700;">preload</span>
-        <span style="font-family: 'Oswald'; font-weight: 700;">preload</span>
-        <span style="font-family: 'Lato'; font-weight: 700;">preload</span>
-        <span style="font-family: 'Bebas Neue'; font-weight: 400;">preload</span>
-        <span style="font-family: 'Lora'; font-weight: 700;">preload</span>
-        <span style="font-family: 'Roboto'; font-weight: 700;">preload</span>
     </div>
 
-    <div id="mobile-warning-popup" class="fixed inset-0 z-[99999] bg-black/90 backdrop-blur-md flex md:hidden flex-col items-center justify-center p-6 text-center transition-opacity duration-300">
-        <h2 class="logo-font text-3xl font-bold text-white mb-6">cine<span class="text-coral-500">Roll</span></h2>
-        <div class="bg-[#1c1c1e] border border-[#2d2d30] rounded-xl p-6 max-w-sm w-full shadow-2xl">
-            <svg class="w-10 h-10 text-coral-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-            <h3 class="text-white font-bold text-lg mb-3">Desktop Optimized</h3>
-            <p class="text-neutral-400 text-[13px] mb-6 leading-relaxed">
-                cineRoll is optimized for <strong>PC/Mac</strong> environments to ensure pixel-perfect fine-art rendering.<br><br>
-                On mobile devices, it runs as a <span class="text-white font-semibold">Lite version</span>.
-            </p>
-            <button onclick="document.getElementById('mobile-warning-popup').style.display='none'" class="w-full bg-coral-500 hover:bg-coral-600 text-white font-bold py-3.5 rounded-lg text-[11px] uppercase tracking-widest transition-all shadow-lg active:scale-95">
-                Continue to Lite
+    <div id="export-modal" class="fixed inset-0 z-[99999] bg-[#000000] flex flex-col">
+        <div class="h-16 px-6 flex justify-between items-center bg-gradient-to-b from-black/80 to-transparent absolute top-0 left-0 w-full z-10">
+            <div class="text-white text-xs font-bold uppercase tracking-widest">Output Gallery</div>
+            <button onclick="closeExportModal()" class="text-white/70 hover:text-white p-2 text-xl font-bold">✕</button>
+        </div>
+        <div class="flex-1 overflow-y-auto pt-20 pb-28 px-6 flex flex-col items-center gap-8" id="export-gallery-container"></div>
+        <div class="h-28 flex flex-col items-center justify-center bg-gradient-to-t from-black/95 to-transparent absolute bottom-0 left-0 w-full pointer-events-none">
+            <span class="text-coral-400 font-bold text-[9px] uppercase tracking-widest bg-black/50 px-4 py-1.5 rounded-full backdrop-blur-md mb-3">
+                Right-Click or Long Press to Save
+            </span>
+            <button onclick="closeExportModal()" class="text-white text-[11px] uppercase font-bold tracking-widest bg-coral-600 hover:bg-coral-500 px-8 py-3 rounded-full pointer-events-auto transition-colors shadow-2xl border border-coral-400 active:scale-95">
+                RETURN TO WORKSPACE
             </button>
         </div>
     </div>
 
-    <div class="zen-tooltip">Press 'F' or 'ESC' to exit Zen Mode</div>
-    <button id="btn-exit-zen" class="fixed top-6 right-6 z-[9999] bg-white/10 hover:bg-coral-500 text-white p-3 rounded-full transition-colors backdrop-blur-md items-center justify-center shadow-lg" onclick="toggleZenMode()" title="Exit Zen Mode">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path></svg>
+    <button id="btn-exit-zen" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 z-[99999] bg-zinc-800/90 hover:bg-coral-500 text-white px-6 py-3 rounded-full transition-opacity duration-500 backdrop-blur-md items-center justify-center shadow-2xl font-bold text-[10px] uppercase tracking-widest hidden opacity-0" onclick="toggleZenMode()">
+        Exit Zen Mode
     </button>
 
-    <header class="h-14 border-b border-border bg-panel flex items-center justify-between px-4 md:px-6 shrink-0 z-30 shadow-sm relative">
-        <div class="flex items-center gap-2 cursor-pointer" onclick="location.reload()">
-            <h1 class="logo-font text-xl font-bold tracking-tight text-white">cine<span class="text-coral-500">Roll</span></h1>
-        </div>
-        <div class="flex items-center gap-2 md:gap-4">
-            <div class="flex items-center gap-2 md:border-border md:pl-4 md:ml-2">
-                <button id="btn-zen-mode" class="hidden md:flex items-center justify-center w-8 h-8 bg-[#111] text-neutral-400 hover:text-white rounded border border-border transition-colors cursor-pointer" onclick="toggleZenMode()" title="Zen Mode (F)">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
-                </button>
+    <div id="loading-overlay" class="fixed inset-0 z-[999999] bg-black/90 hidden flex-col items-center justify-center transition-opacity duration-300">
+        <div id="loading-text" class="text-white text-xs md:text-sm font-bold uppercase tracking-widest mb-6 font-mono transition-all duration-300 text-center">Processing Cinematic Core...</div>
+        <div class="w-48 h-1 bg-zinc-800 rounded overflow-hidden"><div class="w-full h-full bg-coral-500 animate-pulse"></div></div>
+    </div>
 
-                <button id="btn-split-view" class="hidden items-center justify-center w-8 h-8 bg-[#111] text-neutral-400 hover:text-white rounded border border-border transition-colors cursor-pointer" onclick="toggleSplitView()" title="Split View (Before & After)">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" /><line x1="12" y1="3" x2="12" y2="21" /><rect x="12" y="3" width="9" height="18" fill="currentColor" opacity="0.3" /></svg>
+    <header class="h-12 border-b border-border bg-panel flex items-center justify-between px-4 shrink-0 z-30 relative">
+        <div class="flex items-center gap-2 cursor-pointer" onclick="location.reload()">
+            <h1 class="logo-font text-lg font-bold tracking-tight text-white">cine<span class="text-coral-500">Roll</span></h1>
+        </div>
+        <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2 border-r border-border pr-3 mr-1">
+                <button id="btn-zen-mode" style="display: none;" class="items-center justify-center w-7 h-7 bg-background text-zinc-400 hover:text-white rounded border border-border transition-colors cursor-pointer" onclick="toggleZenMode()" title="Zen Mode (F)">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+                </button>
+                <button id="btn-split-view" style="display: none;" class="items-center justify-center w-7 h-7 bg-background text-zinc-400 hover:text-white rounded border border-border transition-colors cursor-pointer" onclick="toggleSplitView()" title="Split View (Before & After)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" /><line x1="12" y1="3" x2="12" y2="21" /><rect x="12" y="3" width="9" height="18" fill="currentColor" opacity="0.3" /></svg>
                 </button>
             </div>
-
-            <button onclick="location.reload()" class="flex md:flex items-center gap-1.5 text-[10px] font-bold text-neutral-400 hover:text-white bg-[#111] px-3 py-1.5 rounded border border-border transition-colors md:ml-2" title="Start New Project">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            <button onclick="location.reload()" class="flex md:flex items-center gap-1.5 text-[9px] font-bold text-zinc-400 hover:text-white bg-background px-3 py-1.5 rounded border border-border transition-colors">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
                 <span class="hidden sm:inline">NEW PHOTO</span>
             </button>
         </div>
     </header>
 
     <div class="flex-1 flex flex-col md:flex-row overflow-hidden w-full relative">
-        
         <main id="main-stage" class="w-full h-[40%] md:h-full md:flex-1 relative flex bg-background overflow-hidden select-none transition-colors duration-300 shrink-0">
             <div id="upload-zone" class="absolute inset-0 flex flex-col items-center justify-center z-50 bg-background transition-opacity duration-300">
-                <label class="relative w-[260px] md:w-[300px] h-[160px] md:h-[180px] border border-dashed border-[#333] rounded-xl flex flex-col items-center justify-center text-neutral-500 hover:border-coral-500 hover:text-coral-400 transition-colors bg-[#141414] cursor-pointer">
+                <label class="relative w-[240px] md:w-[280px] h-[140px] md:h-[160px] border border-dashed border-zinc-800 rounded-xl flex flex-col items-center justify-center text-zinc-500 hover:border-coral-500 hover:text-coral-400 transition-colors bg-[#111] cursor-pointer">
                     <input type="file" id="upload-input" accept="image/*,.tif,.tiff" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
-                    <svg class="w-8 h-8 mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    <svg class="w-6 h-6 mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                     <span id="uploadText" class="text-[10px] font-bold tracking-widest uppercase">Import Resource</span>
-                    <span class="text-[9px] mt-2 opacity-50">JPEG, PNG, TIFF</span>
+                    <span class="text-[8px] mt-2 opacity-50 tracking-wider">JPEG, PNG, TIFF, RAW(OS)</span>
                 </label>
             </div>
 
             <div id="smart-snap-badge" class="absolute transform -translate-x-1/2 bg-green-500 text-black px-4 py-1.5 rounded-full font-bold text-[10px] uppercase tracking-wider opacity-0 transition-all duration-100 z-50 pointer-events-none shadow-[0_0_20px_rgba(34,197,94,0.5)]"></div>
-            
-            <div id="zoom-controls" class="hidden absolute bottom-4 md:bottom-6 left-1/2 transform -translate-x-1/2 z-[60] bg-black/80 backdrop-blur-xl px-5 py-2.5 rounded-full border border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.8)] items-center gap-3 md:gap-4 transition-opacity duration-300">
-                <button class="text-[10px] font-bold text-coral-400 hover:text-white uppercase tracking-widest px-1 outline-none" onclick="setZoom('fit')">FIT</button>
-                <input type="range" id="slider-zoom" min="20" max="400" value="100" class="w-24 md:w-32 h-1 bg-neutral-600 rounded-full appearance-none outline-none">
-                <div class="flex items-center w-16 justify-end"><input type="number" id="in-zoom" class="bg-transparent text-right outline-none w-full text-white font-mono text-[11px]" value="100"><span class="text-[11px] text-neutral-400 ml-0.5">%</span></div>
+
+            <div id="zoom-controls" class="hidden absolute bottom-4 md:bottom-6 left-1/2 transform -translate-x-1/2 z-[60] bg-[#111]/80 backdrop-blur-xl px-4 py-2 rounded-full border border-white/5 shadow-2xl items-center gap-3 transition-opacity duration-300">
+                <button class="text-[9px] font-bold text-coral-400 hover:text-white uppercase tracking-widest px-1 outline-none" onclick="setZoom('fit')">FIT</button>
+                <input type="range" id="slider-zoom" min="20" max="400" value="100" class="w-20 md:w-28 h-1 bg-zinc-800 rounded-full appearance-none outline-none">
+                <div class="flex items-center w-12 justify-end"><input type="number" id="in-zoom" class="bg-transparent text-right outline-none w-full text-white font-mono text-[10px]" value="100"><span class="text-[9px] text-zinc-500 ml-0.5">%</span></div>
             </div>
 
             <div id="image-container" class="absolute inset-0 z-10 w-full h-full hidden opacity-0 transition-opacity duration-300"></div>
-            
             <div id="preview-area" class="hidden z-20 w-full h-full"><div id="preview-area-inner"></div></div>
         </main>
 
-        <aside class="w-full flex-1 md:flex-none md:w-[320px] md:h-full bg-panel border-t md:border-t-0 md:border-l border-border flex flex-col shrink-0 z-40 relative select-none overflow-hidden">
-            <nav class="flex border-b border-border shrink-0 bg-panel px-2">
+        <aside class="w-full flex-1 md:flex-none md:w-[300px] md:h-full bg-panel border-t md:border-t-0 md:border-l border-border flex flex-col shrink-0 z-40 relative select-none overflow-hidden">
+            <nav class="flex border-b border-border shrink-0 bg-panel px-1">
                 <button class="tab-btn active" onclick="switchTab('format')">Format</button>
                 <button class="tab-btn" onclick="switchTab('frame')">Frame</button>
+                <button class="tab-btn" onclick="switchTab('tone')">Tone</button>
                 <button class="tab-btn" onclick="switchTab('color')">Color</button>
                 <button class="tab-btn" onclick="switchTab('typo')">Typo</button>
             </nav>
 
-            <div class="flex-1 overflow-y-auto custom-scroll p-4 md:p-6 overscroll-contain">
-                <div id="tab-format" class="tab-content space-y-7">
+            <div class="flex-1 overflow-y-auto custom-scroll p-4 md:p-5 overscroll-contain">
+                <div id="tab-format" class="tab-content space-y-5">
                     <div>
-                        <label class="min-label"><span>Output Strategy</span></label>
-                        <div class="grid grid-cols-2 gap-2" id="strategy-btns">
+                        <label class="min-label"><span>Strategy</span></label>
+                        <div class="grid grid-cols-3 gap-1.5" id="strategy-btns">
                             <button class="min-btn active" data-val="seamless">Seamless</button>
+                            <button class="min-btn" data-val="triptych">Triptych</button>
                             <button class="min-btn" data-val="single">Single</button>
                         </div>
                     </div>
-                    <div id="ratio-wrapper" class="disabled-block">
-                        <div class="flex justify-between items-center mb-2"><label class="min-label mb-0"><span>Aspect Ratio</span></label><button class="text-[10px] text-neutral-500 hover:text-white" onclick="resetFraming()">↺</button></div>
+
+                    <div id="ratio-wrapper">
+                        <div class="flex justify-between items-center mb-1.5"><label class="min-label mb-0"><span>Base Ratio</span></label><button class="text-[9px] text-zinc-500 hover:text-white" onclick="resetFraming()">↺</button></div>
                         <select class="min-select" id="select-ratio">
-                            <option value="NaN">Free Crop (Smart Snap)</option>
+                            <option value="NaN">Free (Smart Snap)</option>
                             <option value="1">1:1 (Square)</option>
                             <option value="0.8" selected>4:5 (Vertical IG)</option>
                             <option value="0.75">3:4 (Classic Portrait)</option>
@@ -250,12 +210,14 @@
                             <option value="1.777">16:9 (Landscape)</option>
                         </select>
                     </div>
+
                     <div id="seamless-count-wrapper">
-                        <div class="flex justify-between items-center mb-2"><label class="min-label mb-0"><span>Pan Slides</span></label><button class="text-[10px] text-neutral-500 hover:text-white" onclick="resetFraming()">↺</button></div>
+                        <label class="min-label mb-1.5"><span>Pan Slides</span></label>
                         <select class="min-select" id="select-slides"><option value="2">2 Slides</option><option value="3" selected>3 Slides</option><option value="4">4 Slides</option></select>
                     </div>
-                    <div class="pt-4 border-t border-border">
-                        <label class="min-label"><span>Anamorphic De-squeeze</span></label>
+
+                    <div class="pt-3 border-t border-border">
+                        <label class="min-label mb-1.5"><span>De-squeeze</span></label>
                         <select class="min-select" id="select-squeeze">
                             <option value="100" selected>1.0x (Standard)</option>
                             <option value="133">1.33x</option>
@@ -265,185 +227,174 @@
                             <option value="200">2.00x</option>
                         </select>
                     </div>
-                    <div class="pt-4 border-t border-border">
-                        <label class="min-label"><span>Straighten</span><div class="flex items-center"><input type="number" id="in-angle" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="0"><span>°</span></div></label>
-                        <div class="flex items-center gap-2"><input type="range" id="slider-angle" min="-45" max="45" value="0" step="0.5" class="flex-1"><button class="text-[10px] text-neutral-500 hover:text-white" onclick="resetAngle()">↺</button></div>
+
+                    <div class="pt-3 border-t border-border">
+                        <label class="min-label mb-1.5"><span>Rotate & Straighten</span></label>
+                        <button class="w-full bg-background border border-border hover:border-coral-500 text-zinc-400 hover:text-white py-1.5 rounded transition-colors text-[10px] font-bold mb-2 flex items-center justify-center gap-1" onclick="rotateBase(90)">
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg> Rotate 90°
+                        </button>
+                        <div class="flex items-center gap-2">
+                            <input type="range" id="slider-angle" min="-45" max="45" value="0" step="0.5" class="flex-1">
+                            <div class="flex items-center"><input type="number" id="in-angle" class="bg-transparent text-right outline-none w-8 text-white text-[10px] font-mono" value="0"><span>°</span></div>
+                        </div>
                     </div>
-                    <button class="w-full text-[11px] font-bold text-coral-400 border border-coral-900/50 hover:bg-coral-950/20 py-3 rounded mt-4 transition-colors" onclick="applyCropAndRender()">Apply Crop (Enter)</button>
+
+                    <button class="w-full text-[10px] font-bold text-white bg-transparent border border-coral-500 hover:bg-coral-500/20 py-2.5 rounded mt-2 transition-colors uppercase tracking-widest" onclick="applyCropAndRender()">
+                        Apply Crop
+                    </button>
                 </div>
 
-                <div id="tab-frame" class="tab-content space-y-7 hidden">
+                <div id="tab-frame" class="tab-content space-y-5 hidden">
                     <div>
-                        <label class="min-label mb-2"><span>Paper Texture</span></label>
-                        <div class="grid grid-cols-2 gap-2 mb-2">
-                            <button class="min-btn active" data-bg="#000000" onclick="setBG(this)">Pure Black</button>
-                            <button class="min-btn" data-bg="#ffffff" onclick="setBG(this)">Pure White</button>
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <button class="min-btn" data-bg="#141414" onclick="setBG(this)">Archival Black</button>
-                            <button class="min-btn" data-bg="#F4F0E6" onclick="setBG(this)">Baryta White</button>
-                        </div>
+                        <label class="min-label mb-1.5"><span>Paper Texture</span></label>
+                        <div class="grid grid-cols-2 gap-1.5 mb-1.5"><button class="min-btn active" data-bg="#000000" onclick="setBG(this)">Pure Black</button><button class="min-btn" data-bg="#ffffff" onclick="setBG(this)">Pure White</button></div>
+                        <div class="grid grid-cols-2 gap-1.5"><button class="min-btn" data-bg="#141414" onclick="setBG(this)">Archival Blk</button><button class="min-btn" data-bg="#F4F0E6" onclick="setBG(this)">Baryta Wht</button></div>
                     </div>
-                    
-                    <div class="pt-4 border-t border-border">
-                        <label class="min-label"><span>Layout Presentation</span></label>
-                        <div class="grid grid-cols-2 gap-2">
-                            <button class="min-btn active" id="btn-edge" onclick="setMargin(false)">Edge-to-Edge</button>
-                            <button class="min-btn" id="btn-margin" onclick="setMargin(true)">Margin Frame</button>
-                        </div>
+                    <div class="pt-3 border-t border-border">
+                        <label class="min-label mb-1.5"><span>Layout</span></label>
+                        <div class="grid grid-cols-2 gap-1.5"><button class="min-btn active" id="btn-edge" onclick="setMargin(false)">Edge-to-Edge</button><button class="min-btn" id="btn-margin" onclick="setMargin(true)">Margin Frame</button></div>
                     </div>
-                    
-                    <div id="margin-scale-wrapper" class="pt-4 border-t border-border hidden">
-                        <label class="min-label"><span>Frame Padding</span><div class="flex items-center"><input type="number" id="in-margin-scale" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="85"><span>%</span></div></label>
-                        <div class="flex items-center gap-2"><input type="range" id="slider-margin-scale" min="50" max="100" value="85" oninput="ModuleFrame.build()"></div>
-                        
-                        <div class="mt-5 border-t border-border pt-4">
-                            <label class="min-label mb-2"><span class="text-coral-400 font-bold">Film Borders (Pro)</span></label>
-                            <select id="select-border" class="min-select bg-[#141414]" onchange="ModuleFrame.updateBorderOptions()">
-                                <option value="none">None (Clean Cut)</option>
-                                <option value="fineart">Fine-Art Solid Line</option>
-                                <option value="vnotch">120mm V-Notch Edge</option>
-                                <option value="instant">Type-100</option>
-                            </select>
-                            
-                            <div id="border-weight-wrapper" class="mt-3 hidden transition-opacity duration-300">
-                                <label class="min-label mb-1"><span>Border Weight</span><div class="flex items-center"><input type="number" id="in-borderWeight" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="3"></div></label>
+                    <div id="margin-scale-wrapper" class="pt-3 border-t border-border hidden">
+                        <label class="min-label mb-1.5"><span>Padding</span><div class="flex items-center"><input type="number" id="in-margin-scale" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="85"><span>%</span></div></label>
+                        <input type="range" id="slider-margin-scale" min="50" max="100" value="85" oninput="ModuleFrame.build()">
+
+                        <div class="mt-4 border-t border-border pt-3">
+                            <label class="min-label mb-1.5"><span class="text-coral-400">Film Borders</span></label>
+                            <select id="select-border" class="min-select" onchange="ModuleFrame.updateBorderOptions()"><option value="none">None (Clean)</option><option value="fineart">Fine-Art Line</option><option value="vnotch">120mm V-Notch</option><option value="instant">Type-100</option></select>
+                            <div id="border-weight-wrapper" class="mt-2 hidden">
+                                <label class="min-label mb-1"><span>Weight</span><div class="flex items-center"><input type="number" id="in-borderWeight" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="3"></div></label>
                                 <input type="range" id="slider-borderWeight" min="1" max="10" value="3" step="0.5" oninput="ModuleFrame.build()">
                             </div>
                         </div>
                     </div>
-
-                    <div class="pt-4 border-t border-border">
-                        <div class="flex justify-between items-center"><label class="min-label mb-0"><span>IG Safe Zone Guide</span></label>
-                            <button id="btn-safezone" class="min-btn text-[9px] px-2 py-1" onclick="toggleSafeZone()">OFF</button>
-                        </div>
-                    </div>
                 </div>
 
-                <div id="tab-color" class="tab-content space-y-6 hidden">
-                    <div class="pb-4 border-b border-border mb-4">
-                        <div class="flex justify-between items-center mb-3">
-                            <label class="min-label mb-0"><span class="text-coral-400 font-bold">Cinematic LUT</span></label>
-                            <button onclick="document.getElementById('uploadLut').click()" class="min-btn text-[9px] px-2 py-1 flex items-center gap-1"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg> .CUBE</button>
+                <div id="tab-tone" class="tab-content space-y-5 hidden">
+                    <div class="pb-3 border-b border-border mb-3">
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="min-label mb-0"><span class="text-coral-400">Cinematic LUT</span></label>
+                            <button onclick="document.getElementById('uploadLut').click()" class="text-[9px] text-zinc-400 hover:text-white flex items-center gap-1 font-bold"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg> .CUBE</button>
                             <input type="file" id="uploadLut" accept=".cube" class="hidden">
                         </div>
-                        <select id="select-lut" class="min-select mb-3" onchange="ModuleColor.updateLut()">
+                        <select id="select-lut" class="min-select mb-2" onchange="ModuleColor.triggerEngine()">
                             <option value="none">None (Original)</option>
-                            <option value="kodak">Kodak Portra 400 (Emulation)</option>
-                            <option value="fuji">Fujifilm Pro 400H (Emulation)</option>
-                            <option value="cinematic">Teal & Orange (Cinema)</option>
+                            <option value="kodak">Warm Nostalgia</option>
+                            <option value="fuji">Cool Fade</option>
+                            <option value="cinematic">Teal & Orange</option>
+                            <option value="custom" id="opt-custom-lut" class="hidden font-bold text-coral-400">My Custom LUT (.cube)</option>
                         </select>
                         <div id="lut-intensity-wrapper" class="opacity-50 pointer-events-none transition-opacity">
-                            <label class="min-label mb-1"><span class="text-[9px] text-neutral-500">LUT Intensity</span><span id="val-lut-intensity" class="text-[9px] text-neutral-500 font-mono">100%</span></label>
-                            <input type="range" id="slider-lut-intensity" min="0" max="100" value="100" oninput="ModuleColor.updateLut()">
+                            <label class="min-label mb-1"><span class="text-[9px] text-zinc-500">Intensity</span><span id="val-lut-intensity" class="text-[9px] text-zinc-500 font-mono">100%</span></label>
+                            <input type="range" id="slider-lut-intensity" min="0" max="100" value="100" oninput="document.getElementById('val-lut-intensity').innerText=this.value+'%';" onchange="ModuleColor.triggerEngine()">
                         </div>
                     </div>
 
-                    <div><label class="min-label"><span>Brightness</span><div class="flex items-center"><input type="number" id="in-br" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="100"><span>%</span></div></label><input type="range" id="slider-br" min="50" max="150" value="100"></div>
-                    <div><label class="min-label"><span>Contrast</span><div class="flex items-center"><input type="number" id="in-co" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="100"><span>%</span></div></label><input type="range" id="slider-co" min="50" max="150" value="100"></div>
-                    <div><label class="min-label"><span>Saturation</span><div class="flex items-center"><input type="number" id="in-sa" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="100"><span>%</span></div></label><input type="range" id="slider-sa" min="0" max="200" value="100"></div>
-                    <div class="pt-4 border-t border-border"><label class="min-label"><span>Film Grain</span><div class="flex items-center"><input type="number" id="in-grain" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="0"><span>%</span></div></label><input type="range" id="slider-grain" min="0" max="100" value="0"></div>
-                    <button class="w-full text-[10px] text-neutral-500 hover:text-white py-2 border border-border rounded mt-4" onclick="resetColor()">Reset Lab</button>
+                    <div class="space-y-3">
+                        <label class="min-label mb-0"><span class="text-coral-400">Advanced Tone (Pro)</span></label>
+                        <div>
+                            <label class="min-label mb-1"><span class="text-[9px] text-zinc-400">Highlights</span><div class="flex items-center"><input type="number" id="in-hl" class="bg-transparent text-right outline-none w-8 text-white font-mono text-[10px]" value="0"></div></label>
+                            <input type="range" id="slider-hl" min="-100" max="100" value="0" onchange="ModuleColor.triggerEngine()">
+                        </div>
+                        <div>
+                            <label class="min-label mb-1"><span class="text-[9px] text-zinc-400">Shadows</span><div class="flex items-center"><input type="number" id="in-sh" class="bg-transparent text-right outline-none w-8 text-white font-mono text-[10px]" value="0"></div></label>
+                            <input type="range" id="slider-sh" min="-100" max="100" value="0" onchange="ModuleColor.triggerEngine()">
+                        </div>
+                    </div>
+                    <button class="w-full text-[9px] text-zinc-500 hover:text-white py-1.5 border border-border rounded mt-3 transition-colors uppercase tracking-widest" onclick="resetTone()">Reset Tone</button>
                 </div>
 
-                <div id="tab-typo" class="tab-content space-y-7 hidden">
-                    <div class="space-y-4">
-                        <div class="flex flex-col gap-2">
-                            <label class="min-label mb-0"><span>Branding Style</span></label>
+                <div id="tab-color" class="tab-content space-y-5 hidden">
+                    <div><label class="min-label mb-1.5"><span>Brightness</span><div class="flex items-center"><input type="number" id="in-br" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="100"><span>%</span></div></label><input type="range" id="slider-br" min="50" max="150" value="100"></div>
+                    <div><label class="min-label mb-1.5"><span>Contrast</span><div class="flex items-center"><input type="number" id="in-co" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="100"><span>%</span></div></label><input type="range" id="slider-co" min="50" max="150" value="100"></div>
+                    <div><label class="min-label mb-1.5"><span>Saturation</span><div class="flex items-center"><input type="number" id="in-sa" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="100"><span>%</span></div></label><input type="range" id="slider-sa" min="0" max="200" value="100"></div>
+                    <div class="pt-3 border-t border-border"><label class="min-label mb-1.5"><span>Film Grain</span><div class="flex items-center"><input type="number" id="in-grain" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="0"><span>%</span></div></label><input type="range" id="slider-grain" min="0" max="100" value="0"></div>
+                    <button class="w-full text-[9px] text-zinc-500 hover:text-white py-1.5 border border-border rounded mt-3 transition-colors uppercase tracking-widest" onclick="resetColor()">Reset Basic</button>
+                </div>
+
+                <div id="tab-typo" class="tab-content space-y-5 hidden">
+                    <div class="space-y-3">
+                        <div class="flex flex-col gap-1.5">
                             <div class="flex items-center justify-between">
-                                <div class="flex gap-1">
-                                    <button class="preset-pill" id="btn-preset-gold" onclick="applyCinePreset('gold')">GOLD</button>
-                                    <button class="preset-pill" id="btn-preset-silver" onclick="applyCinePreset('silver')">SILVER</button>
-                                </div>
-                                <button id="btn-save-preset" onclick="saveCurrentPreset()" class="text-[9px] font-bold text-coral-400 border border-coral-900/50 hover:bg-coral-950/20 px-3 py-1.5 rounded transition-colors uppercase tracking-widest flex items-center justify-center min-w-[85px]">SAVE PRESET</button>
+                                <label class="min-label mb-0"><span>Style</span></label>
+                                <button id="btn-save-preset" onclick="saveCurrentPreset()" class="text-[8px] font-bold text-coral-400 hover:text-coral-300 transition-colors uppercase tracking-widest">SAVE PRESET</button>
+                            </div>
+                            <div class="flex gap-1">
+                                <button class="preset-pill" id="btn-preset-gold" onclick="applyCinePreset('gold')">GOLD</button>
+                                <button class="preset-pill" id="btn-preset-silver" onclick="applyCinePreset('silver')">SILVER</button>
                             </div>
                         </div>
 
-                        <div class="flex items-center gap-2 bg-[#111] p-2 rounded border border-border">
-                            <input type="color" id="textColorPicker" value="#FFFFFF" oninput="ModuleTypo.updateColorFromPicker()">
+                        <div class="flex items-center gap-2 bg-background p-1.5 rounded border border-border">
+                            <input type="color" id="textColorPicker" value="#FFFFFF" onclick="ModuleTypo.updateColorFromPicker()" oninput="ModuleTypo.updateColorFromPicker()">
                             <div class="w-px h-3 bg-border mx-1"></div>
-                            <button id="btnBold" class="style-btn px-2 py-0.5 rounded border border-border text-[9px]" onclick="toggleBold()">B</button>
-                            <button id="btnGlow" class="style-btn active px-2 py-0.5 rounded border border-border text-coral-300 text-[9px] bg-coral-900/20" onclick="toggleGlow()">Glow</button>
-                            
-                            <select id="fontSelect" class="bg-transparent text-[10px] outline-none text-neutral-300 ml-auto" onchange="ModuleTypo.update()">
+                            <button id="btnBold" class="style-btn px-1.5 py-0.5 rounded border border-transparent text-[10px] text-zinc-400 hover:text-white" onclick="toggleBold()">B</button>
+                            <button id="btnGlow" class="style-btn active px-1.5 py-0.5 rounded border border-transparent text-[10px] text-zinc-400 hover:text-white" onclick="toggleGlow()">Glow</button>
+                            <select id="fontSelect" class="bg-transparent text-[10px] outline-none text-zinc-300 ml-auto w-full max-w-[90px]" onchange="ModuleTypo.update()">
                                 <optgroup label="Modern Sans">
-                                    <option value="Inter">Inter</option>
-                                    <option value="Outfit">Outfit</option>
-                                    <option value="Montserrat">Montserrat</option>
-                                    <option value="Lato">Lato</option>
-                                    <option value="Roboto">Roboto</option>
+                                    <option value="Inter">Inter</option><option value="Outfit">Outfit</option><option value="Montserrat">Montserrat</option><option value="Lato">Lato</option><option value="Roboto">Roboto</option>
                                 </optgroup>
-                                <optgroup label="Editorial Serif">
-                                    <option value="Playfair Display">Playfair Display</option>
-                                    <option value="Cinzel">Cinzel</option>
-                                    <option value="Cormorant Garamond">Garamond</option>
-                                    <option value="Lora">Lora</option>
+                                <optgroup label="Editorial">
+                                    <option value="Playfair Display">Playfair</option><option value="Cinzel">Cinzel</option><option value="Cormorant Garamond">Garamond</option><option value="Lora">Lora</option>
                                 </optgroup>
                                 <optgroup label="Display">
-                                    <option value="Oswald">Oswald</option>
-                                    <option value="Bebas Neue">Bebas Neue</option>
+                                    <option value="Oswald">Oswald</option><option value="Bebas Neue">Bebas Neue</option>
                                 </optgroup>
                             </select>
                         </div>
-                        
-                        <div class="pt-2">
-                            <label class="min-label mb-1"><span>Font Scale</span><div class="flex items-center"><input type="number" id="in-fontScale" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="100"><span>%</span></div></label>
-                            <input type="range" id="slider-fontScale" min="30" max="200" value="100" oninput="ModuleTypo.update()">
-                        </div>
 
-                        <div id="glow-slider-wrapper" class="pt-2">
-                            <label class="min-label mb-1"><span class="text-[9px] text-neutral-500">Glow Intensity</span><span id="val-glow" class="text-[9px] text-neutral-500 font-mono">15px</span></label>
-                            <input type="range" id="slider-glow-amount" min="1" max="50" value="15" oninput="ModuleTypo.update()">
-                        </div>
+                        <div class="pt-1"><label class="min-label mb-1"><span>Font Scale</span><div class="flex items-center"><input type="number" id="in-fontScale" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="100"><span>%</span></div></label><input type="range" id="slider-fontScale" min="30" max="200" value="100" oninput="ModuleTypo.update()"></div>
+                        <div id="glow-slider-wrapper" class="pt-1"><label class="min-label mb-1"><span class="text-[9px] text-zinc-500">Glow Intensity</span></label><input type="range" id="slider-glow-amount" min="1" max="50" value="15" oninput="ModuleTypo.update()"></div>
 
-                        <div class="flex items-center gap-2">
-                            <input type="text" id="watermarkText" placeholder="Caption or Gear..." class="min-input flex-1" oninput="ModuleTypo.update()">
-                            <button onclick="extractExif()" class="min-btn text-[9px] px-2 font-bold text-coral-400">EXIF</button>
-                        </div>
-                        
-                        <div id="custom-presets-container" class="flex flex-wrap gap-2 pt-2 empty:hidden"></div>
-                    </div>
+                        <div class="flex items-center gap-1.5"><input type="text" id="watermarkText" placeholder="Caption or Signature..." class="min-input flex-1" oninput="ModuleTypo.update()"></div>
 
-                    <div id="target-display-wrapper" class="pt-4 border-t border-border space-y-3">
-                        <div class="flex justify-between items-center mb-1">
+                        <div id="custom-presets-container" class="flex flex-wrap gap-1 pt-1 empty:hidden"></div>
+
+                        <div id="target-display-wrapper" class="pt-3 border-t border-border space-y-2">
                             <label class="min-label mb-0"><span>Target Display</span></label>
+                            <select id="watermarkTarget" class="min-select" onchange="ModuleTypo.update()"><option value="all">Apply to All Slides</option><option value="1">Slide 1 (Cover)</option><option value="2">Slide 2 Only</option><option value="3">Slide 3 Only</option><option value="4">Slide 4 Only</option></select>
                         </div>
-                        <select id="watermarkTarget" class="min-select" onchange="ModuleTypo.update()">
-                            <option value="all">Apply to All Slides</option>
-                            <option value="1">Slide 1 (Cover) Only</option>
-                            <option value="2">Slide 2 Only</option>
-                            <option value="3">Slide 3 Only</option>
-                            <option value="4">Slide 4 Only</option>
-                        </select>
-                    </div>
 
-                    <div class="pt-4 border-t border-border space-y-3">
-                        <div class="flex justify-between items-center mb-1">
-                            <label class="min-label mb-0 flex items-center gap-2 cursor-pointer hover:text-white transition-colors">
-                                <input type="checkbox" id="toggle-logo" class="w-3 h-3 accent-coral-500 cursor-pointer" onchange="handleLogoToggleCheckbox()">
-                                <span>Custom Logo (PNG)</span>
+                        <div class="pt-3 border-t border-border space-y-2">
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="min-label mb-0 flex items-center gap-2 cursor-pointer hover:text-white transition-colors">
+                                    <input type="checkbox" id="toggle-logo" class="w-3 h-3 accent-coral-500 cursor-pointer" onchange="handleLogoToggleCheckbox()">
+                                    <span>Custom Logo (.PNG)</span>
+                                </label>
+                                <span id="logoStatus" class="text-[8px] text-green-400 hidden">✅ Loaded</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button onclick="document.getElementById('uploadLogo').click()" class="bg-background border border-border px-3 py-1.5 rounded text-[9px] flex-1 hover:text-white transition-colors">+ Upload</button>
+                                <input type="file" id="uploadLogo" accept="image/png" class="hidden">
+                            </div>
+                            <div id="logoSettings" class="opacity-30 pointer-events-none transition-opacity duration-300 space-y-2 pt-1">
+                                <div><label class="min-label mb-1"><span>Scale</span><div class="flex items-center"><input type="number" id="in-logoScale" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="50"><span>%</span></div></label><input type="range" id="sliderLogoScale" min="1" max="100" value="50" oninput="ModuleTypo.update()"></div>
+                                <div><label class="min-label mb-1"><span>Opacity</span><div class="flex items-center"><input type="number" id="in-logoOp" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="100"><span>%</span></div></label><input type="range" id="sliderLogoOp" min="10" max="100" value="100" oninput="ModuleTypo.update()"></div>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between pt-3 border-t border-border mt-2">
+                            <label class="min-label mb-0 flex items-center gap-1.5">
+                                <span>App Watermark</span>
                             </label>
-                            <span id="logoStatus" class="text-[9px] text-green-400 hidden">✅ Loaded</span>
-                        </div>
-                        <div class="flex items-center gap-3">
-                            <button onclick="document.getElementById('uploadLogo').click()" class="bg-[#111] border border-border px-3 py-1.5 rounded text-[10px] flex-1 hover:text-white transition-colors">+ Upload Logo</button>
-                            <input type="file" id="uploadLogo" accept="image/png" class="hidden">
-                        </div>
-                        <div id="logoSettings" class="opacity-30 pointer-events-none transition-opacity duration-300 space-y-3 pt-2">
-                            <div><label class="min-label"><span>Logo Scale</span><div class="flex items-center"><input type="number" id="in-logoScale" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="20"><span>%</span></div></label><input type="range" id="sliderLogoScale" min="5" max="100" value="20" oninput="ModuleTypo.update()"></div>
-                            <div><label class="min-label"><span>Opacity</span><div class="flex items-center"><input type="number" id="in-logoOp" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="100"><span>%</span></div></label><input type="range" id="sliderLogoOp" min="10" max="100" value="100" oninput="ModuleTypo.update()"></div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="toggleAppLogo" class="sr-only peer" onchange="ModuleTypo.update()">
+                                <div class="w-7 h-4 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-coral-500"></div>
+                            </label>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="p-3 pb-6 md:p-6 md:pb-6 border-t border-border shrink-0 bg-panel z-50">
-                <div class="flex flex-row md:flex-col gap-2 items-center md:items-stretch">
-                    <select id="exportQuality" class="min-select bg-[#141414] border-neutral-700 font-bold flex-1 h-10 m-0">
-                        <option value="1080">IG Optimized</option>
-                        <option value="native">High-Res Archive</option>
+            <div class="p-4 border-t border-border shrink-0 bg-panel z-50">
+                <div class="flex flex-row gap-2 items-center">
+                    <select id="exportQuality" class="min-select bg-background border-border font-bold w-[120px] h-9 m-0 text-[9px] uppercase tracking-wider">
+                        <option value="ig">IG Opt. (Free)</option>
+                        <option value="web">Web Res. (PRO)</option>
+                        <option value="png">Lossless (PRO)</option>
                     </select>
-                    <button class="flex-1 w-full bg-coral-500 hover:bg-coral-600 text-white font-bold h-10 rounded text-[11px] uppercase transition-all shadow-lg active:scale-95 opacity-50 cursor-not-allowed" id="btn-export">Export</button>
+                    <button class="flex-1 bg-transparent border border-coral-500 text-white hover:bg-coral-500/20 font-bold h-9 rounded text-[10px] uppercase transition-all active:scale-95 tracking-widest" id="btn-export">
+                        Export
+                    </button>
                 </div>
             </div>
         </aside>
@@ -451,46 +402,41 @@
 
     <script>
         const DOM = {
-            mainStage: document.getElementById('main-stage'), main: document.getElementById('image-container'), 
+            mainStage: document.getElementById('main-stage'), main: document.getElementById('image-container'),
             previewArea: document.getElementById('preview-area'), previewInner: document.getElementById('preview-area-inner'),
-            btnBA: document.getElementById('btn-split-view'),
+            btnBA: document.getElementById('btn-split-view'), btnZen: document.getElementById('btn-zen-mode'),
             upZone: document.getElementById('upload-zone'), upInput: document.getElementById('upload-input'), upText: document.getElementById('uploadText'),
-            sRatio: document.getElementById('select-ratio'), sSlides: document.getElementById('select-slides'), sSqueeze: document.getElementById('select-squeeze'), 
+            sRatio: document.getElementById('select-ratio'), sSlides: document.getElementById('select-slides'), sSqueeze: document.getElementById('select-squeeze'),
             sAngle: document.getElementById('slider-angle'), inAngle: document.getElementById('in-angle'),
-            sBr: document.getElementById('slider-br'), inBr: document.getElementById('in-br'), 
+            sBr: document.getElementById('slider-br'), inBr: document.getElementById('in-br'),
             sCo: document.getElementById('slider-co'), inCo: document.getElementById('in-co'),
             sSa: document.getElementById('slider-sa'), inSa: document.getElementById('in-sa'),
             sGrain: document.getElementById('slider-grain'), inGrain: document.getElementById('in-grain'),
-            wmText: document.getElementById('watermarkText'), fontSel: document.getElementById('fontSelect'), textColor: document.getElementById('textColorPicker'), wmTarget: document.getElementById('watermarkTarget'),
-            sGlowAmt: document.getElementById('slider-glow-amount'), valGlow: document.getElementById('val-glow'), glowWrapper: document.getElementById('glow-slider-wrapper'),
-            
-            sFontScale: document.getElementById('slider-fontScale'), inFontScale: document.getElementById('in-fontScale'), 
-            
+            sHl: document.getElementById('slider-hl'), inHl: document.getElementById('in-hl'),
+            sSh: document.getElementById('slider-sh'), inSh: document.getElementById('in-sh'),
+            wmText: document.getElementById('watermarkText'), fontSel: document.getElementById('fontSelect'), textColor: document.getElementById('textColorPicker'),
+            wmTarget: document.getElementById('watermarkTarget'),
+            sGlowAmt: document.getElementById('slider-glow-amount'), sFontScale: document.getElementById('slider-fontScale'), inFontScale: document.getElementById('in-fontScale'),
             upLogo: document.getElementById('uploadLogo'), logoSettings: document.getElementById('logoSettings'), logoStatus: document.getElementById('logoStatus'), toggleLogo: document.getElementById('toggle-logo'),
             sLogoScale: document.getElementById('sliderLogoScale'), inLogoScale: document.getElementById('in-logoScale'),
             sLogoOp: document.getElementById('sliderLogoOp'), inLogoOp: document.getElementById('in-logoOp'),
             btnExport: document.getElementById('btn-export'), badge: document.getElementById('smart-snap-badge'),
             zoomControls: document.getElementById('zoom-controls'), sliderZoom: document.getElementById('slider-zoom'), inZoom: document.getElementById('in-zoom'),
             marginScaleWrapper: document.getElementById('margin-scale-wrapper'), sMarginScale: document.getElementById('slider-margin-scale'), inMarginScale: document.getElementById('in-margin-scale'),
-            
-            sBorder: document.getElementById('select-border'), sBorderWeight: document.getElementById('slider-borderWeight'), inBorderWeight: document.getElementById('in-borderWeight'),
-            borderWeightWrapper: document.getElementById('border-weight-wrapper'),
-            
-            targetWrapper: document.getElementById('target-display-wrapper'),
-            presetsContainer: document.getElementById('custom-presets-container'),
-            exportQuality: document.getElementById('exportQuality')
+            sBorder: document.getElementById('select-border'), sBorderWeight: document.getElementById('slider-borderWeight'), inBorderWeight: document.getElementById('in-borderWeight'), borderWeightWrapper: document.getElementById('border-weight-wrapper'),
+            exportQuality: document.getElementById('exportQuality'),
+            ratioWrapper: document.getElementById('ratio-wrapper'), seamlessWrapper: document.getElementById('seamless-count-wrapper'),
+            toggleAppLogo: document.getElementById('toggleAppLogo'), presetList: document.getElementById('custom-presets-container')
         };
 
-        let cropper = null; let originalImg = null; let rawFile = null; let currentStrategy = 'seamless'; 
-        let proxyCropUrl = null; 
+        let cropper = null; let originalImg = null; let rawFile = null; let currentStrategy = 'seamless';
+        let baseProxyCropUrl = null; let proxyCropUrl = null;
         let staticGrainDataUrl = null; let activeGlobalRatio = 1; let zoomMode = 'fit';
-        let isMargin = false; let bgColor = '#000000'; let isSafeZone = false;
-        let isBold = false; let isGlow = true; let isExifOn = false; let manualBackupText = "";
+        let isMargin = false; let bgColor = '#000000';
+        let isBold = false; let isGlow = true; let manualBackupText = "";
         let tPosX = 50, tPosY = 94, lPosX = 50, lPosY = 80; let logoObj = null; let logoUrl = null; let activeTarget = null;
-        let isCropperReady = false; let textStylePreset = 'none'; 
-        let isSplitView = false; let splitPos = 50; 
-        let savedCustomPresets = [];
-        let lutStyleStr = 'none';
+        let isCropperReady = false; let isSplitView = false; let splitPos = 50;
+        let textStylePreset = 'none'; let savedCustomPresets = []; let lutStyleStr = 'none'; let baseRotation = 0;
 
         function initGrain() {
             const c = document.createElement('canvas'); c.width = 256; c.height = 256; const ctx = c.getContext('2d'); const id = ctx.createImageData(256, 256);
@@ -499,108 +445,125 @@
         }
         initGrain();
 
-        window.addEventListener('DOMContentLoaded', () => { 
-            loadPresetsFromStorage(); 
-            initGlobalDrag(); 
+        window.addEventListener('DOMContentLoaded', () => {
+            loadPresetsFromStorage();
+            initGlobalDrag();
         });
 
         function loadPresetsFromStorage() {
-            const stored = localStorage.getItem('cineroll_presets_v2');
-            if (stored) { 
-                try { savedCustomPresets = JSON.parse(stored); renderPresetChips(); } 
-                catch(e) { console.error("Preset parsing error", e); }
-            }
+            const stored = localStorage.getItem('cineroll_presets_v4');
+            if (stored) { try { savedCustomPresets = JSON.parse(stored); renderPresetChips(); } catch(e) {} }
         }
 
-        // 🌟 V103: 모바일 하단 알약 메뉴 가림 방지를 위한 패딩 계산식 튜닝
-        function applyZoom() { 
-            const parentWrap = document.getElementById('preview-wrapper-parent'); 
-            if(!parentWrap) return; 
+        function applyZoom() {
+            const parentWrap = document.getElementById('preview-wrapper-parent');
+            if(!parentWrap) return;
             const isMobile = window.innerWidth < 768;
-            const isZen = document.body.classList.contains('zen-mode');
-            
-            const padX = isMobile ? 32 : 64;
-            // 줌 컨트롤 높이가 약 60px이므로 상하 여백 합쳐서 최소 100px 이상 확보
-            let padY = isMobile ? 120 : 128; 
-            
-            const parentW = DOM.previewArea.clientWidth - padX; 
-            const parentH = DOM.previewArea.clientHeight - padY; 
-            
-            if (parentW <= 0 || parentH <= 0) return; 
-            
-            if (zoomMode === 'fit') { 
-                let targetH = Math.min(parentH, parentW / activeGlobalRatio); 
-                parentWrap.style.height = targetH + 'px'; 
-                parentWrap.style.width = (targetH * activeGlobalRatio) + 'px'; 
-                DOM.inZoom.value = 100; DOM.sliderZoom.value = 100; 
-            } else { 
-                let baseHeightForZoom = Math.min(parentH, parentW / activeGlobalRatio); 
-                let zoomedH = baseHeightForZoom * (DOM.sliderZoom.value / 100); 
-                parentWrap.style.height = zoomedH + 'px'; 
-                parentWrap.style.width = (zoomedH * activeGlobalRatio) + 'px'; 
-                DOM.inZoom.value = DOM.sliderZoom.value; 
-            } 
-            ModuleTypo.update(); 
+            const padX = isMobile ? 32 : 64; let padY = isMobile ? 120 : 128;
+            const parentW = DOM.previewArea.clientWidth - padX; const parentH = DOM.previewArea.clientHeight - padY;
+            if (parentW <= 0 || parentH <= 0) return;
+
+            if (zoomMode === 'fit') {
+                let targetH = Math.min(parentH, parentW / activeGlobalRatio);
+                parentWrap.style.height = targetH + 'px'; parentWrap.style.width = (targetH * activeGlobalRatio) + 'px';
+                DOM.inZoom.value = 100; DOM.sliderZoom.value = 100;
+            } else {
+                let baseHeightForZoom = Math.min(parentH, parentW / activeGlobalRatio);
+                let zoomedH = baseHeightForZoom * (DOM.sliderZoom.value / 100);
+                parentWrap.style.height = zoomedH + 'px'; parentWrap.style.width = (zoomedH * activeGlobalRatio) + 'px';
+                DOM.inZoom.value = DOM.sliderZoom.value;
+            }
+            ModuleTypo.update();
         }
-        
-        function setZoom(mode) { zoomMode = mode; if(mode === 'fit') { DOM.sliderZoom.value = 100; DOM.inZoom.value = 100; } applyZoom(); }
+
+        window.setZoom = function(mode) { zoomMode = mode; if(mode === 'fit') { DOM.sliderZoom.value = 100; DOM.inZoom.value = 100; } applyZoom(); }
         window.addEventListener('resize', () => { if(zoomMode === 'fit') applyZoom(); });
 
         DOM.sliderZoom.addEventListener('input', (e) => { zoomMode = 'custom'; DOM.inZoom.value = e.target.value; applyZoom(); });
         DOM.sliderZoom.addEventListener('touchmove', (e) => { zoomMode = 'custom'; DOM.inZoom.value = e.target.value; applyZoom(); }, {passive: true});
         DOM.inZoom.addEventListener('change', (e) => { zoomMode = 'custom'; DOM.sliderZoom.value = e.target.value; applyZoom(); });
 
-        function bindInputSlider(slider, input, callback) {
+        function bindInputSlider(slider, input, callback, isTone = false) {
             if(!slider || !input) return;
-            slider.addEventListener('input', (e) => { input.value = e.target.value; if(callback) callback(); });
-            input.addEventListener('change', (e) => { 
+            slider.addEventListener('input', (e) => { input.value = e.target.value; if(!isTone && callback) callback(); });
+            if(isTone) { slider.addEventListener('change', e => { if(callback) callback(); }); }
+            input.addEventListener('change', (e) => {
                 let val = parseFloat(e.target.value);
                 if(val < parseFloat(slider.min)) val = slider.min;
                 if(val > parseFloat(slider.max)) val = slider.max;
-                e.target.value = val; slider.value = val; 
-                if(callback) callback(); 
+                e.target.value = val; slider.value = val;
+                if(callback) callback();
             });
         }
+
         bindInputSlider(DOM.sAngle, DOM.inAngle, () => { if(cropper) cropper.rotateTo(DOM.sAngle.value); });
-        bindInputSlider(DOM.sBr, DOM.inBr, () => ModuleColor.update());
-        bindInputSlider(DOM.sCo, DOM.inCo, () => ModuleColor.update());
-        bindInputSlider(DOM.sSa, DOM.inSa, () => ModuleColor.update());
-        bindInputSlider(DOM.sGrain, DOM.inGrain, () => ModuleColor.update());
+        bindInputSlider(DOM.sBr, DOM.inBr, () => ModuleColor.updateCSSFilters());
+        bindInputSlider(DOM.sCo, DOM.inCo, () => ModuleColor.updateCSSFilters());
+        bindInputSlider(DOM.sSa, DOM.inSa, () => ModuleColor.updateCSSFilters());
+        bindInputSlider(DOM.sGrain, DOM.inGrain, () => ModuleColor.updateCSSFilters());
+        bindInputSlider(DOM.sHl, DOM.inHl, () => ModuleColor.triggerEngine(), true);
+        bindInputSlider(DOM.sSh, DOM.inSh, () => ModuleColor.triggerEngine(), true);
         bindInputSlider(DOM.sLogoScale, DOM.inLogoScale, () => ModuleTypo.update());
         bindInputSlider(DOM.sLogoOp, DOM.inLogoOp, () => ModuleTypo.update());
         bindInputSlider(DOM.sMarginScale, DOM.inMarginScale, () => ModuleFrame.build());
-        bindInputSlider(DOM.sFontScale, DOM.inFontScale, () => ModuleTypo.update()); 
+        bindInputSlider(DOM.sFontScale, DOM.inFontScale, () => ModuleTypo.update());
         bindInputSlider(DOM.sBorderWeight, DOM.inBorderWeight, () => ModuleFrame.build());
 
         window.toggleSplitView = () => {
             isSplitView = !isSplitView;
-            DOM.btnBA.classList.toggle('active', isSplitView);
-            DOM.btnBA.classList.toggle('text-coral-400', isSplitView);
-            ModuleFrame.build(); 
+            DOM.btnBA.classList.toggle('bg-zinc-800', isSplitView);
+            DOM.btnBA.classList.toggle('text-white', isSplitView);
+            ModuleFrame.build();
         };
-        
+
         window.toggleZenMode = () => {
             if(!proxyCropUrl) return;
             document.body.classList.toggle('zen-mode');
+            const isZen = document.body.classList.contains('zen-mode');
+            const exitBtn = document.getElementById('btn-exit-zen');
+            if (exitBtn) {
+                if (isZen) {
+                    exitBtn.classList.remove('hidden'); exitBtn.classList.add('flex');
+                    exitBtn.classList.remove('opacity-0'); exitBtn.classList.add('opacity-100');
+                    clearTimeout(window.zenTimeout);
+                    window.zenTimeout = setTimeout(() => { exitBtn.classList.remove('opacity-100'); exitBtn.classList.add('opacity-0'); }, 2000);
+                }
+                else {
+                    exitBtn.classList.add('hidden'); exitBtn.classList.remove('flex');
+                }
+            }
             setTimeout(() => applyZoom(), 100);
         };
+
+        window.addEventListener('mousemove', () => {
+            if(document.body.classList.contains('zen-mode')) {
+                const btn = document.getElementById('btn-exit-zen');
+                if(btn) {
+                    btn.classList.remove('opacity-0');
+                    btn.classList.add('opacity-100');
+                    clearTimeout(window.zenTimeout);
+                    window.zenTimeout = setTimeout(() => {
+                        btn.classList.remove('opacity-100');
+                        btn.classList.add('opacity-0');
+                    }, 2000);
+                }
+            }
+        });
 
         let isDraggingSplit = false;
         window.addEventListener('mousemove', (e) => {
             if(!isDraggingSplit || !isSplitView) return;
-            e.preventDefault(); 
+            e.preventDefault();
             const parentWrapper = document.getElementById('preview-wrapper-parent');
             const layerImagesBefore = document.getElementById('layer-images-before');
             const handle = document.getElementById('split-handle');
             if(!parentWrapper || !layerImagesBefore || !handle) return;
-            
+
             const rect = parentWrapper.getBoundingClientRect();
             let pct = ((e.clientX - rect.left) / rect.width) * 100;
             pct = Math.max(0, Math.min(100, pct));
             splitPos = pct;
-            
             layerImagesBefore.style.clipPath = `polygon(0 0, ${pct}% 0, ${pct}% 100%, 0 100%)`;
-            layerImagesBefore.style.WebkitClipPath = `polygon(0 0, ${pct}% 0, ${pct}% 100%, 0 100%)`; 
             handle.style.left = `${pct}%`;
         });
         window.addEventListener('mouseup', () => { isDraggingSplit = false; });
@@ -609,11 +572,10 @@
             const isInput = ['INPUT', 'TEXTAREA'].includes(e.target.tagName);
             if(e.key.toLowerCase() === 'f' && !isInput) { e.preventDefault(); toggleZenMode(); }
             if(e.key === 'Escape' && document.body.classList.contains('zen-mode')) { toggleZenMode(); }
-            
             if(e.key === 'Enter' && !isInput && e.target.tagName !== 'BUTTON') {
                 const formatTab = document.getElementById('tab-format');
                 if(formatTab && !formatTab.classList.contains('hidden') && cropper && isCropperReady) {
-                    e.preventDefault(); applyCropAndRender(); 
+                    e.preventDefault(); applyCropAndRender();
                 }
             }
             if(activeTarget && !isInput) {
@@ -626,111 +588,207 @@
             }
         });
 
+        const DragState = { active: false, target: null, container: null, gx: null, gy: null };
+
+        function initGlobalDrag() {
+            function startDrag(e, type, el) {
+                DragState.active = true; DragState.target = type; activeTarget = type;
+                DragState.container = el.parentElement;
+                if(DragState.container) { DragState.gx = DragState.container.querySelector('.snap-guide-x'); DragState.gy = DragState.container.querySelector('.snap-guide-y'); }
+
+                document.querySelectorAll('.draggable-text, .draggable-logo').forEach(n => n.classList.remove('is-active-target'));
+                el.classList.add('is-active-target');
+                el.focus();
+            }
+
+            window.addEventListener('mousedown', e => {
+                let te = e.target.closest('.draggable-text'); let le = e.target.closest('.draggable-logo');
+                if(te) { startDrag(e, 'text', te); }
+                else if(le) { startDrag(e, 'logo', le); }
+                else if(e.target.closest('#preview-wrapper-parent')) {
+                    activeTarget = null;
+                    document.querySelectorAll('.draggable-text, .draggable-logo').forEach(n => n.classList.remove('is-active-target'));
+                }
+            });
+
+            window.addEventListener('touchstart', e => {
+                let te = e.target.closest('.draggable-text'); let le = e.target.closest('.draggable-logo');
+                if(te) startDrag(e, 'text', te); else if(le) startDrag(e, 'logo', le);
+            }, {passive: false});
+
+            function moveDrag(e) {
+                if(!DragState.active || !DragState.container) return;
+                e.preventDefault();
+                const rect = DragState.container.getBoundingClientRect();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                let px = ((clientX - rect.left)/rect.width)*100;
+                let py = ((clientY - rect.top)/rect.height)*100;
+                px = Math.max(0, Math.min(100, px)); py = Math.max(0, Math.min(100, py));
+                const snap = 2.5; let sx = false, sy = false;
+                if(Math.abs(px-50)<snap) { px=50; sx=true; }
+                if(Math.abs(py-50)<snap) { py=50; sy=true; }
+                if(Math.abs(py-94)<snap) { py=94; sy=true; }
+
+                if(DragState.target==='text') { tPosX=px; tPosY=py; } else { lPosX=px; lPosY=py; }
+                ModuleTypo.updatePositions();
+
+                if(DragState.gx) { DragState.gx.style.display = sy?'block':'none'; DragState.gx.style.top = `${py}%`; }
+                if(DragState.gy) { DragState.gy.style.display = sx?'block':'none'; DragState.gy.style.left = `${px}%`; }
+            }
+
+            window.addEventListener('mousemove', moveDrag);
+            window.addEventListener('touchmove', moveDrag, {passive: false});
+
+            function endDrag() { DragState.active = false; if(DragState.gx) DragState.gx.style.display = 'none'; if(DragState.gy) DragState.gy.style.display = 'none'; }
+            window.addEventListener('mouseup', endDrag); window.addEventListener('touchend', endDrag);
+        }
+
+        const Engine3D = {
+            canvas: document.createElement('canvas'), gl: null, program: null, posBuf: null, lutData: null, identityLut: null,
+            initIdentityLut: function() {
+                const size = 16; const data = new Uint8Array(size * size * size * 4); let i = 0;
+                for (let z = 0; z < size; z++) { for (let y = 0; y < size; y++) { for (let x = 0; x < size; x++) { data[i++] = Math.round((x / (size - 1)) * 255); data[i++] = Math.round((y / (size - 1)) * 255); data[i++] = Math.round((z / (size - 1)) * 255); data[i++] = 255; } } }
+                this.identityLut = { size, data };
+            },
+            parseCube: function(text) {
+                const lines = text.split('\n'); let size = 0; const vals = [];
+                for (let line of lines) { line = line.trim(); if (line.startsWith('LUT_3D_SIZE')) { size = parseInt(line.split(/\s+/)[1]); } else if (line && !line.startsWith('#') && /^[0-9.-]/.test(line)) { const parts = line.split(/\s+/).map(Number); vals.push(parts[0], parts[1], parts[2]); } }
+                const data = new Uint8Array(size * size * size * 4); let vIdx = 0;
+                for(let i = 0; i < data.length; i += 4) { data[i] = Math.max(0, Math.min(255, Math.round(vals[vIdx]*255))); data[i+1] = Math.max(0, Math.min(255, Math.round(vals[vIdx+1]*255))); data[i+2] = Math.max(0, Math.min(255, Math.round(vals[vIdx+2]*255))); data[i+3] = 255; vIdx += 3; }
+                this.lutData = { size, data };
+            },
+            apply: async function(sourceCanvas, intensity, hl, sh, hasCustomLut) {
+                if (!this.gl) { this.gl = this.canvas.getContext('webgl2', { preserveDrawingBuffer: true }); this.initIdentityLut(); }
+                const gl = this.gl; if (!gl) return sourceCanvas;
+
+                if (!this.program) {
+                    const vsSource = `#version 300 es\n in vec2 a_position; out vec2 v_texCoord; void main() { gl_Position = vec4(a_position, 0.0, 1.0); v_texCoord = vec2((a_position.x + 1.0) / 2.0, 1.0 - (a_position.y + 1.0) / 2.0); }`;
+                    const fsSource = `#version 300 es\n precision highp float; precision highp sampler3D; in vec2 v_texCoord; uniform sampler2D u_image; uniform sampler3D u_lut; uniform float u_intensity; uniform float u_hl; uniform float u_sh; uniform int u_hasLut; out vec4 outColor; float getLum(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); } void main() { vec4 texColor = texture(u_image, v_texCoord); vec3 color = texColor.rgb; float lum = getLum(color); float shadowMask = pow(clamp(1.0 - (lum / 0.5), 0.0, 1.0), 1.5); float hlMask = pow(clamp((lum - 0.5) / 0.5, 0.0, 1.0), 1.5); color *= 1.0 + (u_sh - 1.0) * shadowMask; color *= 1.0 + (u_hl - 1.0) * hlMask; color = clamp(color, 0.0, 1.0); vec3 finalColor = color; if (u_hasLut == 1) { vec3 lutColor = texture(u_lut, color).rgb; finalColor = mix(color, lutColor, u_intensity); } outColor = vec4(finalColor, texColor.a); }`;
+                    const createShader = (type, source) => { const s = gl.createShader(type); gl.shaderSource(s, source); gl.compileShader(s); return s; };
+                    this.program = gl.createProgram(); gl.attachShader(this.program, createShader(gl.VERTEX_SHADER, vsSource)); gl.attachShader(this.program, createShader(gl.FRAGMENT_SHADER, fsSource)); gl.linkProgram(this.program);
+                    this.posBuf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, this.posBuf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]), gl.STATIC_DRAW);
+                }
+
+                gl.useProgram(this.program);
+                const posLoc = gl.getAttribLocation(this.program, "a_position");
+                gl.enableVertexAttribArray(posLoc);
+                gl.bindBuffer(gl.ARRAY_BUFFER, this.posBuf);
+                gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+
+                const lutTex = gl.createTexture();
+                gl.activeTexture(gl.TEXTURE1);
+                gl.bindTexture(gl.TEXTURE_3D, lutTex);
+                gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
+                gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+                gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+                gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+                gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+                const activeLut = (hasCustomLut && this.lutData) ? this.lutData : this.identityLut;
+                gl.texImage3D(gl.TEXTURE_3D, 0, gl.RGBA, activeLut.size, activeLut.size, activeLut.size, 0, gl.RGBA, gl.UNSIGNED_BYTE, activeLut.data);
+
+                gl.uniform1i(gl.getUniformLocation(this.program, "u_lut"), 1);
+                gl.uniform1f(gl.getUniformLocation(this.program, "u_intensity"), intensity);
+                gl.uniform1f(gl.getUniformLocation(this.program, "u_hl"), hl);
+                gl.uniform1f(gl.getUniformLocation(this.program, "u_sh"), sh);
+                gl.uniform1i(gl.getUniformLocation(this.program, "u_hasLut"), hasCustomLut ? 1 : 0);
+
+                const isHuge = sourceCanvas.width > 4096 || sourceCanvas.height > 4096;
+
+                if (!isHuge) {
+                    this.canvas.width = sourceCanvas.width; this.canvas.height = sourceCanvas.height;
+                    gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+
+                    const imgTex = gl.createTexture();
+                    gl.activeTexture(gl.TEXTURE0);
+                    gl.bindTexture(gl.TEXTURE_2D, imgTex);
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+                    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, sourceCanvas);
+                    gl.uniform1i(gl.getUniformLocation(this.program, "u_image"), 0);
+
+                    gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+                    const outCvs = document.createElement('canvas');
+                    outCvs.width = this.canvas.width; outCvs.height = this.canvas.height;
+                    outCvs.getContext('2d').drawImage(this.canvas, 0, 0);
+
+                    gl.deleteTexture(imgTex);
+                    gl.deleteTexture(lutTex);
+                    return outCvs;
+
+                } else {
+                    const outCvs = document.createElement('canvas');
+                    outCvs.width = sourceCanvas.width; outCvs.height = sourceCanvas.height;
+                    const outCtx = outCvs.getContext('2d');
+                    const TILE_SIZE = 2048;
+
+                    for (let y = 0; y < sourceCanvas.height; y += TILE_SIZE) {
+                        for (let x = 0; x < sourceCanvas.width; x += TILE_SIZE) {
+                            const w = Math.min(TILE_SIZE, sourceCanvas.width - x);
+                            const h = Math.min(TILE_SIZE, sourceCanvas.height - y);
+
+                            const tileCvs = document.createElement('canvas');
+                            tileCvs.width = w; tileCvs.height = h;
+                            tileCvs.getContext('2d').drawImage(sourceCanvas, x, y, w, h, 0, 0, w, h);
+
+                            this.canvas.width = w; this.canvas.height = h;
+                            gl.viewport(0, 0, w, h);
+
+                            const imgTex = gl.createTexture();
+                            gl.activeTexture(gl.TEXTURE0);
+                            gl.bindTexture(gl.TEXTURE_2D, imgTex);
+                            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+                            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+                            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+                            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+                            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, tileCvs);
+                            gl.uniform1i(gl.getUniformLocation(this.program, "u_image"), 0);
+
+                            gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+                            outCtx.drawImage(this.canvas, x, y);
+                            gl.deleteTexture(imgTex);
+                            tileCvs.width = 0; tileCvs.height = 0;
+                        }
+                    }
+                    gl.deleteTexture(lutTex);
+                    return outCvs;
+                }
+            }
+        };
+
+        const updateLoadingText = (text) => { const el = document.getElementById('loading-text'); if (el) el.innerText = text; };
+        const showLoading = (msg) => { updateLoadingText(msg); document.getElementById('loading-overlay').classList.remove('hidden'); document.getElementById('loading-overlay').classList.add('flex'); };
+        const hideLoading = () => { document.getElementById('loading-overlay').classList.add('hidden'); document.getElementById('loading-overlay').classList.remove('flex'); };
+
+        document.getElementById('uploadLut').addEventListener('change', async e => {
+            const file = e.target.files[0]; if(!file) return; showLoading("Parsing .CUBE 3D Matrix...");
+            try { const text = await file.text(); Engine3D.parseCube(text); document.getElementById('opt-custom-lut').classList.remove('hidden'); document.getElementById('select-lut').value = 'custom'; ModuleColor.triggerEngine(); }
+            catch(err) { alert("LUT 파일을 읽는 중 오류가 발생했습니다."); hideLoading(); }
+        });
+
+        DOM.upLogo.addEventListener('change', e => {
+            const file = e.target.files[0]; if(!file) return; const reader = new FileReader();
+            reader.onload = (event) => { logoUrl = event.target.result; logoObj = new Image(); logoObj.onload = () => { DOM.toggleLogo.checked = true; DOM.logoStatus.classList.remove('hidden'); DOM.logoSettings.classList.remove('opacity-30', 'pointer-events-none'); ModuleTypo.update(); }; logoObj.src = logoUrl; };
+            reader.readAsDataURL(file);
+        });
+
         function switchTab(target) {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.innerText.toLowerCase() === target));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
             document.getElementById(`tab-${target}`).classList.remove('hidden');
-            
+
             if(target === 'format') {
-                DOM.previewArea.classList.add('hidden'); 
-                DOM.zoomControls.classList.add('hidden'); 
-                DOM.zoomControls.classList.remove('flex');
-                DOM.btnBA.classList.add('hidden'); DOM.btnBA.classList.remove('flex');
-                document.getElementById('btn-zen-mode').classList.add('hidden'); document.getElementById('btn-zen-mode').classList.remove('flex');
-                
-                DOM.main.classList.remove('hidden');
-                DOM.main.style.display = 'block';
-                void DOM.main.offsetWidth;
-                
-                setTimeout(() => { 
-                    if(originalImg && !cropper) {
-                        setupCropper(); 
-                    } else if(cropper) { 
-                        DOM.main.classList.add('opacity-100'); 
-                        cropper.resize(); 
-                    }
-                }, 50); 
+                DOM.previewArea.classList.add('hidden'); DOM.zoomControls.classList.add('hidden'); DOM.btnBA.style.display = 'none'; DOM.btnZen.style.display = 'none';
+                DOM.main.classList.remove('hidden'); DOM.main.style.display = 'block'; void DOM.main.offsetWidth;
+                setTimeout(() => { if(originalImg && !cropper) { setupCropper(); } else if(cropper) { DOM.main.classList.add('opacity-100'); cropper.resize(); } }, 50);
             } else {
-                DOM.main.classList.remove('opacity-100'); DOM.main.style.display = 'none'; 
-                if(proxyCropUrl) { 
-                    DOM.previewArea.classList.remove('hidden'); 
-                    DOM.zoomControls.classList.remove('hidden'); 
-                    DOM.zoomControls.classList.add('flex');
-                    DOM.btnBA.classList.remove('hidden'); DOM.btnBA.classList.add('flex');
-                    document.getElementById('btn-zen-mode').classList.remove('hidden'); document.getElementById('btn-zen-mode').classList.add('flex');
-                    applyZoom(); 
-                }
+                DOM.main.classList.remove('opacity-100'); DOM.main.style.display = 'none';
+                if(proxyCropUrl) { DOM.previewArea.classList.remove('hidden'); DOM.zoomControls.classList.remove('hidden'); DOM.zoomControls.classList.add('flex'); DOM.btnBA.style.display = 'flex'; DOM.btnZen.style.display = 'flex'; applyZoom(); }
             }
-        }
-
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eName => { DOM.mainStage.addEventListener(eName, e => { e.preventDefault(); e.stopPropagation(); }, false); });
-        DOM.mainStage.addEventListener('drop', e => { if(e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]); });
-        DOM.upInput.addEventListener('change', e => { if(e.target.files.length) handleFile(e.target.files[0]); });
-
-        async function handleFile(file) {
-            if (!file) return; 
-            const isTiff = file.name.toLowerCase().match(/\.tiff?$/);
-            if (!file.type.startsWith('image/') && !isTiff) return;
-
-            DOM.upText.innerText = "Processing File..."; rawFile = file;
-            
-            try {
-                if (isTiff) {
-                    const arrayBuffer = await file.arrayBuffer(); const ifds = UTIF.decode(arrayBuffer); UTIF.decodeImage(arrayBuffer, ifds[0]);
-                    const rgba = UTIF.toRGBA8(ifds[0]); const cvs = document.createElement('canvas'); cvs.width = ifds[0].width; cvs.height = ifds[0].height;
-                    const ctx = cvs.getContext('2d'); const imgData = new ImageData(new Uint8ClampedArray(rgba.buffer), cvs.width, cvs.height); ctx.putImageData(imgData, 0, 0);
-                    originalImg = new Image(); 
-                    originalImg.onload = () => { 
-                        DOM.upZone.classList.add('hidden'); DOM.upText.innerText = "Import Resource"; switchTab('format'); 
-                    }; 
-                    originalImg.src = cvs.toDataURL('image/jpeg', 0.95);
-                    cvs.width = 0; cvs.height = 0;
-                } else {
-                    originalImg = new Image(); 
-                    originalImg.onload = () => { 
-                        DOM.upZone.classList.add('hidden'); DOM.upText.innerText = "Import Resource"; switchTab('format'); 
-                    }; 
-                    originalImg.src = URL.createObjectURL(file);
-                }
-            } catch (err) { alert("이미지 처리 오류."); DOM.upText.innerText = "Import Resource"; }
-        }
-
-        function setupCropper() {
-            if(!originalImg) return; isCropperReady = false; 
-            if(cropper) { cropper.destroy(); cropper = null; }
-            DOM.main.innerHTML = ''; const newImg = document.createElement('img'); newImg.style.display = 'block'; newImg.style.maxWidth = '100%';
-            
-            const sf = parseFloat(DOM.sSqueeze.value)/100; const cvs = document.createElement('canvas');
-            let tw = originalImg.width * sf; let th = originalImg.height; 
-            const maxW = 3500; if(tw > maxW) { const scale = maxW / tw; th *= scale; tw = maxW; } 
-            cvs.width = tw; cvs.height = th; cvs.getContext('2d').drawImage(originalImg, 0, 0, originalImg.width, originalImg.height, 0, 0, tw, th);
-            
-            cvs.toBlob((blob) => {
-                const proxyObjUrl = URL.createObjectURL(blob); 
-                newImg.src = proxyObjUrl;
-                cvs.width = 0; cvs.height = 0; 
-                
-                newImg.onload = () => {
-                    cropper = new Cropper(newImg, { 
-                        viewMode: 1, 
-                        dragMode: 'none', autoCrop: false, background: false, 
-                        ready: () => { 
-                            cropper.crop(); 
-                            updateCropperRatio(); 
-                            isCropperReady = true; 
-                            setTimeout(() => { DOM.main.classList.remove('opacity-0'); DOM.main.classList.add('opacity-100'); }, 50); 
-                        },
-                        crop: () => {
-                            const isFree = isNaN(parseFloat(DOM.sRatio.value)); if(!isFree) { DOM.badge.classList.add('opacity-0'); return; }
-                            const d = cropper.getCropBoxData(); if(!d || d.width===0 || d.height===0) return;
-                            const r = d.width/d.height; let txt = "";
-                            if(r>0.78 && r<0.82) txt="4:5 Vertical IG"; else if(r>0.98 && r<1.02) txt="1:1 Square"; else if(r>1.75 && r<1.8) txt="16:9 Landscape";
-                            else if(r>0.65 && r<0.68) txt="2:3 Vertical"; else if(r>1.45 && r<1.55) txt="3:2 Horizontal"; else if(r>0.74 && r<0.76) txt="3:4 Classic";
-                            if(txt) { DOM.badge.innerText=txt; DOM.badge.classList.remove('opacity-0'); DOM.badge.style.top = Math.max(10, d.top - 28) + 'px'; DOM.badge.style.left = (d.left + d.width/2) + 'px'; } else DOM.badge.classList.add('opacity-0');
-                        }
-                    });
-                }; DOM.main.appendChild(newImg);
-            }, 'image/jpeg', 0.95);
         }
 
         function updateCropperRatio() {
@@ -745,208 +803,164 @@
             btn.addEventListener('click', e => {
                 document.querySelectorAll('#strategy-btns .min-btn').forEach(b => b.classList.remove('active')); e.target.classList.add('active'); currentStrategy = e.target.dataset.val;
                 const isSingle = currentStrategy === 'single';
-                document.getElementById('seamless-count-wrapper').classList.toggle('disabled-block', isSingle); 
-                document.getElementById('ratio-wrapper').classList.toggle('disabled-block', !isSingle);
-                DOM.targetWrapper.style.display = isSingle ? 'none' : 'block'; 
-                
-                if(isSingle) document.getElementById('ratio-wrapper').style.display = 'block';
-                else DOM.sRatio.value = "0.8"; 
-                
+                DOM.seamlessWrapper.classList.toggle('disabled-block', isSingle);
+                if(isSingle && DOM.sRatio.value === "NaN") DOM.sRatio.value = "0.8";
                 updateCropperRatio();
             });
         });
 
         window.resetFraming = function() {
             const needsRebuild = DOM.sSqueeze.value !== "100";
-            if (currentStrategy === 'seamless') { DOM.sRatio.value = "0.8"; DOM.sSlides.value = "3"; } else { DOM.sRatio.value = "NaN"; }
-            DOM.sAngle.value = 0; DOM.inAngle.value = 0; DOM.sSqueeze.value = "100"; 
+            if (currentStrategy === 'seamless' || currentStrategy === 'triptych') { DOM.sRatio.value = "0.8"; DOM.sSlides.value = "3"; } else { DOM.sRatio.value = "NaN"; }
+            DOM.sAngle.value = 0; DOM.inAngle.value = 0; DOM.sSqueeze.value = "100";
             if (needsRebuild) { DOM.main.classList.remove('opacity-100'); DOM.main.classList.add('opacity-0'); setTimeout(() => setupCropper(), 300); } else if (cropper) { cropper.rotateTo(0); updateCropperRatio(); }
         };
 
-        DOM.sRatio.addEventListener('change', updateCropperRatio); DOM.sSlides.addEventListener('change', updateCropperRatio);
-        window.resetAngle = function() { DOM.sAngle.value = 0; DOM.inAngle.value = 0; DOM.sAngle.dispatchEvent(new Event('input')); };
-        DOM.sSqueeze.addEventListener('change', () => { DOM.main.classList.remove('opacity-100'); DOM.main.classList.add('opacity-0'); setTimeout(setupCropper, 300); });
+        DOM.sSqueeze.addEventListener('change', () => {
+            DOM.main.classList.remove('opacity-100');
+            DOM.main.classList.add('opacity-0');
+            setTimeout(setupCropper, 300);
+        });
 
-        function applyCropAndRender() {
-            if(!cropper || !isCropperReady) return; 
-            try {
-                DOM.badge.classList.add('opacity-0'); 
-                const cvs = cropper.getCroppedCanvas({ maxWidth: 2560, maxHeight: 2560, fillColor: 'transparent', imageSmoothingEnabled: true, imageSmoothingQuality: 'high' });
-                if (!cvs || cvs.width === 0 || cvs.height === 0) { alert("크롭 영역을 다시 지정해주세요."); return; }
-                
-                activeGlobalRatio = cvs.width / cvs.height; 
-                proxyCropUrl = cvs.toDataURL('image/png'); 
-                cvs.width = 0; cvs.height = 0; 
-                
-                switchTab('frame'); 
-                ModuleFrame.build(); 
-            } catch (err) { alert("오류가 발생했습니다. 새로고침 해주세요."); }
+        DOM.sRatio.addEventListener('change', updateCropperRatio); DOM.sSlides.addEventListener('change', updateCropperRatio);
+        window.rotateBase = function(deg) { baseRotation = (baseRotation + deg) % 360; applyRotation(); }
+        function applyRotation() { if(!cropper) return; cropper.rotateTo(baseRotation + (parseFloat(DOM.sAngle.value) || 0)); }
+
+        function setupCropper() {
+            if(!originalImg) return; isCropperReady = false;
+            if(cropper) { cropper.destroy(); cropper = null; }
+            DOM.main.innerHTML = ''; const newImg = document.createElement('img'); newImg.style.display = 'block'; newImg.style.maxWidth = '100%';
+            const sf = parseFloat(DOM.sSqueeze.value)/100;
+
+            newImg.onload = () => {
+                requestAnimationFrame(() => {
+                    cropper = new Cropper(newImg, {
+                        viewMode: 1, dragMode: 'none', autoCrop: false, background: false, checkOrientation: true,
+                        ready: () => { cropper.crop(); updateCropperRatio(); isCropperReady = true; DOM.main.classList.remove('opacity-0'); DOM.main.classList.add('opacity-100'); applyRotation(); },
+                        crop: () => {
+                            const isFree = isNaN(parseFloat(DOM.sRatio.value));
+                            if(!isFree) { if(DOM.badge) DOM.badge.classList.add('opacity-0'); return; }
+                            const d = cropper.getCropBoxData();
+                            if(!d || d.width===0 || d.height===0) return;
+                            const r = d.width/d.height; let txt = "";
+                            if(r>0.78 && r<0.82) txt="4:5 Vertical IG"; else if(r>0.98 && r<1.02) txt="1:1 Square"; else if(r>1.75 && r<1.8) txt="16:9 Landscape"; else if(r>0.65 && r<0.68) txt="2:3 Vertical"; else if(r>1.45 && r<1.55) txt="3:2 Horizontal"; else if(r>0.74 && r<0.76) txt="3:4 Classic";
+                            if(txt && DOM.badge) { DOM.badge.innerText=txt; DOM.badge.classList.remove('opacity-0'); DOM.badge.style.top = Math.max(10, d.top - 28) + 'px'; DOM.badge.style.left = (d.left + d.width/2) + 'px'; }
+                            else if(DOM.badge) DOM.badge.classList.add('opacity-0');
+                        }
+                    });
+                });
+            };
+
+            if (sf === 1.0) { DOM.main.appendChild(newImg); newImg.src = originalImg.src; return; }
+
+            const cvs = document.createElement('canvas'); let tw = originalImg.naturalWidth * sf; let th = originalImg.naturalHeight;
+            const maxW = 3500; if(tw > maxW) { const scale = maxW / tw; th *= scale; tw = maxW; } cvs.width = tw; cvs.height = th;
+            cvs.getContext('2d').drawImage(originalImg, 0, 0, originalImg.naturalWidth, originalImg.naturalHeight, 0, 0, tw, th);
+            cvs.toBlob((blob) => { DOM.main.appendChild(newImg); newImg.src = URL.createObjectURL(blob); cvs.width = 0; cvs.height = 0; }, 'image/jpeg', 0.95);
         }
 
-        const ModuleFrame = {
-            updateBorderOptions: function() {
-                const border = DOM.sBorder.value;
-                if(border === 'fineart') {
-                    DOM.borderWeightWrapper.classList.remove('hidden');
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eName => { DOM.mainStage.addEventListener(eName, e => { e.preventDefault(); e.stopPropagation(); }, false); });
+
+        DOM.mainStage.addEventListener('drop', e => {
+            if(e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+        });
+
+        DOM.upInput.addEventListener('change', e => {
+            if(e.target.files.length) {
+                handleFile(e.target.files[0]);
+                e.target.value = '';
+            }
+        });
+
+        async function handleFile(file) {
+            if (!file) return;
+            const validExts = /\.(jpe?g|png|tiff?|webp|gif|rw2|cr2|cr3|nef|arw|dng)$/i;
+            if (!file.type.startsWith('image/') && !file.name.match(validExts)) {
+                alert("지원하지 않는 이미지 형식입니다."); return;
+            }
+
+            DOM.upText.innerText = "Processing..."; rawFile = file; baseRotation = 0; if (DOM.sAngle) DOM.sAngle.value = 0; if (DOM.inAngle) DOM.inAngle.value = 0;
+            try {
+                if (file.name.match(/\.tiff?$/i)) {
+                    const arrayBuffer = await file.arrayBuffer(); const ifds = UTIF.decode(arrayBuffer); UTIF.decodeImage(arrayBuffer, ifds[0]);
+                    const rgba = UTIF.toRGBA8(ifds[0]); const cvs = document.createElement('canvas'); cvs.width = ifds[0].width; cvs.height = ifds[0].height;
+                    const ctx = cvs.getContext('2d'); const imgData = new ImageData(new Uint8ClampedArray(rgba.buffer), cvs.width, cvs.height); ctx.putImageData(imgData, 0, 0);
+                    originalImg = new Image(); originalImg.onload = () => { DOM.upZone.classList.add('hidden'); switchTab('format'); }; originalImg.src = cvs.toDataURL('image/jpeg', 0.95); cvs.width = 0; cvs.height = 0;
                 } else {
-                    DOM.borderWeightWrapper.classList.add('hidden');
+                    originalImg = new Image(); originalImg.onload = () => { DOM.upZone.classList.add('hidden'); switchTab('format'); }; originalImg.src = URL.createObjectURL(file);
                 }
-                this.build();
-            },
+            } catch (err) { alert("이미지 처리 오류."); DOM.upText.innerText = "Import Resource"; }
+        }
+
+        window.applyCropAndRender = function() {
+            if(!cropper || !isCropperReady) return;
+            try {
+                if(DOM.badge) DOM.badge.classList.add('opacity-0');
+                const cvs = cropper.getCroppedCanvas({ maxWidth: 2560, maxHeight: 2560, fillColor: 'transparent', imageSmoothingEnabled: true, imageSmoothingQuality: 'high' });
+                if (!cvs || cvs.width === 0 || cvs.height === 0) { alert("크롭 영역을 다시 지정해주세요."); return; }
+                activeGlobalRatio = cvs.width / cvs.height; baseProxyCropUrl = cvs.toDataURL('image/png'); cvs.width = 0; cvs.height = 0;
+                ModuleColor.triggerEngine(true);
+            } catch (err) { alert("오류가 발생했습니다."); }
+        };
+
+        const ModuleFrame = {
+            updateBorderOptions: function() { DOM.borderWeightWrapper.classList.toggle('hidden', DOM.sBorder.value !== 'fineart'); this.build(); },
             build: function() {
-                if(!proxyCropUrl) return; 
+                if(!proxyCropUrl) return;
                 DOM.previewInner.innerHTML = '';
-                
-                const parentWrapper = document.createElement('div');
-                parentWrapper.id = "preview-wrapper-parent";
-                parentWrapper.className = "flex relative m-auto";
-                parentWrapper.style.aspectRatio = activeGlobalRatio;
-                parentWrapper.style.flexShrink = "0";
-                parentWrapper.style.boxShadow = "0 40px 100px rgba(0,0,0,0.95)";
-                
-                const layerImagesAfter = this.createLayer('after');
-                parentWrapper.appendChild(layerImagesAfter);
+                const p = document.createElement('div'); p.id = "preview-wrapper-parent"; p.className = "flex relative m-auto"; p.style.aspectRatio = activeGlobalRatio; p.style.flexShrink = "0"; p.style.boxShadow = "0 40px 100px rgba(0,0,0,0.95)";
+                p.appendChild(this.createLayer('after'));
+
+                const lg = document.createElement('div'); lg.className = "layer-glass absolute inset-0 flex z-50 pointer-events-none";
+                let slides = (currentStrategy === 'seamless' || currentStrategy === 'triptych') ? parseInt(DOM.sSlides.value) : 1;
+                for(let i=0; i<slides; i++) {
+                    const gp = document.createElement('div'); gp.className = "flex-1 relative h-full pointer-events-none overflow-hidden"; gp.id = `glass-pane-${i+1}`;
+                    gp.innerHTML = `<div class="snap-guide snap-guide-x hidden"></div><div class="snap-guide snap-guide-y hidden"></div>`; lg.appendChild(gp);
+                }
+                p.appendChild(lg); DOM.previewInner.appendChild(p); DOM.btnExport.classList.remove('opacity-50', 'cursor-not-allowed');
 
                 if (isSplitView) {
-                    const layerImagesBefore = this.createLayer('before');
-                    layerImagesBefore.id = 'layer-images-before';
-                    layerImagesBefore.style.clipPath = `polygon(0 0, ${splitPos}% 0, ${splitPos}% 100%, 0 100%)`;
-                    layerImagesBefore.style.WebkitClipPath = `polygon(0 0, ${splitPos}% 0, ${splitPos}% 100%, 0 100%)`; 
-                    layerImagesBefore.style.zIndex = "20";
-                    parentWrapper.appendChild(layerImagesBefore);
-
-                    const handle = document.createElement('div');
-                    handle.id = "split-handle";
-                    handle.className = "absolute top-0 bottom-0 cursor-ew-resize border-r-[3px] border-white shadow-[0_0_10px_rgba(0,0,0,0.5)]";
-                    handle.style.zIndex = "60"; 
-                    handle.style.left = `${splitPos}%`;
-                    handle.style.transform = "translateX(-1.5px)"; 
-                    
-                    const handleCircle = document.createElement('div');
-                    handleCircle.className = "absolute top-1/2 left-1/2 w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-lg transform -translate-x-1/2 -translate-y-1/2";
-                    handleCircle.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2"><path d="M13 5l7 7-7 7M11 5l-7 7 7 7"/></svg>`;
-                    handle.appendChild(handleCircle);
-                    
-                    handle.addEventListener('mousedown', (e) => { isDraggingSplit = true; e.preventDefault(); e.stopPropagation(); });
-                    parentWrapper.appendChild(handle);
-                }
-                
-                const layerGlass = document.createElement('div');
-                layerGlass.id = "layer-glass";
-                layerGlass.className = "layer-glass flex w-full h-full absolute inset-0"; 
-                
-                let slides = currentStrategy === 'seamless' ? parseInt(DOM.sSlides.value) : 1;
-                for(let i=0; i<slides; i++) {
-                    const glassPane = document.createElement('div');
-                    glassPane.className = "flex-1 relative h-full"; 
-                    
-                    const gx = document.createElement('div'); gx.className="snap-guide snap-guide-x"; glassPane.appendChild(gx);
-                    const gy = document.createElement('div'); gy.className="snap-guide snap-guide-y"; glassPane.appendChild(gy);
-                    
-                    glassPane.id = `glass-pane-${i+1}`;
-                    layerGlass.appendChild(glassPane);
+                    const layerImagesBefore = this.createLayer('before'); layerImagesBefore.id = 'layer-images-before';
+                    layerImagesBefore.style.clipPath = `polygon(0 0, ${splitPos}% 0, ${splitPos}% 100%, 0 100%)`; layerImagesBefore.style.zIndex = "20"; p.appendChild(layerImagesBefore);
+                    const handle = document.createElement('div'); handle.id = "split-handle"; handle.className = "absolute top-0 bottom-0 cursor-ew-resize border-r-[3px] border-white shadow-[0_0_10px_rgba(0,0,0,0.5)]"; handle.style.zIndex = "60"; handle.style.left = `${splitPos}%`; handle.style.transform = "translateX(-1.5px)";
+                    const handleCircle = document.createElement('div'); handleCircle.className = "absolute top-1/2 left-1/2 w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-lg transform -translate-x-1/2 -translate-y-1/2"; handleCircle.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2"><path d="M13 5l7 7-7 7M11 5l-7 7 7 7"/></svg>`; handle.appendChild(handleCircle);
+                    handle.addEventListener('mousedown', (e) => { isDraggingSplit = true; e.preventDefault(); e.stopPropagation(); }); p.appendChild(handle);
                 }
 
-                parentWrapper.appendChild(layerGlass);
-                DOM.previewInner.appendChild(parentWrapper); 
-                DOM.btnExport.classList.remove('opacity-50', 'cursor-not-allowed');
-                
-                ModuleColor.update();
-                ModuleTypo.update();
-                applyZoom();
+                ModuleColor.updateCSSFilters(); ModuleTypo.update(); applyZoom();
             },
             createLayer: function(type) {
-                let slides = currentStrategy === 'seamless' ? parseInt(DOM.sSlides.value) : 1;
-                const layer = document.createElement('div');
-                layer.className = "preview-layer flex w-full h-full absolute inset-0";
-                
-                let filterStr = lutStyleStr;
-                if (type === 'after' && (DOM.sBr.value !== '100' || DOM.sCo.value !== '100' || DOM.sSa.value !== '100')) {
-                    if(filterStr === 'none') filterStr = '';
-                    filterStr += ` brightness(${DOM.sBr.value}%) contrast(${DOM.sCo.value}%) saturate(${DOM.sSa.value}%)`;
-                }
-                
-                let marginScale = isMargin ? parseInt(DOM.sMarginScale.value) / 100 : 1;
-                const activeBorder = DOM.sBorder ? DOM.sBorder.value : 'none';
-                const bWeight = DOM.sBorderWeight ? parseFloat(DOM.sBorderWeight.value) : 3;
-                const isPolaroid = (isMargin && activeBorder === 'instant');
+                let slides = (currentStrategy === 'seamless' || currentStrategy === 'triptych') ? parseInt(DOM.sSlides.value) : 1;
+                const layer = document.createElement('div'); layer.className = "preview-layer flex w-full h-full absolute inset-0";
+
+                const intensity = document.getElementById('slider-lut-intensity').value / 100;
+                const lutVal = document.getElementById('select-lut').value;
+                const filters = { kodak: `sepia(${50*intensity}%) contrast(${100+15*intensity}%) saturate(${100+20*intensity}%) hue-rotate(${-10*intensity}deg)`, fuji: `sepia(${30*intensity}%) hue-rotate(${10*intensity}deg) saturate(${100-10*intensity}%) contrast(${100-5*intensity}%)`, cinematic: `contrast(${100+20*intensity}%) saturate(${100+10*intensity}%) sepia(${40*intensity}%) hue-rotate(${-15*intensity}deg)` };
+                let cssLutStr = (lutVal !== 'none' && lutVal !== 'custom') ? filters[lutVal] : 'none';
+
+                let f = cssLutStr;
+                if (type === 'after' && (DOM.sBr.value !== '100' || DOM.sCo.value !== '100' || DOM.sSa.value !== '100')) { if(f === 'none') f = ''; f += ` brightness(${DOM.sBr.value}%) contrast(${DOM.sCo.value}%) saturate(${DOM.sSa.value}%)`; }
+                let mScale = isMargin ? parseInt(DOM.sMarginScale.value) / 100 : 1;
+                const bType = DOM.sBorder.value; const bWt = parseFloat(DOM.sBorderWeight.value);
 
                 for(let i=0; i<slides; i++) {
-                    const col = document.createElement('div');
-                    col.className = `flex flex-col flex-1 h-full relative`;
-                    
-                    if (currentStrategy === 'seamless' && type === 'after') {
-                        const label = document.createElement('div');
-                        label.className = "absolute -top-6 left-0 right-0 text-[10px] text-neutral-500 font-mono uppercase tracking-widest text-center";
-                        label.innerText = `roll . 0${i+1}`;
-                        col.appendChild(label);
-                    }
+                    const col = document.createElement('div'); col.className = `flex flex-col flex-1 h-full relative`;
+                    const sc = document.createElement('div'); sc.className=`slide-container w-full h-full flex-1 relative shadow-inner border-[#111] last:border-r-0`;
+                    if(currentStrategy === 'seamless' || currentStrategy === 'triptych') sc.style.borderRightWidth = '4px';
+                    sc.style.backgroundColor = type === 'after' ? bgColor : '#000000';
+                    if(isMargin && type === 'after' && bType === 'vnotch') sc.classList.add('border-vnotch');
 
-                    const sc = document.createElement('div'); 
-                    sc.className=`slide-container w-full h-full flex-1 relative shadow-inner border-[#111] last:border-r-0`; 
-                    if(currentStrategy === 'seamless') sc.style.borderRightWidth = '4px'; 
-                    sc.style.backgroundColor = type === 'after' ? bgColor : '#000000'; 
-                    
+                    const iw = document.createElement('div'); iw.className="absolute overflow-hidden pointer-events-none preview-img-wrapper";
                     if(isMargin && type === 'after') {
-                        if(activeBorder === 'vnotch') sc.classList.add('border-vnotch');
-                    }
+                        if(bType === 'instant') { const pS = mScale * 0.88; iw.style.width=`${pS*100}%`; iw.style.height=`${pS*100}%`; iw.style.left=`${(1-pS)/2*100}%`; iw.style.top=`6%`; }
+                        else { iw.style.width=`${mScale*100}%`; iw.style.height=`${mScale*100}%`; iw.style.left=`${(1-mScale)/2*100}%`; iw.style.top=`${(1-mScale)/2*100}%`; if(bType==='fineart') iw.style.border = `${Math.max(1, bWt)}px solid rgba(20,20,20,0.95)`; }
+                    } else { iw.style.width="100%"; iw.style.height="100%"; iw.style.left="0"; iw.style.top="0"; }
 
-                    const iw = document.createElement('div'); 
-                    iw.className="absolute overflow-hidden pointer-events-none preview-img-wrapper"; 
-                    
-                    if(isMargin && type === 'after') { 
-                        if(isPolaroid) {
-                            const polScale = marginScale * 0.88;
-                            iw.style.width=`${polScale * 100}%`; 
-                            iw.style.height=`${polScale * 100}%`; 
-                            iw.style.left=`${(1 - polScale) / 2 * 100}%`; 
-                            iw.style.top=`6%`; 
-                        } else {
-                            iw.style.width=`${marginScale * 100}%`; iw.style.height=`${marginScale * 100}%`; 
-                            iw.style.left=`${(1 - marginScale) / 2 * 100}%`; iw.style.top=`${(1 - marginScale) / 2 * 100}%`; 
-                            
-                            if (activeBorder === 'fineart') {
-                                iw.style.border = `${Math.max(1, bWeight)}px solid rgba(20,20,20,0.95)`;
-                            }
-                        }
-                    } 
-                    else { iw.style.width="100%"; iw.style.height="100%"; iw.style.left="0"; iw.style.top="0"; }
-                    
-                    const img = document.createElement('img'); img.src=proxyCropUrl; img.style.filter=filterStr;
-                    if(currentStrategy==='seamless') { 
-                        img.className="preview-img absolute max-w-none h-full"; 
-                        img.style.width=`${slides*100}%`; img.style.transform=`translateX(-${(i/slides)*100}%)`; 
-                    } else { 
-                        img.className="preview-img absolute w-full h-full object-cover"; 
-                    }
-                    
+                    const img = document.createElement('img'); img.src=proxyCropUrl; img.style.filter=f;
+                    if(currentStrategy==='seamless' || currentStrategy === 'triptych') { img.className="preview-img absolute max-w-none h-full"; img.style.width=`${slides*100}%`; img.style.transform=`translateX(-${(i/slides)*100}%)`; } else { img.className="preview-img absolute w-full h-full object-cover"; }
+
                     iw.appendChild(img); sc.appendChild(iw);
-                    
-                    if(type === 'after') {
-                        const grain = document.createElement('div'); grain.className="gallery-grain-overlay"; grain.style.backgroundImage=`url(${staticGrainDataUrl})`; grain.style.opacity=(DOM.sGrain.value/100)*2.5; sc.appendChild(grain);
-                        
-                        const safeZone = `
-                        <div class="safe-zone-overlay absolute inset-0 z-40 hidden flex-col justify-between p-[4%] mix-blend-difference opacity-70 pointer-events-none">
-                            <div class="flex items-center gap-[3%]">
-                                <div class="w-[10%] aspect-square max-w-[32px] rounded-full border border-white/60 bg-white/20"></div>
-                                <div class="w-[30%] max-w-[96px] h-[4px] md:h-[8px] rounded bg-white/40"></div>
-                            </div>
-                            <div class="flex justify-between items-center">
-                                <div class="flex gap-[5%] w-[40%]">
-                                    <div class="w-[20%] aspect-square max-w-[24px] rounded-full border border-white/60 bg-white/20"></div>
-                                    <div class="w-[20%] aspect-square max-w-[24px] rounded-full border border-white/60 bg-white/20"></div>
-                                    <div class="w-[20%] aspect-square max-w-[24px] rounded-full border border-white/60 bg-white/20"></div>
-                                </div>
-                                <div class="flex gap-[5%] w-[15%] justify-center">
-                                    <div class="w-[20%] aspect-square max-w-[6px] rounded-full bg-coral-500"></div>
-                                    <div class="w-[20%] aspect-square max-w-[6px] rounded-full bg-white/40"></div>
-                                    <div class="w-[20%] aspect-square max-w-[6px] rounded-full bg-white/40"></div>
-                                </div>
-                                <div class="w-[10%] aspect-square max-w-[24px] rounded-full border border-white/60 bg-white/20"></div>
-                            </div>
-                        </div>`;
-                        sc.insertAdjacentHTML('beforeend', safeZone);
-                    }
+                    if(type === 'after') { const grain = document.createElement('div'); grain.className="gallery-grain-overlay"; grain.style.backgroundImage=`url(${staticGrainDataUrl})`; grain.style.opacity=(DOM.sGrain.value/100)*2.5; sc.appendChild(grain); }
                     col.appendChild(sc); layer.appendChild(col);
                 }
                 return layer;
@@ -954,424 +968,343 @@
         };
 
         const ModuleColor = {
-            updateLut: function() {
-                const lutVal = document.getElementById('select-lut').value;
+            triggerEngine: function(isFirstLoad = false) {
+                const lutSelect = document.getElementById('select-lut');
+                const lutVal = lutSelect ? lutSelect.value : 'none';
                 const intensity = document.getElementById('slider-lut-intensity').value / 100;
                 document.getElementById('val-lut-intensity').innerText = `${Math.round(intensity*100)}%`;
-                
                 const lutWrap = document.getElementById('lut-intensity-wrapper');
-                if(lutVal === 'none') { lutWrap.classList.add('opacity-50', 'pointer-events-none'); lutStyleStr = 'none'; }
-                else { lutWrap.classList.remove('opacity-50', 'pointer-events-none'); }
+                const hlVal = parseFloat(DOM.sHl.value); const shVal = parseFloat(DOM.sSh.value);
+                const hasCustomLut = lutVal === 'custom' && Engine3D.lutData;
 
-                if(lutVal === 'kodak') lutStyleStr = `sepia(${50 * intensity}%) contrast(${100 + 15 * intensity}%) saturate(${100 + 20 * intensity}%) hue-rotate(${-10 * intensity}deg)`;
-                else if(lutVal === 'fuji') lutStyleStr = `sepia(${30 * intensity}%) hue-rotate(${10 * intensity}deg) saturate(${100 - 10 * intensity}%) contrast(${100 - 5 * intensity}%)`;
-                else if(lutVal === 'cinematic') lutStyleStr = `contrast(${100 + 20 * intensity}%) saturate(${100 + 10 * intensity}%) sepia(${40 * intensity}%) hue-rotate(${-15 * intensity}deg)`;
-                
-                this.update();
+                if (lutVal !== 'none') {
+                    lutWrap.classList.remove('opacity-50', 'pointer-events-none');
+                } else {
+                    lutWrap.classList.add('opacity-50', 'pointer-events-none');
+                }
+
+                if (hasCustomLut || hlVal !== 0 || shVal !== 0) {
+                    showLoading("Rendering Core Tone...");
+
+                    setTimeout(async () => {
+                        const img = new Image();
+                        const p = new Promise(r => { img.onload = r; });
+                        img.src = baseProxyCropUrl;
+                        await p;
+
+                        let cvs = document.createElement('canvas'); cvs.width = img.width; cvs.height = img.height;
+                        const ctx = cvs.getContext('2d');
+                        ctx.drawImage(img, 0, 0);
+
+                        const hlF = 1.0 + (hlVal / 100.0); const shF = 1.0 + (shVal / 100.0);
+                        const processedCanvas = await Engine3D.apply(cvs, intensity, hlF, shF, hasCustomLut);
+                        proxyCropUrl = processedCanvas.toDataURL('image/jpeg', 0.95);
+                        setTimeout(() => { hideLoading(); if(isFirstLoad){switchTab('frame');ModuleFrame.build();} else{ModuleFrame.build();} }, 50);
+                    }, 50);
+                    return;
+                }
+
+                proxyCropUrl = baseProxyCropUrl;
+                if (isFirstLoad) { switchTab('frame'); ModuleFrame.build(); } else { ModuleFrame.build(); }
             },
-            update: function() {
-                let filterStr = lutStyleStr;
-                if (DOM.sBr.value !== '100' || DOM.sCo.value !== '100' || DOM.sSa.value !== '100') {
-                    if(filterStr === 'none') filterStr = '';
-                    filterStr += ` brightness(${DOM.sBr.value}%) contrast(${DOM.sCo.value}%) saturate(${DOM.sSa.value}%)`;
-                }
-                if(filterStr === '') filterStr = 'none';
+            updateCSSFilters: function() {
+                const intensity = document.getElementById('slider-lut-intensity').value / 100;
+                const lutVal = document.getElementById('select-lut').value;
+                const filters = { kodak: `sepia(${50*intensity}%) contrast(${100+15*intensity}%) saturate(${100+20*intensity}%) hue-rotate(${-10*intensity}deg)`, fuji: `sepia(${30*intensity}%) hue-rotate(${10*intensity}deg) saturate(${100-10*intensity}%) contrast(${100-5*intensity}%)`, cinematic: `contrast(${100+20*intensity}%) saturate(${100+10*intensity}%) sepia(${40*intensity}%) hue-rotate(${-15*intensity}deg)` };
+                let cssLutStr = (lutVal !== 'none' && lutVal !== 'custom') ? filters[lutVal] : 'none';
 
-                document.querySelectorAll('.preview-img').forEach(img => {
-                    if (!img.closest('[style*="polygon"]')) { img.style.filter = filterStr; } 
-                });
-                const grainOp = (DOM.sGrain.value / 100) * 2.5;
-                document.querySelectorAll('.gallery-grain-overlay').forEach(gr => gr.style.opacity = grainOp);
+                let f = cssLutStr;
+                if (DOM.sBr.value !== '100' || DOM.sCo.value !== '100' || DOM.sSa.value !== '100') { if(f === 'none') f = ''; f += ` brightness(${DOM.sBr.value}%) contrast(${DOM.sCo.value}%) saturate(${DOM.sSa.value}%)`; }
+                if(f === '') f = 'none';
+
+                document.querySelectorAll('.preview-img').forEach(img => { if (!img.closest('[style*="polygon"]')) { img.style.filter = f; } });
+                document.querySelectorAll('.gallery-grain-overlay').forEach(gr => gr.style.opacity = (DOM.sGrain.value / 100) * 2.5);
             }
         };
-        window.resetColor = function() { 
-            DOM.sBr.value = 100; DOM.inBr.value = 100; DOM.sCo.value = 100; DOM.inCo.value = 100;
-            DOM.sSa.value = 100; DOM.inSa.value = 100; DOM.sGrain.value = 0; DOM.inGrain.value = 0;
-            document.getElementById('select-lut').value = 'none'; ModuleColor.updateLut();
-        };
 
-        const DragState = { active: false, target: null, container: null, gx: null, gy: null };
-        
-        function initGlobalDrag() {
-            function startDrag(e, type, el) {
-                DragState.active = true; DragState.target = type; activeTarget = type;
-                DragState.container = el.parentElement; 
-                if(DragState.container) {
-                    DragState.gx = DragState.container.querySelector('.snap-guide-x');
-                    DragState.gy = DragState.container.querySelector('.snap-guide-y');
-                }
-                el.focus();
-            }
-            
-            window.addEventListener('mousedown', e => {
-                let te = e.target.closest('.draggable-text'); let le = e.target.closest('.draggable-logo');
-                if(te) startDrag(e, 'text', te); else if(le) startDrag(e, 'logo', le);
-            });
-            window.addEventListener('touchstart', e => {
-                let te = e.target.closest('.draggable-text'); let le = e.target.closest('.draggable-logo');
-                if(te) startDrag(e, 'text', te); else if(le) startDrag(e, 'logo', le);
-            }, {passive: false});
-            
-            function moveDrag(e) {
-                if(!DragState.active || !DragState.container) return;
-                e.preventDefault();
-                const rect = DragState.container.getBoundingClientRect();
-                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-                let px = ((clientX - rect.left)/rect.width)*100;
-                let py = ((clientY - rect.top)/rect.height)*100;
-                px = Math.max(0, Math.min(100, px)); py = Math.max(0, Math.min(100, py));
-                const snap = 2.5; let sx = false, sy = false;
-                if(Math.abs(px-50)<snap) { px=50; sx=true; }
-                if(Math.abs(py-50)<snap) { py=50; sy=true; }
-                if(Math.abs(py-94)<snap) { py=94; sy=true; }
-                
-                if(DragState.target==='text') { tPosX=px; tPosY=py; } else { lPosX=px; lPosY=py; }
-                ModuleTypo.updatePositions();
-                
-                if(DragState.gx) { DragState.gx.style.display = sy?'block':'none'; DragState.gx.style.top = `${py}%`; }
-                if(DragState.gy) { DragState.gy.style.display = sx?'block':'none'; DragState.gy.style.left = `${px}%`; }
-            }
-            
-            window.addEventListener('mousemove', moveDrag);
-            window.addEventListener('touchmove', moveDrag, {passive: false});
-            
-            function endDrag() {
-                DragState.active = false;
-                if(DragState.gx) DragState.gx.style.display = 'none';
-                if(DragState.gy) DragState.gy.style.display = 'none';
-            }
-            window.addEventListener('mouseup', endDrag);
-            window.addEventListener('touchend', endDrag);
-        }
+        window.resetTone = function() { DOM.sHl.value = 0; DOM.inHl.value = 0; DOM.sSh.value = 0; DOM.inSh.value = 0; document.getElementById('select-lut').value = 'none'; ModuleColor.triggerEngine(); };
+        window.resetColor = function() { DOM.sBr.value = 100; DOM.inBr.value = 100; DOM.sCo.value = 100; DOM.inCo.value = 100; DOM.sSa.value = 100; DOM.inSa.value = 100; DOM.sGrain.value = 0; DOM.inGrain.value = 0; ModuleColor.updateCSSFilters(); };
 
         const ModuleTypo = {
-            updateColorFromPicker: function() {
-                textStylePreset = 'none';
-                document.querySelectorAll('.preset-pill').forEach(p => p.classList.remove('active'));
-                this.update();
-            },
+            updateColorFromPicker: function() { textStylePreset = 'none'; document.querySelectorAll('.preset-pill').forEach(p => p.classList.remove('active')); this.update(); },
             update: function() {
                 const txt = DOM.wmText.value.trim();
-                const target = DOM.wmTarget.value;
+                const target = DOM.wmTarget ? DOM.wmTarget.value : 'all';
                 const isSingle = currentStrategy === 'single';
-                const slides = isSingle ? 1 : parseInt(DOM.sSlides.value);
-                
-                DOM.valGlow.innerText = DOM.sGlowAmt.value + 'px';
-                const glowAmt = parseInt(DOM.sGlowAmt.value);
+                const slides = (currentStrategy === 'seamless' || currentStrategy === 'triptych') ? parseInt(DOM.sSlides.value) : 1;
+                const gAmt = parseInt(DOM.sGlowAmt.value); const pW = document.getElementById('preview-wrapper-parent'); if(!pW) return;
+                const fSc = DOM.sFontScale.value / 100; const fs = Math.floor(pW.clientHeight * (isSingle ? 0.025 : 0.018)) * fSc;
 
-                const parentWrap = document.getElementById('preview-wrapper-parent');
-                if(!parentWrap) return;
-                
-                const currentUiHeight = parentWrap.clientHeight;
-                const currentUiWidth = parentWrap.clientWidth / slides; 
-                
-                if(currentUiHeight <= 0 || currentUiWidth <= 0) return;
-
-                const fontScaleMultiplier = DOM.sFontScale.value / 100; 
-                const uiFontSize = Math.floor(currentUiHeight * (isSingle ? 0.025 : 0.018)) * fontScaleMultiplier;
-                const uiLogoWidth = currentUiWidth * (DOM.sLogoScale.value / 100) * 0.5;
-                
-                const showLogo = DOM.toggleLogo ? DOM.toggleLogo.checked : false; 
+                const showAppLogo = DOM.toggleAppLogo ? DOM.toggleAppLogo.checked : false;
+                const currentUiWidth = pW.clientWidth / slides;
+                const uiLogoWidth = currentUiWidth * (DOM.sLogoScale.value / 100) * 0.2;
 
                 for(let i=1; i<=slides; i++) {
-                    const pane = document.getElementById(`glass-pane-${i}`);
-                    if(!pane) continue;
-                    
+                    const pane = document.getElementById(`glass-pane-${i}`); if(!pane) continue;
                     const shouldShow = isSingle || (target === 'all' || parseInt(target) === i);
 
                     let te = pane.querySelector('.draggable-text');
                     if (txt && shouldShow) {
-                        if (!te) {
-                            te = document.createElement('div'); te.className = "draggable-text"; te.tabIndex = 0;
-                            te.style.left = `${tPosX}%`; te.style.top = `${tPosY}%`;
-                            pane.appendChild(te);
-                        }
-                        te.style.display = 'flex';
-
-                        let spanClass = ""; 
-                        let fontVal = DOM.fontSel.value; 
-                        let spanStyle = `font-family: '${fontVal}', sans-serif; font-size:${uiFontSize}px; ${isBold?'font-weight:700;':''} letter-spacing:0.1em;`;
-                        
-                        if (textStylePreset === 'gold') spanClass = "text-preset-gold";
-                        else if (textStylePreset === 'silver') spanClass = "text-preset-silver";
-
-                        if (textStylePreset !== 'none') {
-                            if (isGlow) {
-                                const glowScale = uiFontSize / 50; 
-                                const uiGlowAmt = glowAmt * glowScale;
-                                spanStyle += `filter: drop-shadow(0 0 ${uiGlowAmt}px rgba(0,0,0,0.8));`;
-                            }
-                        } else {
-                            let color = DOM.textColor.value;
-                            spanStyle += ` color: ${color}; `;
-                            if (isGlow) { 
-                                const glowScale = uiFontSize / 50; 
-                                const uiGlowAmt = glowAmt * glowScale;
-                                spanStyle += `text-shadow: 0 0 ${uiGlowAmt/3}px ${color}, 0 0 ${uiGlowAmt}px ${color}, 0 0 ${uiGlowAmt*2}px ${color};`; 
-                            } else { 
-                                spanStyle += `text-shadow: none;`; 
-                            }
-                        }
+                        if (!te) { te = document.createElement('div'); te.className = "draggable-text"; te.tabIndex = 0; pane.appendChild(te); }
+                        te.style.left = `${tPosX}%`; te.style.top = `${tPosY}%`; te.style.display = 'flex';
+                        let spanClass = ""; let spanStyle = `font-family: '${DOM.fontSel.value}', sans-serif; font-size:${fs}px; ${isBold?'font-weight:700;':''} letter-spacing:0.1em;`;
+                        if (textStylePreset === 'gold') spanClass = "text-preset-gold"; else if (textStylePreset === 'silver') spanClass = "text-preset-silver";
+                        if (textStylePreset !== 'none') { if (isGlow) spanStyle += `filter: drop-shadow(0 0 ${gAmt*(fs/50)}px rgba(0,0,0,0.8));`; }
+                        else { spanStyle += ` color: ${DOM.textColor.value}; `; if (isGlow) spanStyle += `text-shadow: 0 0 ${gAmt*(fs/50)}px ${DOM.textColor.value};`; }
                         te.innerHTML = `<span class="${spanClass}" style="display:inline-block; ${spanStyle}">${txt}</span>`;
                     } else if (te) { te.style.display = 'none'; }
 
                     let le = pane.querySelector('.draggable-logo');
-                    if (logoObj && logoUrl && shouldShow && showLogo) { 
-                        if (!le) {
-                            le = document.createElement('div'); le.className = "draggable-logo"; le.tabIndex = 0;
-                            le.style.left = `${lPosX}%`; le.style.top = `${lPosY}%`;
-                            pane.appendChild(le);
-                        }
-                        le.style.display = 'flex';
-                        le.innerHTML = `<img src="${logoUrl}" style="opacity:${DOM.sLogoOp.value/100}; width:${uiLogoWidth}px; pointer-events:none;">`;
+                    if (logoObj && logoUrl && shouldShow && DOM.toggleLogo.checked) {
+                        if (!le) { le = document.createElement('div'); le.className = "draggable-logo"; le.tabIndex = 0; pane.appendChild(le); }
+                        le.style.left = `${lPosX}%`; le.style.top = `${lPosY}%`; le.style.display = 'flex';
+                        le.innerHTML = `<img src="${logoUrl}" style="opacity:${DOM.sLogoOp.value/100}; width:${uiLogoWidth}px; min-width:${uiLogoWidth}px; pointer-events:none; max-width:none !important; flex-shrink:0;">`;
                     } else if (le) { le.style.display = 'none'; }
+
+                    let appWm = pane.querySelector('.app-watermark-preview');
+                    if (showAppLogo) {
+                        if (!appWm) {
+                            appWm = document.createElement('div'); appWm.className = "app-watermark-preview absolute bottom-4 right-4 pointer-events-none z-50 text-[9px] md:text-[10px] text-white/90 font-bold tracking-widest";
+                            appWm.style.fontFamily = "'Outfit', sans-serif";
+                            appWm.innerText = "cineRoll.studio"; pane.appendChild(appWm);
+                        }
+                        appWm.style.textShadow = "0 2px 4px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,0.8)";
+                        appWm.style.display = 'block';
+                    } else if (appWm) { appWm.style.display = 'none'; }
                 }
             },
-            updatePositions: function() {
-                document.querySelectorAll('.draggable-text').forEach(el => { el.style.left=`${tPosX}%`; el.style.top=`${tPosY}%`; }); 
-                document.querySelectorAll('.draggable-logo').forEach(el => { el.style.left=`${lPosX}%`; el.style.top=`${lPosY}%`; });
-            }
+            updatePositions: function() { document.querySelectorAll('.draggable-text').forEach(el => { el.style.left=`${tPosX}%`; el.style.top=`${tPosY}%`; }); document.querySelectorAll('.draggable-logo').forEach(el => { el.style.left=`${lPosX}%`; el.style.top=`${lPosY}%`; }); }
         };
 
         window.handleLogoToggleCheckbox = function() {
-            if(!logoUrl && DOM.toggleLogo.checked) {
-                DOM.toggleLogo.checked = false; 
-                DOM.upLogo.click();
-                return;
-            }
-            if(DOM.toggleLogo.checked) {
-                DOM.logoSettings.classList.remove('opacity-30', 'pointer-events-none');
-            } else {
-                DOM.logoSettings.classList.add('opacity-30', 'pointer-events-none');
-            }
+            if(!logoUrl && DOM.toggleLogo.checked) { DOM.toggleLogo.checked = false; DOM.upLogo.click(); return; }
+            if(DOM.toggleLogo.checked) { DOM.logoSettings.classList.remove('opacity-30', 'pointer-events-none'); } else { DOM.logoSettings.classList.add('opacity-30', 'pointer-events-none'); }
             ModuleTypo.update();
         };
 
-        // 🌟 V103: iOS/Safari 다운로드 불가 & 화질 저하 동시 해결
-        DOM.btnExport.addEventListener('click', async () => {
-            if (!cropper) return alert("크롭 엔진을 찾을 수 없습니다. 이미지를 다시 업로드해주세요."); 
-            DOM.btnExport.innerText = "Processing Engine..."; DOM.btnExport.classList.add('opacity-70', 'pointer-events-none');
-            
-            try {
-                // iOS 검지 (Safari 한계 우회용)
-                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-                await document.fonts.ready;
+        window.toggleBold = function() { isBold = !isBold; document.getElementById('btnBold').classList.toggle('active', isBold); ModuleTypo.update(); }
+        window.toggleGlow = function() { isGlow = !isGlow; document.getElementById('btnGlow').classList.toggle('active', isGlow); ModuleTypo.update(); }
 
-                const qualitySetting = DOM.exportQuality.value;
-                const isHighRes = qualitySetting === 'native';
-                let slides = currentStrategy === 'seamless' ? parseInt(DOM.sSlides.value) : 1;
+        window.applyCinePreset = function(type) { textStylePreset = type; document.querySelectorAll('.preset-pill').forEach(p => p.classList.remove('active')); if(type==='gold') { document.getElementById('btn-preset-gold').classList.add('active'); } else if(type==='silver') { document.getElementById('btn-preset-silver').classList.add('active'); } ModuleTypo.update(); }
 
-                // 인스타 최적화 화질 상향 (1080 -> 2160)
-                let baseW = isHighRes ? 12000 : 2160; 
+        window.saveCurrentPreset = function() {
+            const txt = DOM.wmText.value.trim(); if(!txt && !logoUrl) return alert("저장할 텍스트나 로고를 설정해주세요.");
+            const preset = { id: Date.now(), text: txt, color: DOM.textColor.value, bold: isBold, glow: isGlow, font: DOM.fontSel.value, glowAmt: DOM.sGlowAmt.value, type: textStylePreset };
+            savedCustomPresets.push(preset); localStorage.setItem('cineroll_presets_v4', JSON.stringify(savedCustomPresets));
+            const saveBtn = document.getElementById('btn-save-preset'); saveBtn.innerText = "✔️ Saved"; saveBtn.classList.add('text-green-400'); setTimeout(() => { saveBtn.innerText = "SAVE PRESET"; saveBtn.classList.remove('text-green-400'); }, 1000); renderPresetChips();
+        }
 
-                // 🌟 V103: 사파리 캔버스 크래시 방지용 최대 화소 면적 타협 (약 1,500만 화소)
-                const SAFAIR_MAX_AREA = 15000000; 
-                let targetWidth = currentStrategy === 'seamless' ? baseW * slides : baseW;
-                let targetHeight = targetWidth / activeGlobalRatio;
-                
-                // 사파리에서 임계 면적을 넘어가면 자동으로 최적화 상한선 적용 (안 튕기게)
-                if ((targetWidth * targetHeight) > SAFAIR_MAX_AREA) {
-                    targetWidth = Math.sqrt(SAFAIR_MAX_AREA * activeGlobalRatio);
-                }
+        function renderPresetChips() {
+            const container = document.getElementById('custom-presets-container'); if(!container) return; container.innerHTML = '';
+            savedCustomPresets.forEach(p => {
+                const chip = document.createElement('div'); chip.className = "preset-chip flex items-center bg-[#18181b] border border-border rounded text-[9px] text-zinc-400 cursor-pointer hover:border-coral-500/50 transition-colors font-bold tracking-wide";
+                const nameBtn = document.createElement('div'); nameBtn.className = "px-3 py-1.5 truncate max-w-[100px]"; nameBtn.innerText = p.text ? p.text : "Preset"; nameBtn.onclick = () => loadPreset(p);
+                const delBtn = document.createElement('div'); delBtn.className = "px-2 py-1.5 border-l border-border hover:bg-coral-500 hover:text-white transition-colors"; delBtn.innerText = "✕"; delBtn.onclick = (e) => { e.stopPropagation(); deletePreset(p.id); };
+                chip.appendChild(nameBtn); chip.appendChild(delBtn); container.appendChild(chip);
+            });
+        }
 
-                let masterCanvas = cropper.getCroppedCanvas({
-                    maxWidth: targetWidth, 
-                    fillColor: 'transparent',
-                    imageSmoothingEnabled: true, imageSmoothingQuality: 'high'
-                });
+        function loadPreset(p) {
+            DOM.wmText.value = p.text; DOM.textColor.value = p.color; isBold = p.bold; isGlow = p.glow; DOM.fontSel.value = p.font; DOM.sGlowAmt.value = p.glowAmt || 15; textStylePreset = p.type;
+            document.getElementById('btnBold').classList.toggle('active', isBold); document.getElementById('btnGlow').classList.toggle('active', isGlow); document.querySelectorAll('.preset-pill').forEach(btn => btn.classList.remove('active')); if(p.type === 'gold') document.getElementById('btn-preset-gold').classList.add('active'); if(p.type === 'silver') document.getElementById('btn-preset-silver').classList.add('active'); ModuleTypo.update();
+        }
 
-                if (!masterCanvas) throw new Error("원본 데이터를 렌더링하는데 실패했습니다.");
-
-                const imgRatio = masterCanvas.width / masterCanvas.height;
-                let singleW = currentStrategy === 'seamless' ? masterCanvas.width / slides : masterCanvas.width;
-                let exportH = masterCanvas.height;
-                
-                const marginScale = isMargin ? parseInt(DOM.sMarginScale.value) / 100 : 1;
-                const bWeight = DOM.sBorderWeight ? parseFloat(DOM.sBorderWeight.value) : 3;
-                const activeBorder = DOM.sBorder ? DOM.sBorder.value : 'none';
-                const gi = parseInt(DOM.sGrain.value); let grainCanvas = null;
-                if (gi > 0) { grainCanvas = document.createElement('canvas'); grainCanvas.width = 512; grainCanvas.height = 512; const gCtx = grainCanvas.getContext('2d'); const id = gCtx.createImageData(512, 512); for (let i = 0; i < id.data.length; i += 4) { const val = Math.random() < 0.5 ? 0 : 255; id.data[i] = id.data[i+1] = id.data[i+2] = val; id.data[i+3] = 255; } gCtx.putImageData(id, 0, 0); }
-
-                // 🌟 V103: iOS에서는 ZIP 대신 네이티브 공유하기로 파일 전달
-                let filesToShare = [];
-                const zip = new JSZip();
-
-                for (let i = 0; i < slides; i++) {
-                    await new Promise(resolve => setTimeout(resolve, 50)); 
-                    const workCvs = document.createElement('canvas'); 
-                    workCvs.width = singleW; workCvs.height = exportH; 
-                    const ctx = workCvs.getContext('2d'); 
-                    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
-                    ctx.fillStyle = bgColor; ctx.fillRect(0, 0, singleW, exportH); 
-                    ctx.save(); 
-                    
-                    let filterStr = lutStyleStr;
-                    if (DOM.sBr.value !== '100' || DOM.sCo.value !== '100' || DOM.sSa.value !== '100') {
-                        if(filterStr === 'none') filterStr = '';
-                        filterStr += ` brightness(${DOM.sBr.value}%) contrast(${DOM.sCo.value}%) saturate(${DOM.sSa.value}%)`;
-                    }
-                    if(filterStr !== 'none' && filterStr !== '') ctx.filter = filterStr;
-                    else ctx.filter = 'none';
-                    
-                    let drawX = 0, drawY = 0, drawW = singleW, drawH = exportH;
-
-                    if(isMargin) {
-                        if(activeBorder === 'instant') {
-                            const polScale = marginScale * 0.88;
-                            drawW = singleW * polScale; drawH = exportH * polScale; 
-                            drawX = (singleW - drawW) / 2; drawY = exportH * 0.06; 
-                        } else {
-                            drawW = singleW * marginScale; drawH = exportH * marginScale; 
-                            drawX = (singleW - drawW) / 2; drawY = (exportH - drawH) / 2; 
-                        }
-                        if(currentStrategy === 'seamless') { ctx.drawImage(masterCanvas, i * (masterCanvas.width/slides), 0, (masterCanvas.width/slides), masterCanvas.height, drawX, drawY, drawW, drawH); } else { ctx.drawImage(masterCanvas, drawX, drawY, drawW, drawH); }
-                    } else { 
-                        if(currentStrategy === 'seamless') { ctx.drawImage(masterCanvas, i * (masterCanvas.width/slides), 0, (masterCanvas.width/slides), masterCanvas.height, 0, 0, singleW, exportH); } else { ctx.drawImage(masterCanvas, 0, 0, singleW, exportH); }
-                    } 
-                    ctx.restore();
-
-                    if (isMargin) {
-                        if (activeBorder === 'fineart') {
-                            ctx.save(); const strokeW = Math.max(1, exportH * 0.001 * bWeight); ctx.strokeStyle = 'rgba(20,20,20,0.95)'; ctx.lineWidth = strokeW; ctx.strokeRect(drawX + strokeW/2, drawY + strokeW/2, drawW - strokeW, drawH - strokeW); ctx.restore();
-                        } else if (activeBorder === 'vnotch') {
-                            ctx.save(); ctx.globalCompositeOperation = 'destination-out'; ctx.beginPath(); const nTop = exportH * 0.45; const nHeight = exportH * 0.10; const notchW = singleW * 0.015; ctx.moveTo(0, nTop); ctx.lineTo(notchW, nTop + nHeight*0.25); ctx.lineTo(0, nTop + nHeight*0.4); ctx.lineTo(0, nTop + nHeight*0.6); ctx.lineTo(notchW, nTop + nHeight*0.75); ctx.lineTo(0, nTop + nHeight); ctx.closePath(); ctx.fill(); ctx.restore();
-                        }
-                    }
-
-                    if (grainCanvas) { ctx.save(); ctx.globalAlpha = (gi / 100) * 1.5; ctx.globalCompositeOperation = 'soft-light'; ctx.fillStyle = ctx.createPattern(grainCanvas, 'repeat'); ctx.fillRect(0, 0, singleW, exportH); ctx.restore(); }
-                    
-                    const txt = DOM.wmText.value.trim(); const target = DOM.wmTarget.value;
-                    const glowAmt = parseInt(DOM.sGlowAmt.value);
-                    const showLogo = DOM.toggleLogo ? DOM.toggleLogo.checked : false;
-
-                    if (txt && (currentStrategy === 'single' || target === 'all' || parseInt(target) === i + 1)) {
-                        ctx.save(); const fontWeight = isBold ? 'bold ' : ''; const fontScaleMultiplier = DOM.sFontScale.value / 100; const exportFontSize = Math.floor(exportH * (currentStrategy === 'single' ? 0.025 : 0.018)) * fontScaleMultiplier;
-                        let fontVal = DOM.fontSel.value; ctx.font = `${fontWeight} ${exportFontSize}px '${fontVal}', sans-serif`; ctx.textBaseline = 'middle'; ctx.textAlign = 'center'; ctx.letterSpacing = "2px"; 
-                        const textDrawX = singleW * (tPosX / 100); const textDrawY = exportH * (tPosY / 100);
-                        const textWidth = ctx.measureText(txt).width;
-                        if (textStylePreset !== 'none') {
-                            const gradient = ctx.createLinearGradient(textDrawX - textWidth/2, textDrawY - exportFontSize/2, textDrawX + textWidth/2, textDrawY + exportFontSize/2);
-                            if (textStylePreset === 'gold') { gradient.addColorStop(0, "#BF953F"); gradient.addColorStop(0.25, "#FCF6BA"); gradient.addColorStop(0.5, "#B38728"); gradient.addColorStop(0.75, "#FBF5B7"); gradient.addColorStop(1, "#AA771C");
-                            } else { gradient.addColorStop(0, "#8A9097"); gradient.addColorStop(0.25, "#E0E5EC"); gradient.addColorStop(0.5, "#8A9097"); gradient.addColorStop(0.75, "#B0B5BB"); gradient.addColorStop(1, "#595F66"); }
-                            ctx.fillStyle = gradient;
-                        } else { ctx.fillStyle = DOM.textColor.value; }
-                        if (isGlow) { const glowScale = exportFontSize / 50; const currentGlow = glowAmt * glowScale; ctx.shadowColor = (textStylePreset === 'none') ? DOM.textColor.value : 'rgba(0,0,0,0.8)'; ctx.shadowBlur = currentGlow * 1.5; } else { ctx.shadowColor = 'transparent'; }
-                        ctx.fillText(txt, textDrawX, textDrawY); ctx.restore(); 
-                    }
-                    if (logoObj && logoUrl && showLogo && (currentStrategy === 'single' || target === 'all' || parseInt(target) === i + 1)) {
-                        ctx.save(); ctx.globalAlpha = DOM.sLogoOp.value / 100; const drawLogoW = singleW * (DOM.sLogoScale.value / 100) * 0.5; const drawLogoH = (drawLogoW / logoObj.width) * logoObj.height; ctx.drawImage(logoObj, (singleW * (lPosX / 100)) - (drawLogoW/2), (exportH * (lPosY / 100)) - (drawLogoH/2), drawLogoW, drawLogoH); ctx.restore();
-                    }
-                    
-                    const fn = currentStrategy === 'seamless' ? `cineRoll_${i+1}.jpg` : `cineRoll_single.jpg`;
-                    await new Promise((resolve) => { 
-                        workCvs.toBlob((blob) => { 
-                            if(isIOS) {
-                                // iOS용 파일 객체 생성
-                                filesToShare.push(new File([blob], fn, {type: 'image/jpeg'}));
-                            } else {
-                                zip.file(fn, blob);
-                            }
-                            resolve(); 
-                        }, 'image/jpeg', 1.0); 
-                    });
-                    workCvs.width = 0; workCvs.height = 0;
-                }
-                
-                if (isIOS && navigator.share && filesToShare.length > 0) {
-                    // 🌟 V103: iOS 네이티브 공유하기로 다운로드 우회
-                    await navigator.share({
-                        files: filesToShare,
-                        title: 'cineRoll Output',
-                    });
-                    DOM.btnExport.innerText = "✅ Sent to Share Sheet!";
-                } else {
-                    const content = await zip.generateAsync({type:"blob"}); 
-                    const link = document.createElement('a'); link.href = URL.createObjectURL(content); link.download = `cineRoll_Output.zip`; document.body.appendChild(link); link.click(); document.body.removeChild(link); 
-                    DOM.btnExport.innerText = "✅ Download Complete!";
-                }
-                masterCanvas.width = 0; masterCanvas.height = 0; 
-            } catch (err) { alert("Export Failed: " + err.message); console.error(err); DOM.btnExport.innerText = "❌ Export Failed"; } finally { DOM.btnExport.classList.remove('opacity-70', 'pointer-events-none'); setTimeout(() => { DOM.btnExport.innerText = "Export Gallery"; }, 3000); }
-        });
+        function deletePreset(id) { savedCustomPresets = savedCustomPresets.filter(p => p.id !== id); localStorage.setItem('cineroll_presets_v4', JSON.stringify(savedCustomPresets)); renderPresetChips(); }
 
         function setBG(el) { document.querySelectorAll('[data-bg]').forEach(b=>b.classList.remove('active')); el.classList.add('active'); bgColor=el.dataset.bg; document.querySelectorAll('.slide-container').forEach(sc => { if(!sc.closest('[style*="polygon"]')) { sc.style.backgroundColor = bgColor; } }); ModuleTypo.update(); }
         function setMargin(val) { isMargin=val; document.getElementById('btn-edge').classList.toggle('active', !val); document.getElementById('btn-margin').classList.toggle('active', val); DOM.marginScaleWrapper.classList.toggle('hidden', !val); ModuleFrame.build(); }
-        function toggleSafeZone() { isSafeZone=!isSafeZone; document.getElementById('btn-safezone').innerText=isSafeZone?'ON':'OFF'; document.getElementById('btn-safezone').classList.toggle('active', isSafeZone); DOM.previewArea.classList.toggle('show-safe-zone', isSafeZone); }
-        
-        window.applyCinePreset = function(type) { 
-            textStylePreset = type; 
-            document.querySelectorAll('.preset-pill').forEach(p => p.classList.remove('active')); 
-            if(type==='gold') { document.getElementById('btn-preset-gold').classList.add('active'); } 
-            else if(type==='silver') { document.getElementById('btn-preset-silver').classList.add('active'); } 
-            ModuleTypo.update(); 
-        }
-        
-        window.saveCurrentPreset = function() { 
-            const txt = DOM.wmText.value.trim(); 
-            if(!txt) return alert("프리셋으로 저장할 텍스트를 입력해주세요."); 
-            const preset = { id: Date.now(), text: txt, color: DOM.textColor.value, bold: isBold, glow: isGlow, font: DOM.fontSel.value, glowAmt: DOM.sGlowAmt.value, type: textStylePreset }; 
-            savedCustomPresets.push(preset); 
-            localStorage.setItem('cineroll_presets_v2', JSON.stringify(savedCustomPresets)); 
-            const saveBtn = document.getElementById('btn-save-preset'); 
-            saveBtn.innerText = "✔️ Saved"; saveBtn.classList.add('text-green-400'); 
-            setTimeout(() => { saveBtn.innerText = "SAVE PRESET"; saveBtn.classList.remove('text-green-400'); }, 1000); 
-            renderPresetChips(); 
-        }
-        
-        function renderPresetChips() { 
-            const container = document.getElementById('custom-presets-container');
-            if(!container) return; container.innerHTML = ''; 
-            savedCustomPresets.forEach(p => { 
-                const chip = document.createElement('div'); chip.className = "preset-chip flex items-center bg-[#1a1a1c] border border-border rounded text-[10px] text-neutral-400 cursor-pointer hover:border-coral-500/50 transition-colors"; 
-                const nameBtn = document.createElement('div'); nameBtn.className = "px-3 py-1.5 truncate max-w-[120px]"; nameBtn.innerText = p.text; nameBtn.onclick = () => loadPreset(p); 
-                const delBtn = document.createElement('div'); delBtn.className = "px-2 py-1.5 border-l border-border hover:bg-coral-500 hover:text-white transition-colors"; delBtn.innerText = "×"; delBtn.onclick = (e) => { e.stopPropagation(); deletePreset(p.id); }; 
-                chip.appendChild(nameBtn); chip.appendChild(delBtn); container.appendChild(chip); 
-            }); 
-        }
-        
-        function loadPreset(p) { 
-            DOM.wmText.value = p.text; DOM.textColor.value = p.color; isBold = p.bold; isGlow = p.glow; DOM.fontSel.value = p.font; DOM.sGlowAmt.value = p.glowAmt || 15; textStylePreset = p.type; 
-            document.getElementById('btnBold').classList.toggle('active', isBold); 
-            document.getElementById('btnGlow').classList.toggle('active', isGlow); 
-            document.querySelectorAll('.preset-pill').forEach(btn => btn.classList.remove('active')); 
-            if(p.type === 'gold') document.getElementById('btn-preset-gold').classList.add('active'); 
-            if(p.type === 'silver') document.getElementById('btn-preset-silver').classList.add('active'); 
-            ModuleTypo.update(); 
-        }
-        
-        function deletePreset(id) { savedCustomPresets = savedCustomPresets.filter(p => p.id !== id); localStorage.setItem('cineroll_presets_v2', JSON.stringify(savedCustomPresets)); renderPresetChips(); }
-        
-        function toggleBold() { isBold=!isBold; document.getElementById('btnBold').classList.toggle('active', isBold); ModuleTypo.update(); }
-        function toggleGlow() { isGlow=!isGlow; document.getElementById('btnGlow').classList.toggle('active', isGlow); ModuleTypo.update(); }
-        
-        DOM.upLogo.addEventListener('change', e => { 
-            const file = e.target.files[0]; if(!file) return; 
-            const reader = new FileReader(); 
-            reader.onload = ev => { 
-                logoUrl = ev.target.result; logoObj = new Image(); 
-                logoObj.onload = () => { DOM.toggleLogo.checked = true; DOM.logoStatus.classList.remove('hidden'); DOM.logoSettings.classList.remove('opacity-30', 'pointer-events-none'); ModuleTypo.update(); }; 
-                logoObj.src = logoUrl; 
-            }; reader.readAsDataURL(file); 
-        });
 
-        function extractExif() { 
-            if(!rawFile) return alert("사진을 먼저 업로드해주세요."); 
-            if(isExifOn) { isExifOn=false; DOM.wmText.value=manualBackupText; ModuleTypo.update(); return; } 
-            exifr.parse(rawFile, {tiff: true, exif: true}).then(exif => { 
-                if(exif && Object.keys(exif).length > 0) { 
-                    let t = []; 
-                    let make = exif.Make || ""; let model = exif.Model || ""; let cameraStr = "";
-                    if (make && model) { if (model.toLowerCase().startsWith(make.toLowerCase())) cameraStr = model; else cameraStr = `${make} ${model}`; } else { cameraStr = make || model || ""; }
-                    if (cameraStr) t.push(cameraStr);
-                    let aperture = exif.FNumber || exif.ApertureValue;
-                    if(aperture && Number(aperture) > 0) t.push(`f/${Number(aperture).toFixed(1).replace('.0', '')}`); 
-                    if(exif.ExposureTime) t.push(`${exif.ExposureTime>=1 ? exif.ExposureTime : `1/${Math.round(1/exif.ExposureTime)}`}s`); 
-                    if(exif.ISO) t.push(`ISO ${exif.ISO}`); 
-                    if(exif.LensModel) t.push(exif.LensModel);
-                    if(t.length) { manualBackupText=DOM.wmText.value; DOM.wmText.value=t.join(' | '); isExifOn=true; ModuleTypo.update(); } 
-                } else { alert("EXIF 데이터가 없습니다."); } 
-            }).catch(err => alert("EXIF 데이터를 읽지 못했습니다.")); 
-        }
+        window.closeExportModal = function() {
+            document.getElementById('export-modal').classList.remove('show');
+            setTimeout(() => { document.getElementById('export-gallery-container').innerHTML = ''; }, 300);
+        };
+
+        DOM.btnExport.addEventListener('click', async () => {
+            if (!cropper) return alert("크롭 영역을 다시 확인해주세요.");
+
+            const cropData = cropper.getCropBoxData();
+            if(cropData && cropData.width && cropData.height) {
+                activeGlobalRatio = cropData.width / cropData.height;
+            }
+
+            DOM.btnExport.classList.add('opacity-70', 'pointer-events-none'); showLoading("Rendering High-Res...");
+            try {
+                await document.fonts.ready; const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
+
+                const qualMode = DOM.exportQuality.value;
+                let mimeType = 'image/jpeg';
+                let encQual = 0.9;
+
+                const SAFE_MAX_DIM = 16000;
+                const MAX_AREA = isMobile ? 16777216 : 67108864; // Desktop은 6400만 화소까지 안전
+
+                let targetW, targetH;
+                let slides = (currentStrategy === 'seamless' || currentStrategy === 'triptych') ? parseInt(DOM.sSlides.value) : 1;
+
+                if (qualMode === 'web') {
+                    let bW = isMobile ? 3000 : 6000;
+                    encQual = 1.0;
+                    targetW = (currentStrategy === 'seamless') ? bW * slides : bW;
+                } else if (qualMode === 'ig') {
+                    let bW = 2160;
+                    targetW = (currentStrategy === 'seamless') ? bW * slides : bW;
+                } else if (qualMode === 'png') {
+                    mimeType = 'image/png';
+                    targetW = SAFE_MAX_DIM;
+                }
+
+                targetH = targetW / activeGlobalRatio;
+
+                if (targetW > SAFE_MAX_DIM || targetH > SAFE_MAX_DIM) {
+                    const s = Math.min(SAFE_MAX_DIM/targetW, SAFE_MAX_DIM/targetH);
+                    targetW *= s;
+                    targetH *= s;
+                }
+
+                if ((targetW * targetH) > MAX_AREA) {
+                    const s = Math.sqrt(MAX_AREA / (targetW * targetH));
+                    targetW *= s;
+                    targetH *= s;
+                }
+
+                targetW = Math.floor(targetW);
+                targetH = Math.floor(targetW / activeGlobalRatio);
+
+                let cropperOptions = {
+                    width: targetW,
+                    height: targetH,
+                    fillColor: 'transparent',
+                    imageSmoothingEnabled: true,
+                    imageSmoothingQuality: 'high'
+                };
+
+                await new Promise(r => setTimeout(r, 50));
+                let mCvs = cropper.getCroppedCanvas(cropperOptions);
+
+                const lutSelect = document.getElementById('select-lut');
+                const lutVal = lutSelect ? lutSelect.value : 'none';
+                const hlVal = parseFloat(DOM.sHl.value); const shVal = parseFloat(DOM.sSh.value); const hasCustomLut = lutVal === 'custom' && Engine3D.lutData;
+
+                const intensity = document.getElementById('slider-lut-intensity').value / 100;
+                const filters = { kodak: `sepia(${50*intensity}%) contrast(${100+15*intensity}%) saturate(${100+20*intensity}%) hue-rotate(${-10*intensity}deg)`, fuji: `sepia(${30*intensity}%) hue-rotate(${10*intensity}deg) saturate(${100-10*intensity}%) contrast(${100-5*intensity}%)`, cinematic: `contrast(${100+20*intensity}%) saturate(${100+10*intensity}%) sepia(${40*intensity}%) hue-rotate(${-15*intensity}deg)` };
+                const cssLutStr = (lutVal !== 'none' && lutVal !== 'custom') ? filters[lutVal] : 'none';
+
+                if (hasCustomLut || hlVal !== 0 || shVal !== 0 || cssLutStr !== 'none') {
+                    if (cssLutStr !== 'none') {
+                        const tempCvs = document.createElement('canvas'); tempCvs.width = mCvs.width; tempCvs.height = mCvs.height;
+                        const ctx = tempCvs.getContext('2d'); ctx.filter = cssLutStr; ctx.drawImage(mCvs, 0, 0); mCvs = tempCvs;
+                    }
+                    const hlF = 1.0 + (hlVal / 100.0); const shF = 1.0 + (shVal / 100.0);
+                    mCvs = await Engine3D.apply(mCvs, intensity, hlF, shF, hasCustomLut);
+                }
+
+                let sW = mCvs.width / slides;
+                let eH = mCvs.height;
+
+                const mS = isMargin ? parseInt(DOM.sMarginScale.value) / 100 : 1; const bWt = parseFloat(DOM.sBorderWeight.value); const bTy = DOM.sBorder.value;
+                const gi = parseInt(DOM.sGrain.value); let gCvs = null;
+                if (gi > 0) { gCvs = document.createElement('canvas'); gCvs.width = 512; gCvs.height = 512; const gx = gCvs.getContext('2d'); const id = gx.createImageData(512, 512); for (let i=0; i<id.data.length; i+=4) { id.data[i] = id.data[i+1] = id.data[i+2] = Math.random()<0.5?0:255; id.data[i+3] = 255; } gx.putImageData(id, 0, 0); }
+
+                const gCon = document.getElementById('export-gallery-container'); gCon.innerHTML = ''; let fArr = []; let sBlb = null; const zip = new JSZip();
+
+                const showAppLogo = DOM.toggleAppLogo ? DOM.toggleAppLogo.checked : false;
+                const target = DOM.wmTarget ? DOM.wmTarget.value : 'all';
+
+                for (let i = 0; i < slides; i++) {
+                    updateLoadingText(`Encoding File ${i + 1} / ${slides}...`);
+                    await new Promise(r => setTimeout(r, 50));
+
+                    const wCv = document.createElement('canvas');
+                    const finalSliceW = Math.floor(sW); const finalExportH = Math.floor(eH);
+                    wCv.width = finalSliceW; wCv.height = finalExportH;
+                    const ctx = wCv.getContext('2d'); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+                    ctx.fillStyle = isMargin ? bgColor : '#000000'; ctx.fillRect(0, 0, finalSliceW, finalExportH); ctx.save();
+
+                    let dx = 0, dy = 0, dw = sW, dh = eH;
+                    if(isMargin) { if(bTy === 'instant') { const pS = mS * 0.88; dw = sW*pS; dh = eH*pS; dx = (sW-dw)/2; dy = eH*0.06; } else { dw = sW*mS; dh = eH*mS; dx = (sW-dw)/2; dy = (eH-dh)/2; }
+                        if(currentStrategy === 'seamless' || currentStrategy === 'triptych') ctx.drawImage(mCvs, i*sW, 0, sW, eH, dx, dy, dw, dh); else ctx.drawImage(mCvs, dx, dy, dw, dh);
+                    } else { if(currentStrategy === 'seamless' || currentStrategy === 'triptych') ctx.drawImage(mCvs, i*sW, 0, sW, eH, 0, 0, finalSliceW, finalExportH); else ctx.drawImage(mCvs, 0, 0, finalSliceW, finalExportH); }
+                    ctx.restore();
+
+                    if (isMargin && bTy === 'fineart') { ctx.save(); const strokeW = Math.max(1, eH*0.001*bWt); ctx.strokeStyle = 'rgba(20,20,20,0.95)'; ctx.lineWidth = strokeW; ctx.strokeRect(dx+strokeW/2, dy+strokeW/2, dw-strokeW, dh-strokeW); ctx.restore(); }
+                    if (gCvs) { ctx.save(); ctx.globalAlpha = (gi/100)*1.5; ctx.globalCompositeOperation = 'soft-light'; ctx.fillStyle = ctx.createPattern(gCvs, 'repeat'); ctx.fillRect(0, 0, finalSliceW, finalExportH); ctx.restore(); }
+
+                    const txt = DOM.wmText.value.trim();
+                    const shouldShowTypo = currentStrategy === 'single' || target === 'all' || parseInt(target) === i + 1;
+
+                    if (txt && shouldShowTypo) {
+                        ctx.save(); ctx.font = `${isBold?'bold ':''} ${Math.floor(eH*(currentStrategy==='single'?0.025:0.018)*(DOM.sFontScale.value/100))}px '${DOM.fontSel.value}', sans-serif`; ctx.textBaseline = 'middle'; ctx.textAlign = 'center'; ctx.letterSpacing = "2px";
+                        if (textStylePreset !== 'none') {
+                            const gradient = ctx.createLinearGradient(sW*(tPosX/100)-100, eH*(tPosY/100)-20, sW*(tPosX/100)+100, eH*(tPosY/100)+20);
+                            if (textStylePreset === 'gold') { gradient.addColorStop(0, "#BF953F"); gradient.addColorStop(0.25, "#FCF6BA"); gradient.addColorStop(0.5, "#B38728"); gradient.addColorStop(0.75, "#FBF5B7"); gradient.addColorStop(1, "#AA771C"); } else { gradient.addColorStop(0, "#8A9097"); gradient.addColorStop(0.25, "#E0E5EC"); gradient.addColorStop(0.5, "#8A9097"); gradient.addColorStop(0.75, "#B0B5BB"); gradient.addColorStop(1, "#595F66"); }
+                            ctx.fillStyle = gradient;
+                        } else { ctx.fillStyle = DOM.textColor.value; }
+                        if (isGlow) { ctx.shadowColor = textStylePreset !== 'none' ? 'rgba(0,0,0,0.8)' : DOM.textColor.value; ctx.shadowBlur = parseInt(DOM.sGlowAmt.value) * 1.5; }
+                        ctx.fillText(txt, sW*(tPosX/100), eH*(tPosY/100)); ctx.restore();
+                    }
+
+                    if (logoObj && logoUrl && DOM.toggleLogo.checked && shouldShowTypo) {
+                        ctx.save(); ctx.globalAlpha = DOM.sLogoOp.value / 100; const lgScale = DOM.sLogoScale.value / 100; const maxW = sW * 0.2 * lgScale; const ratio = logoObj.height / logoObj.width; const finalW = maxW; const finalH = maxW * ratio; ctx.drawImage(logoObj, sW*(lPosX/100) - finalW/2, eH*(lPosY/100) - finalH/2, finalW, finalH); ctx.restore();
+                    }
+
+                    if (showAppLogo) {
+                        ctx.save();
+                        const appWmSize = Math.max(16, eH * 0.012);
+                        ctx.font = `700 ${appWmSize}px 'Outfit', sans-serif`;
+                        ctx.shadowColor = 'rgba(0,0,0,0.9)';
+                        ctx.shadowBlur = 8;
+                        ctx.shadowOffsetY = 1;
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+                        ctx.textAlign = 'right';
+                        ctx.textBaseline = 'bottom';
+                        ctx.fillText('cineRoll.studio', finalSliceW-(eH*0.015), finalExportH-(eH*0.015));
+                        ctx.restore();
+                    }
+
+                    const ext = mimeType === 'image/png' ? 'png' : 'jpg';
+                    const fn = (currentStrategy === 'seamless' || currentStrategy === 'triptych') ? `cineRoll_pan_${i+1}.${ext}` : `cineRoll_output.${ext}`;
+
+                    // 🌟 V150: 20초 타임아웃 완전히 삭제. 인코딩이 끝날 때까지 무한 대기.
+                    const blob = await new Promise(r => wCv.toBlob(r, mimeType, encQual));
+
+                    if (!blob) throw new Error("Failed to generate image blob");
+                    sBlb = blob;
+                    fArr.push(new File([blob], fn, {type: mimeType}));
+                    zip.file(fn, blob);
+
+                    const imgEl = document.createElement('img');
+                    imgEl.src = URL.createObjectURL(blob);
+                    imgEl.className = "export-img-item";
+                    document.getElementById('export-gallery-container').appendChild(imgEl);
+
+                    wCv.width=0; wCv.height=0;
+                }
+
+                if (!isMobile) {
+                    if (slides === 1) {
+                        const l = document.createElement('a'); l.href = URL.createObjectURL(sBlb); l.download = `cineRoll_Output.${mimeType === 'image/png' ? 'png' : 'jpg'}`; l.click();
+                    } else {
+                        updateLoadingText("Packaging Gallery (ZIP)...");
+                        await new Promise(r => setTimeout(r, 100)); // UI 업데이트 대기
+                        const c = await zip.generateAsync({type:"blob"});
+                        const l = document.createElement('a'); l.href = URL.createObjectURL(c); l.download = `cineRoll_Gallery.zip`; l.click();
+                    }
+                    hideLoading();
+                    document.getElementById('export-modal').classList.add('show');
+                    DOM.btnExport.innerText = "✅ Downloaded!";
+                } else {
+                    hideLoading();
+                    try {
+                        if (navigator.canShare && navigator.canShare({files: fArr})) {
+                            await navigator.share({files: fArr}); DOM.btnExport.innerText = "✅ Saved!";
+                        } else throw new Error();
+                    } catch (e) {
+                        document.getElementById('export-modal').classList.add('show'); DOM.btnExport.innerText = "✅ Ready!";
+                    }
+                }
+                mCvs.width=0; mCvs.height=0;
+            } catch (err) { hideLoading(); alert("Export Failed: " + err.message); DOM.btnExport.innerText = "❌ Failed"; } finally { DOM.btnExport.classList.remove('opacity-70', 'pointer-events-none'); setTimeout(() => { DOM.btnExport.innerText = "Export Gallery"; }, 3000); }
+        });
     </script>
 </body>
 </html>
