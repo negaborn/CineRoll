@@ -1,2 +1,2 @@
 import './style.css';
-import './legacy.ts';
+import './ui.ts';

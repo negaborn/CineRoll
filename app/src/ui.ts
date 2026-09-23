@@ -1,9 +1,15 @@
-import JSZip from 'jszip';
+// DOM wiring: element refs, event bindings, tab/zoom/drag interactions, and the
+// preview redraw orchestration (which slider/control maps to which render.ts call).
+// Cropping (crop.ts), pixel compositing (render.ts/compose.ts), and the export
+// pipeline (export.ts) are separate modules -- this file's job is gluing DOM
+// events to them, plus the handful of controls (strategy/margin/color/typo)
+// that haven't moved into EditState yet and so still read straight off the DOM.
 import UTIF from 'utif';
 import { editState, loadPresets, savePresets, installDebugHook, type EditState, type BorderStyle } from './state';
-import { CropController, getDesqueezedPlaneSize, renderCroppedRegionFromOriginal } from './crop';
+import { CropController, getDesqueezedPlaneSize } from './crop';
 import { buildToneFilterString, createGrainTile, Engine3D } from './compose';
 import { renderSlideBase, computeFontSizePx, computeGlowPx, drawWatermarkText, drawLogo, drawAppWatermark } from './render';
+import { runExport, packageAndDeliver, type ExportRequest, type ExportQuality } from './export';
 
 function el<T extends HTMLElement = HTMLElement>(id: string): T {
   const e = document.getElementById(id);
@@ -690,163 +696,67 @@ DOM.btnExport.addEventListener('click', async () => {
   const plane = getDesqueezedPlaneSize(originalImg, exportState.squeeze, exportState.rotation.base);
   const cropPxW = exportState.crop.width * plane.width;
   const cropPxH = exportState.crop.height * plane.height;
-  if (cropPxW && cropPxH) {
-    activeGlobalRatio = cropPxW / cropPxH;
-  }
+  if (cropPxW && cropPxH) activeGlobalRatio = cropPxW / cropPxH;
 
   DOM.btnExport.classList.add('opacity-70', 'pointer-events-none'); showLoading('Rendering High-Res...');
   try {
-    await document.fonts.ready; const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
+    await document.fonts.ready;
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
+    const lutVal = el<HTMLSelectElement>('select-lut').value as EditState['tone']['lut'];
 
-    const qualMode = DOM.exportQuality.value;
-    let mimeType = 'image/jpeg';
-    let encQual = 0.9;
+    const request: ExportRequest = {
+      originalImg,
+      squeeze: exportState.squeeze,
+      baseRotation: exportState.rotation.base,
+      crop: exportState.crop,
+      strategy: currentStrategy as EditState['strategy'],
+      slides: (currentStrategy === 'seamless' || currentStrategy === 'triptych') ? parseInt(DOM.sSlides.value) : 1,
+      qualityMode: DOM.exportQuality.value as ExportQuality,
+      isMobile,
+      tone: {
+        lut: lutVal,
+        lutIntensity: Number(el<HTMLInputElement>('slider-lut-intensity').value),
+        highlights: parseFloat(DOM.sHl.value),
+        shadows: parseFloat(DOM.sSh.value),
+        brightness: Number(DOM.sBr.value),
+        contrast: Number(DOM.sCo.value),
+        saturation: Number(DOM.sSa.value),
+        grain: parseInt(DOM.sGrain.value),
+        hasCustomLut: lutVal === 'custom' && !!Engine3D.lutData,
+      },
+      frame: { bgColor, isMargin, marginScale: isMargin ? parseInt(DOM.sMarginScale.value) / 100 : 1, border: DOM.sBorder.value as BorderStyle, borderWeight: parseFloat(DOM.sBorderWeight.value) },
+      typo: {
+        text: DOM.wmText.value.trim(),
+        target: (DOM.wmTarget.value === 'all' ? 'all' : parseInt(DOM.wmTarget.value)) as EditState['typo']['target'],
+        font: DOM.fontSel.value, bold: isBold, preset: textStylePreset, color: DOM.textColor.value,
+        glow: isGlow, glowAmount: parseInt(DOM.sGlowAmt.value), fontScale: Number(DOM.sFontScale.value),
+        pos: { x: tPosX, y: tPosY },
+      },
+      logo: { image: logoObj, enabled: !!(logoObj && logoUrl && DOM.toggleLogo.checked), scale: Number(DOM.sLogoScale.value), opacity: Number(DOM.sLogoOp.value), pos: { x: lPosX, y: lPosY } },
+      appWatermark: DOM.toggleAppLogo ? DOM.toggleAppLogo.checked : false,
+    };
 
-    const SAFE_MAX_DIM = 16000;
-    const MAX_AREA = isMobile ? 16777216 : 67108864;
+    const result = await runExport(request, updateLoadingText);
 
-    let targetW = 0, targetH = 0;
-    const slides = (currentStrategy === 'seamless' || currentStrategy === 'triptych') ? parseInt(DOM.sSlides.value) : 1;
-
-    if (qualMode === 'web') {
-      const bW = isMobile ? 3000 : 6000;
-      encQual = 1.0;
-      targetW = (currentStrategy === 'seamless') ? bW * slides : bW;
-    } else if (qualMode === 'ig') {
-      const bW = 2160;
-      targetW = (currentStrategy === 'seamless') ? bW * slides : bW;
-    } else if (qualMode === 'png') {
-      mimeType = 'image/png';
-      // Lossless means "the true native resolution of the crop", not an
-      // arbitrary upscale target -- cap by the actual desqueezed source
-      // pixels (cropPxW) rather than always reaching for SAFE_MAX_DIM.
-      targetW = Math.min(cropPxW, SAFE_MAX_DIM);
-    }
-
-    targetH = targetW / activeGlobalRatio;
-
-    if (targetW > SAFE_MAX_DIM || targetH > SAFE_MAX_DIM) {
-      const s = Math.min(SAFE_MAX_DIM / targetW, SAFE_MAX_DIM / targetH);
-      targetW *= s;
-      targetH *= s;
-    }
-
-    if ((targetW * targetH) > MAX_AREA) {
-      const s = Math.sqrt(MAX_AREA / (targetW * targetH));
-      targetW *= s;
-      targetH *= s;
-    }
-
-    targetW = Math.floor(targetW);
-    targetH = Math.floor(targetW / activeGlobalRatio);
-
-    await new Promise(r => setTimeout(r, 50));
-    let mCvs: HTMLCanvasElement = renderCroppedRegionFromOriginal(originalImg, exportState.squeeze, exportState.rotation.base, exportState.crop, targetW);
-
-    const lutSelect = document.getElementById('select-lut') as HTMLSelectElement | null;
-    const lutVal = (lutSelect ? lutSelect.value : 'none') as EditState['tone']['lut'];
-    const hlVal = parseFloat(DOM.sHl.value); const shVal = parseFloat(DOM.sSh.value); const hasCustomLut = lutVal === 'custom' && !!Engine3D.lutData;
-    const intensity = Number(el<HTMLInputElement>('slider-lut-intensity').value) / 100;
-
-    // brightness/contrast/saturation + the kodak/fuji/cinematic CSS-emulated LUTs are baked into
-    // the base composite via the same filterString the live preview uses (renderSlideBase below);
-    // only the WebGL-only custom-LUT/highlight-shadow pass needs a separate pre-processing step here.
-    if (hasCustomLut || hlVal !== 0 || shVal !== 0) {
-      const hlF = 1.0 + (hlVal / 100.0); const shF = 1.0 + (shVal / 100.0);
-      mCvs = await Engine3D.apply(mCvs, intensity, hlF, shF, hasCustomLut);
-    }
-
-    const filterString = currentToneFilterString();
-    const gi = parseInt(DOM.sGrain.value);
-    const frame = { bgColor, isMargin, marginScale: isMargin ? parseInt(DOM.sMarginScale.value) / 100 : 1, border: DOM.sBorder.value as BorderStyle, borderWeight: parseFloat(DOM.sBorderWeight.value) };
-
-    const gCon = el('export-gallery-container'); gCon.innerHTML = ''; const fArr: File[] = []; let sBlb: Blob | null = null; const zip = new JSZip();
-
-    const showAppLogo = DOM.toggleAppLogo ? DOM.toggleAppLogo.checked : false;
-    const target = DOM.wmTarget ? DOM.wmTarget.value : 'all';
-    const isSingle = currentStrategy === 'single';
-    const isPanned = currentStrategy === 'seamless' || currentStrategy === 'triptych';
-    const eH = mCvs.height;
-    const sliceW = mCvs.width / slides;
-    const fontSizePx = computeFontSizePx(eH, isSingle, Number(DOM.sFontScale.value));
-    const glowPx = computeGlowPx(parseInt(DOM.sGlowAmt.value), fontSizePx);
-
-    for (let i = 0; i < slides; i++) {
-      updateLoadingText(`Encoding File ${i + 1} / ${slides}...`);
-      await new Promise(r => setTimeout(r, 50));
-
-      const finalSliceW = Math.floor(sliceW); const finalExportH = Math.floor(eH);
-      const wCv = document.createElement('canvas'); wCv.width = finalSliceW; wCv.height = finalExportH;
-      const ctx = wCv.getContext('2d')!; ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
-
-      renderSlideBase({
-        ctx, width: finalSliceW, height: finalExportH, slideIndex: i, slidesCount: slides, isPanned,
-        source: { image: mCvs, naturalWidth: mCvs.width, naturalHeight: mCvs.height },
-        filterString, frame, grain: { tile: grainTile, amountPct: gi },
-      });
-
-      const txt = DOM.wmText.value.trim();
-      const shouldShowTypo = isSingle || target === 'all' || parseInt(target) === i + 1;
-
-      if (txt && shouldShowTypo) {
-        drawWatermarkText({
-          ctx, text: txt, x: finalSliceW * (tPosX / 100), y: finalExportH * (tPosY / 100),
-          fontSizePx, fontFamily: DOM.fontSel.value, bold: isBold, preset: textStylePreset,
-          plainColor: DOM.textColor.value, glow: isGlow, glowPx,
-        });
-      }
-
-      if (logoObj && logoUrl && DOM.toggleLogo.checked && shouldShowTypo) {
-        const logoWidth = finalSliceW * 0.2 * (Number(DOM.sLogoScale.value) / 100);
-        drawLogo({
-          ctx, image: logoObj, naturalWidth: logoObj.naturalWidth, naturalHeight: logoObj.naturalHeight,
-          x: finalSliceW * (lPosX / 100), y: finalExportH * (lPosY / 100), width: logoWidth, opacityPct: Number(DOM.sLogoOp.value),
-        });
-      }
-
-      if (showAppLogo) drawAppWatermark({ ctx, width: finalSliceW, height: finalExportH });
-
-      const ext = mimeType === 'image/png' ? 'png' : 'jpg';
-      const fn = (currentStrategy === 'seamless' || currentStrategy === 'triptych') ? `cineRoll_pan_${i + 1}.${ext}` : `cineRoll_output.${ext}`;
-
-      const blob: Blob | null = await new Promise(r => wCv.toBlob(r, mimeType, encQual));
-
-      if (!blob) throw new Error('Failed to generate image blob');
-      sBlb = blob;
-      fArr.push(new File([blob], fn, { type: mimeType }));
-      zip.file(fn, blob);
-
+    const gCon = el('export-gallery-container'); gCon.innerHTML = '';
+    for (const slide of result.slides) {
       const imgEl = document.createElement('img');
-      imgEl.src = URL.createObjectURL(blob);
+      imgEl.src = URL.createObjectURL(slide.blob);
       imgEl.className = 'export-img-item';
-      el('export-gallery-container').appendChild(imgEl);
-
-      wCv.width = 0; wCv.height = 0;
+      gCon.appendChild(imgEl);
     }
 
-    if (!isMobile) {
-      if (slides === 1) {
-        const l = document.createElement('a'); l.href = URL.createObjectURL(sBlb!); l.download = `cineRoll_Output.${mimeType === 'image/png' ? 'png' : 'jpg'}`; l.click();
-      } else {
-        updateLoadingText('Packaging Gallery (ZIP)...');
-        await new Promise(r => setTimeout(r, 100));
-        const c = await zip.generateAsync({ type: 'blob' });
-        const l = document.createElement('a'); l.href = URL.createObjectURL(c); l.download = 'cineRoll_Gallery.zip'; l.click();
-      }
-      hideLoading();
+    const outcome = await packageAndDeliver(result, isMobile, updateLoadingText);
+    hideLoading();
+    if (outcome === 'downloaded-single' || outcome === 'downloaded-zip') {
       el('export-modal').classList.add('show');
       DOM.btnExport.innerText = '✅ Downloaded!';
+    } else if (outcome === 'shared') {
+      DOM.btnExport.innerText = '✅ Saved!';
     } else {
-      hideLoading();
-      try {
-        if ((navigator as any).canShare && (navigator as any).canShare({ files: fArr })) {
-          await (navigator as any).share({ files: fArr }); DOM.btnExport.innerText = '✅ Saved!';
-        } else throw new Error('share unsupported');
-      } catch (_e) {
-        el('export-modal').classList.add('show'); DOM.btnExport.innerText = '✅ Ready!';
-      }
+      el('export-modal').classList.add('show');
+      DOM.btnExport.innerText = '✅ Ready!';
     }
-    mCvs.width = 0; mCvs.height = 0;
   } catch (err) { hideLoading(); alert('Export Failed: ' + (err as Error).message); DOM.btnExport.innerText = '❌ Failed'; } finally { DOM.btnExport.classList.remove('opacity-70', 'pointer-events-none'); setTimeout(() => { DOM.btnExport.innerText = 'Export Gallery'; }, 3000); }
 });
 
