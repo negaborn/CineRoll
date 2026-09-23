@@ -6,6 +6,11 @@ test('crop box survives Format -> Frame -> resize -> Format round trip (normaliz
   await page.goto('/');
   await uploadTestImage(page, page.context().browser()!, 6000, 4000);
 
+  // Free (unconstrained) ratio, so the arbitrary rect below isn't coerced by
+  // Cropper.js's locked-aspect-ratio enforcement -- this test is about
+  // round-tripping the stored rect, not about aspect-ratio semantics.
+  await page.selectOption('#select-ratio', 'NaN');
+  await page.waitForTimeout(150);
   await page.evaluate(() => window.__CINEROLL_DEBUG__!.setCropForTest({ x: 0.12, y: 0.18, width: 0.4, height: 0.35 }));
   const before = await page.evaluate(() => window.__CINEROLL_DEBUG__!.getState().crop);
 

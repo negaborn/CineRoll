@@ -1,7 +1,7 @@
-import Cropper from 'cropperjs';
-import 'cropperjs/dist/cropper.css';
 import JSZip from 'jszip';
 import UTIF from 'utif';
+import { editState, loadPresets, savePresets, installDebugHook, type EditState } from './state';
+import { CropController, getDesqueezedPlaneSize, renderCroppedRegionFromOriginal } from './crop';
 
 function el<T extends HTMLElement = HTMLElement>(id: string): T {
   const e = document.getElementById(id);
@@ -37,7 +37,7 @@ const DOM = {
   toggleAppLogo: el<HTMLInputElement>('toggleAppLogo'), presetList: el<HTMLDivElement>('custom-presets-container'),
 };
 
-let cropper: any = null; let originalImg: HTMLImageElement | null = null; let currentStrategy = 'seamless';
+let originalImg: HTMLImageElement | null = null; let currentStrategy = 'seamless';
 let baseProxyCropUrl: string | null = null; let proxyCropUrl: string | null = null;
 let staticGrainDataUrl = ''; let activeGlobalRatio = 1; let zoomMode = 'fit';
 let isMargin = false; let bgColor = '#000000';
@@ -46,7 +46,44 @@ let tPosX = 50, tPosY = 94, lPosX = 50, lPosY = 80; let logoObj: HTMLImageElemen
 let isCropperReady = false; let isSplitView = false; let splitPos = 50;
 let textStylePreset: 'none' | 'gold' | 'silver' = 'none';
 let savedCustomPresets: any[] = [];
-let baseRotation = 0;
+
+const cropCtrl = new CropController(DOM.main, {
+  onSmartSnap: ({ label, box }) => {
+    if (!DOM.badge) return;
+    if (label && box) {
+      DOM.badge.innerText = label;
+      DOM.badge.classList.remove('opacity-0');
+      DOM.badge.style.top = Math.max(10, box.top - 28) + 'px';
+      DOM.badge.style.left = (box.left + box.width / 2) + 'px';
+    } else {
+      DOM.badge.classList.add('opacity-0');
+    }
+  },
+});
+
+installDebugHook((rect) => cropCtrl.setCropForTest(rect));
+
+function mirrorFormatStateToEditState() {
+  editState.update((s) => ({
+    ...s,
+    strategy: currentStrategy as EditState['strategy'],
+    baseRatio: isNaN(parseFloat(DOM.sRatio.value)) ? null : parseFloat(DOM.sRatio.value),
+    slides: parseInt(DOM.sSlides.value) as 2 | 3 | 4,
+    squeeze: parseInt(DOM.sSqueeze.value) as EditState['squeeze'],
+  }));
+}
+
+function currentTargetAspect(): number {
+  const br = parseFloat(DOM.sRatio.value);
+  if (currentStrategy === 'seamless' && !isNaN(br)) return br * parseInt(DOM.sSlides.value);
+  return br;
+}
+
+function syncAspectToCropper() {
+  mirrorFormatStateToEditState();
+  if (!cropCtrl.isReady) return;
+  cropCtrl.retarget(currentTargetAspect());
+}
 
 function initGrain() {
   const c = document.createElement('canvas'); c.width = 256; c.height = 256; const ctx = c.getContext('2d')!; const id = ctx.createImageData(256, 256);
@@ -61,8 +98,8 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 function loadPresetsFromStorage() {
-  const stored = localStorage.getItem('cineroll_presets_v4');
-  if (stored) { try { savedCustomPresets = JSON.parse(stored); renderPresetChips(); } catch (_e) { /* ignore corrupt storage */ } }
+  savedCustomPresets = loadPresets();
+  renderPresetChips();
 }
 
 function applyZoom() {
@@ -106,7 +143,7 @@ function bindInputSlider(slider: HTMLInputElement, input: HTMLInputElement, call
   });
 }
 
-bindInputSlider(DOM.sAngle, DOM.inAngle, () => { if (cropper) cropper.rotateTo(Number(DOM.sAngle.value)); });
+bindInputSlider(DOM.sAngle, DOM.inAngle, () => { cropCtrl.setFineAngle(Number(DOM.sAngle.value)); });
 bindInputSlider(DOM.sBr, DOM.inBr, () => ModuleColor.updateCSSFilters());
 bindInputSlider(DOM.sCo, DOM.inCo, () => ModuleColor.updateCSSFilters());
 bindInputSlider(DOM.sSa, DOM.inSa, () => ModuleColor.updateCSSFilters());
@@ -185,7 +222,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && document.body.classList.contains('zen-mode')) { toggleZenMode(); }
   if (e.key === 'Enter' && !isInput && (e.target as HTMLElement).tagName !== 'BUTTON') {
     const formatTab = document.getElementById('tab-format');
-    if (formatTab && !formatTab.classList.contains('hidden') && cropper && isCropperReady) {
+    if (formatTab && !formatTab.classList.contains('hidden') && cropCtrl.isReady && isCropperReady) {
       e.preventDefault(); applyCropAndRender();
     }
   }
@@ -399,8 +436,12 @@ function switchTab(target: string) {
   if (target === 'format') {
     DOM.previewArea.classList.add('hidden'); DOM.zoomControls.classList.add('hidden'); DOM.btnBA.style.display = 'none'; DOM.btnZen.style.display = 'none';
     DOM.main.classList.remove('hidden'); DOM.main.style.display = 'block'; void DOM.main.offsetWidth;
-    setTimeout(() => { if (originalImg && !cropper) { setupCropper(); } else if (cropper) { DOM.main.classList.add('opacity-100'); cropper.resize(); } }, 50);
+    setTimeout(() => {
+      if (originalImg && !cropCtrl.isReady) { remountCropper(); }
+      else if (cropCtrl.isReady) { DOM.main.classList.add('opacity-100'); cropCtrl.resize(); }
+    }, 50);
   } else {
+    cropCtrl.destroy(); isCropperReady = false;
     DOM.main.classList.remove('opacity-100'); DOM.main.style.display = 'none';
     if (proxyCropUrl) { DOM.previewArea.classList.remove('hidden'); DOM.zoomControls.classList.remove('hidden'); DOM.zoomControls.classList.add('flex'); DOM.btnBA.style.display = 'flex'; DOM.btnZen.style.display = 'flex'; applyZoom(); }
   }
@@ -410,21 +451,13 @@ document.querySelectorAll<HTMLElement>('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => switchTab(btn.dataset.tab!));
 });
 
-function updateCropperRatio() {
-  if (!cropper) return; let fr = NaN; const br = parseFloat(DOM.sRatio.value);
-  if (currentStrategy === 'seamless' && !isNaN(br)) fr = br * parseInt(DOM.sSlides.value); else fr = br;
-  cropper.setAspectRatio(fr); const cd = cropper.getCanvasData(); let bw = cd.width * 0.85, bh = cd.height * 0.85;
-  if (!isNaN(fr)) { const cr = cd.width / cd.height; if (fr > cr) { bw = cd.width * 0.85; bh = bw / fr; } else { bh = cd.height * 0.85; bw = bh * fr; } }
-  cropper.setCropBoxData({ left: cd.left + (cd.width - bw) / 2, top: cd.top + (cd.height - bh) / 2, width: bw, height: bh });
-}
-
 document.querySelectorAll<HTMLElement>('#strategy-btns .min-btn').forEach(btn => {
   btn.addEventListener('click', e => {
     document.querySelectorAll('#strategy-btns .min-btn').forEach(b => b.classList.remove('active')); (e.target as HTMLElement).classList.add('active'); currentStrategy = (e.target as HTMLElement).dataset.val!;
     const isSingle = currentStrategy === 'single';
     DOM.seamlessWrapper.classList.toggle('disabled-block', isSingle);
     if (isSingle && DOM.sRatio.value === 'NaN') DOM.sRatio.value = '0.8';
-    updateCropperRatio();
+    syncAspectToCropper();
   });
 });
 
@@ -432,50 +465,34 @@ function resetFraming() {
   const needsRebuild = DOM.sSqueeze.value !== '100';
   if (currentStrategy === 'seamless' || currentStrategy === 'triptych') { DOM.sRatio.value = '0.8'; DOM.sSlides.value = '3'; } else { DOM.sRatio.value = 'NaN'; }
   DOM.sAngle.value = '0'; DOM.inAngle.value = '0'; DOM.sSqueeze.value = '100';
-  if (needsRebuild) { DOM.main.classList.remove('opacity-100'); DOM.main.classList.add('opacity-0'); setTimeout(() => setupCropper(), 300); } else if (cropper) { cropper.rotateTo(0); updateCropperRatio(); }
+  mirrorFormatStateToEditState();
+  editState.update(s => ({ ...s, rotation: { base: 0, fine: 0 } }));
+  if (needsRebuild) { DOM.main.classList.remove('opacity-100'); DOM.main.classList.add('opacity-0'); setTimeout(() => remountCropper(), 300); }
+  else if (cropCtrl.isReady) { cropCtrl.setFineAngle(0); cropCtrl.retarget(currentTargetAspect()); }
 }
 
 DOM.sSqueeze.addEventListener('change', () => {
   DOM.main.classList.remove('opacity-100');
   DOM.main.classList.add('opacity-0');
-  setTimeout(setupCropper, 300);
+  setTimeout(() => remountCropper(), 300);
 });
 
-DOM.sRatio.addEventListener('change', updateCropperRatio); DOM.sSlides.addEventListener('change', updateCropperRatio);
-function rotateBase(deg: number) { baseRotation = (baseRotation + deg) % 360; applyRotation(); }
-function applyRotation() { if (!cropper) return; cropper.rotateTo(baseRotation + (parseFloat(DOM.sAngle.value) || 0)); }
+DOM.sRatio.addEventListener('change', syncAspectToCropper); DOM.sSlides.addEventListener('change', syncAspectToCropper);
 
-function setupCropper() {
-  if (!originalImg) return; isCropperReady = false;
-  if (cropper) { cropper.destroy(); cropper = null; }
-  DOM.main.innerHTML = ''; const newImg = document.createElement('img'); newImg.style.display = 'block'; newImg.style.maxWidth = '100%';
-  const sf = parseFloat(DOM.sSqueeze.value) / 100;
+async function rotateBase(deg: 90) {
+  if (!originalImg) return;
+  DOM.main.classList.remove('opacity-100'); DOM.main.classList.add('opacity-0');
+  await cropCtrl.rotateBase(deg);
+  DOM.main.classList.remove('opacity-0'); DOM.main.classList.add('opacity-100');
+}
 
-  newImg.onload = () => {
-    requestAnimationFrame(() => {
-      cropper = new Cropper(newImg, {
-        viewMode: 1, dragMode: 'none', autoCrop: false, background: false, checkOrientation: true,
-        ready: () => { cropper.crop(); updateCropperRatio(); isCropperReady = true; DOM.main.classList.remove('opacity-0'); DOM.main.classList.add('opacity-100'); applyRotation(); },
-        crop: () => {
-          const isFree = isNaN(parseFloat(DOM.sRatio.value));
-          if (!isFree) { if (DOM.badge) DOM.badge.classList.add('opacity-0'); return; }
-          const d = cropper.getCropBoxData();
-          if (!d || d.width === 0 || d.height === 0) return;
-          const r = d.width / d.height; let txt = '';
-          if (r > 0.78 && r < 0.82) txt = '4:5 Vertical IG'; else if (r > 0.98 && r < 1.02) txt = '1:1 Square'; else if (r > 1.75 && r < 1.8) txt = '16:9 Landscape'; else if (r > 0.65 && r < 0.68) txt = '2:3 Vertical'; else if (r > 1.45 && r < 1.55) txt = '3:2 Horizontal'; else if (r > 0.74 && r < 0.76) txt = '3:4 Classic';
-          if (txt && DOM.badge) { DOM.badge.innerText = txt; DOM.badge.classList.remove('opacity-0'); DOM.badge.style.top = Math.max(10, d.top - 28) + 'px'; DOM.badge.style.left = (d.left + d.width / 2) + 'px'; }
-          else if (DOM.badge) DOM.badge.classList.add('opacity-0');
-        },
-      });
-    });
-  };
-
-  if (sf === 1.0) { DOM.main.appendChild(newImg); newImg.src = originalImg.src; return; }
-
-  const cvs = document.createElement('canvas'); let tw = originalImg.naturalWidth * sf; let th = originalImg.naturalHeight;
-  const maxW = 3500; if (tw > maxW) { const scale = maxW / tw; th *= scale; tw = maxW; } cvs.width = tw; cvs.height = th;
-  cvs.getContext('2d')!.drawImage(originalImg, 0, 0, originalImg.naturalWidth, originalImg.naturalHeight, 0, 0, tw, th);
-  cvs.toBlob((blob) => { DOM.main.appendChild(newImg); newImg.src = URL.createObjectURL(blob!); cvs.width = 0; cvs.height = 0; }, 'image/jpeg', 0.95);
+async function remountCropper() {
+  if (!originalImg) return;
+  mirrorFormatStateToEditState();
+  isCropperReady = false;
+  await cropCtrl.mount(originalImg, parseInt(DOM.sSqueeze.value));
+  isCropperReady = true;
+  DOM.main.classList.remove('opacity-0'); DOM.main.classList.add('opacity-100');
 }
 
 ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eName => { DOM.mainStage.addEventListener(eName, e => { e.preventDefault(); e.stopPropagation(); }, false); });
@@ -500,7 +517,8 @@ async function handleFile(file: File) {
     alert('지원하지 않는 이미지 형식입니다.'); return;
   }
 
-  DOM.upText.innerText = 'Processing...'; baseRotation = 0; if (DOM.sAngle) DOM.sAngle.value = '0'; if (DOM.inAngle) DOM.inAngle.value = '0';
+  DOM.upText.innerText = 'Processing...'; if (DOM.sAngle) DOM.sAngle.value = '0'; if (DOM.inAngle) DOM.inAngle.value = '0';
+  editState.update(s => ({ ...s, rotation: { base: 0, fine: 0 }, crop: { x: 0, y: 0, width: 0, height: 0 } }));
   try {
     if (file.name.match(/\.tiff?$/i)) {
       const arrayBuffer = await file.arrayBuffer(); const ifds = UTIF.decode(arrayBuffer); UTIF.decodeImage(arrayBuffer, ifds[0]);
@@ -514,10 +532,10 @@ async function handleFile(file: File) {
 }
 
 function applyCropAndRender() {
-  if (!cropper || !isCropperReady) return;
+  if (!cropCtrl.isReady || !isCropperReady) return;
   try {
     if (DOM.badge) DOM.badge.classList.add('opacity-0');
-    const cvs = cropper.getCroppedCanvas({ maxWidth: 2560, maxHeight: 2560, fillColor: 'transparent', imageSmoothingEnabled: true, imageSmoothingQuality: 'high' });
+    const cvs = cropCtrl.getCroppedCanvas({ maxWidth: 2560, maxHeight: 2560, fillColor: 'transparent', imageSmoothingEnabled: true, imageSmoothingQuality: 'high' })!;
     if (!cvs || cvs.width === 0 || cvs.height === 0) { alert('크롭 영역을 다시 지정해주세요.'); return; }
     activeGlobalRatio = cvs.width / cvs.height; baseProxyCropUrl = cvs.toDataURL('image/png'); cvs.width = 0; cvs.height = 0;
     ModuleColor.triggerEngine(true);
@@ -711,7 +729,7 @@ function applyCinePreset(type: 'gold' | 'silver') { textStylePreset = type; docu
 function saveCurrentPreset() {
   const txt = DOM.wmText.value.trim(); if (!txt && !logoUrl) return alert('저장할 텍스트나 로고를 설정해주세요.');
   const preset = { id: Date.now(), text: txt, color: DOM.textColor.value, bold: isBold, glow: isGlow, font: DOM.fontSel.value, glowAmt: DOM.sGlowAmt.value, type: textStylePreset };
-  savedCustomPresets.push(preset); localStorage.setItem('cineroll_presets_v4', JSON.stringify(savedCustomPresets));
+  savedCustomPresets.push(preset); savePresets(savedCustomPresets);
   const saveBtn = el('btn-save-preset'); saveBtn.innerText = '✔️ Saved'; saveBtn.classList.add('text-green-400'); setTimeout(() => { saveBtn.innerText = 'SAVE PRESET'; saveBtn.classList.remove('text-green-400'); }, 1000); renderPresetChips();
 }
 
@@ -730,7 +748,7 @@ function loadPreset(p: any) {
   el('btnBold').classList.toggle('active', isBold); el('btnGlow').classList.toggle('active', isGlow); document.querySelectorAll('.preset-pill').forEach(btn => btn.classList.remove('active')); if (p.type === 'gold') el('btn-preset-gold').classList.add('active'); if (p.type === 'silver') el('btn-preset-silver').classList.add('active'); ModuleTypo.update();
 }
 
-function deletePreset(id: number) { savedCustomPresets = savedCustomPresets.filter(p => p.id !== id); localStorage.setItem('cineroll_presets_v4', JSON.stringify(savedCustomPresets)); renderPresetChips(); }
+function deletePreset(id: number) { savedCustomPresets = savedCustomPresets.filter(p => p.id !== id); savePresets(savedCustomPresets); renderPresetChips(); }
 
 function setBG(elm: HTMLElement) { document.querySelectorAll('[data-bg]').forEach(b => b.classList.remove('active')); elm.classList.add('active'); bgColor = elm.dataset.bg!; document.querySelectorAll<HTMLElement>('.slide-container').forEach(sc => { if (!sc.closest('[style*="polygon"]')) { sc.style.backgroundColor = bgColor; } }); ModuleTypo.update(); }
 function setMargin(val: boolean) { isMargin = val; el('btn-edge').classList.toggle('active', !val); el('btn-margin').classList.toggle('active', val); DOM.marginScaleWrapper.classList.toggle('hidden', !val); ModuleFrame.build(); }
@@ -741,11 +759,14 @@ function closeExportModal() {
 }
 
 DOM.btnExport.addEventListener('click', async () => {
-  if (!cropper) return alert('크롭 영역을 다시 확인해주세요.');
+  if (!originalImg) return alert('크롭 영역을 다시 확인해주세요.');
 
-  const cropData = cropper.getCropBoxData();
-  if (cropData && cropData.width && cropData.height) {
-    activeGlobalRatio = cropData.width / cropData.height;
+  const exportState = editState.get();
+  const plane = getDesqueezedPlaneSize(originalImg, exportState.squeeze, exportState.rotation.base);
+  const cropPxW = exportState.crop.width * plane.width;
+  const cropPxH = exportState.crop.height * plane.height;
+  if (cropPxW && cropPxH) {
+    activeGlobalRatio = cropPxW / cropPxH;
   }
 
   DOM.btnExport.classList.add('opacity-70', 'pointer-events-none'); showLoading('Rendering High-Res...');
@@ -791,16 +812,8 @@ DOM.btnExport.addEventListener('click', async () => {
     targetW = Math.floor(targetW);
     targetH = Math.floor(targetW / activeGlobalRatio);
 
-    const cropperOptions = {
-      width: targetW,
-      height: targetH,
-      fillColor: 'transparent',
-      imageSmoothingEnabled: true,
-      imageSmoothingQuality: 'high',
-    };
-
     await new Promise(r => setTimeout(r, 50));
-    let mCvs = cropper.getCroppedCanvas(cropperOptions);
+    let mCvs: HTMLCanvasElement = renderCroppedRegionFromOriginal(originalImg, exportState.squeeze, exportState.rotation.base, exportState.crop, targetW);
 
     const lutSelect = document.getElementById('select-lut') as HTMLSelectElement | null;
     const lutVal = lutSelect ? lutSelect.value : 'none';
