@@ -135,8 +135,6 @@ export class CropController {
   private cropper: any = null;
   private proxyNaturalWidth = 0;
   private proxyNaturalHeight = 0;
-  private originalImg: HTMLImageElement | null = null;
-  private squeezePct = 100;
   private ready = false;
   /** Bumped by every mount() and destroy(); an in-flight mount whose number is stale abandons itself. */
   private mountSeq = 0;
@@ -167,8 +165,6 @@ export class CropController {
     this.destroy();
     const seq = this.mountSeq;
     const stale = () => seq !== this.mountSeq;
-    this.originalImg = original;
-    this.squeezePct = squeezePct;
 
     const proxy = await buildProxyImage(original, squeezePct, editState.get().rotation.base);
     if (stale()) return false;
@@ -248,10 +244,16 @@ export class CropController {
     if (this.cropper) this.cropper.resize();
   }
 
-  setFineAngle(deg: number): void {
-    editState.update((s) => ({ ...s, rotation: { ...s.rotation, fine: deg } }));
-    // The base rotation is already baked into the proxy image; Cropper only applies the straighten angle.
-    if (this.cropper) this.cropper.rotateTo(deg);
+  /** Applies EditState's straighten angle to the live Cropper (the base rotation is already baked into the proxy). */
+  syncFineAngle(): void {
+    if (this.cropper) this.cropper.rotateTo(editState.get().rotation.fine);
+  }
+
+  /** Re-applies the target aspect and centers a fresh default crop box (used by Reset framing). */
+  resetCropBox(): void {
+    if (!this.cropper) return;
+    this.applyAspectFromState();
+    this.centerDefaultCropBox();
   }
 
   /** The straightened proxy's bounding box, in proxy pixels -- the space getData()/setData() work in. */
@@ -259,19 +261,17 @@ export class CropController {
     return rotatedBounds(this.proxyNaturalWidth, this.proxyNaturalHeight, editState.get().rotation.fine);
   }
 
-  /** Rotates the base orientation by +/-90 and re-renders the proxy pre-rotated. */
-  async rotateBase(deltaDeg: 90 | -90 = 90): Promise<void> {
+  /**
+   * Rotates the base orientation by +/-90 in EditState, remapping the crop rect
+   * exactly. The caller re-mounts (the proxy image has the base rotation baked in).
+   */
+  rotateBase(deltaDeg: 90 | -90 = 90): void {
     const s = editState.get();
     const nextBase = (((s.rotation.base + deltaDeg) % 360) + 360) % 360 as 0 | 90 | 180 | 270;
     const steps = ((deltaDeg / 90) % 4 + 4) % 4;
     let rect = s.crop;
     for (let i = 0; i < steps; i++) rect = rotateRect90CW(rect);
-
     editState.update((prev) => ({ ...prev, rotation: { ...prev.rotation, base: nextBase }, crop: rect }));
-
-    if (this.originalImg) {
-      await this.mount(this.originalImg, this.squeezePct);
-    }
   }
 
   /**
