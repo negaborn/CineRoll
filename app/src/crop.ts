@@ -64,28 +64,51 @@ export function getDesqueezedPlaneSize(original: HTMLImageElement, squeezePct: n
   return rotated90 ? { width: h, height: w } : { width: w, height: h };
 }
 
+/** Axis-aligned bounding box of a w x h rectangle rotated by deg. */
+export function rotatedBounds(w: number, h: number, deg: number): { width: number; height: number } {
+  const t = (deg * Math.PI) / 180;
+  const c = Math.abs(Math.cos(t));
+  const s = Math.abs(Math.sin(t));
+  return { width: w * c + h * s, height: w * s + h * c };
+}
+
 /**
- * Renders the normalized crop region of the desqueezed+base-rotated source at
- * targetWidth (height from the crop's own aspect), for export -- when no live
- * Cropper exists. The desqueeze, rotation and crop are composed into a single
- * transform and the original is drawn straight onto an output-sized canvas,
- * so the only canvas allocated is the output itself: never the full
- * desqueezed frame, which for a phone photo at 2x easily exceeds the
- * ~16.7 MP per-canvas limit on iOS Safari.
+ * The frame the normalized crop rect lives in: the desqueezed, base-rotated
+ * plane, further rotated by the fine (straighten) angle, as its bounding box.
+ * This is exactly what Cropper.js crops within once the image is rotated, so
+ * crop fractions stored against it round-trip through getData()/setData().
+ * With fine = 0 it is just the plane.
+ */
+export function getCropFrameSize(original: HTMLImageElement, squeezePct: number, baseRotation: number, fineDeg: number): { width: number; height: number } {
+  const plane = getDesqueezedPlaneSize(original, squeezePct, baseRotation);
+  return rotatedBounds(plane.width, plane.height, fineDeg);
+}
+
+/**
+ * Renders the normalized crop region of the desqueezed + base-rotated +
+ * straightened source at targetWidth (height from the crop's own aspect), for
+ * export -- when no live Cropper exists. Desqueeze, both rotations and the
+ * crop are composed into a single transform and the original is drawn
+ * straight onto an output-sized canvas, so the only canvas allocated is the
+ * output itself: never the full desqueezed frame, which for a phone photo at
+ * 2x easily exceeds the ~16.7 MP per-canvas limit on iOS Safari. Areas the
+ * straightened image doesn't cover stay transparent, matching Cropper's own
+ * getCroppedCanvas() used for the preview.
  */
 export function renderCroppedRegionFromOriginal(
   original: HTMLImageElement,
   squeezePct: number,
   baseRotation: number,
+  fineDeg: number,
   crop: CropRect,
   targetWidth: number,
 ): HTMLCanvasElement {
   const sf = squeezePct / 100;
-  const plane = getDesqueezedPlaneSize(original, squeezePct, baseRotation);
-  const sx = crop.x * plane.width;
-  const sy = crop.y * plane.height;
-  const sw = crop.width * plane.width;
-  const sh = crop.height * plane.height;
+  const frame = getCropFrameSize(original, squeezePct, baseRotation, fineDeg);
+  const sx = crop.x * frame.width;
+  const sy = crop.y * frame.height;
+  const sw = crop.width * frame.width;
+  const sh = crop.height * frame.height;
 
   const out = document.createElement('canvas');
   out.width = Math.max(1, Math.round(targetWidth));
@@ -93,12 +116,12 @@ export function renderCroppedRegionFromOriginal(
   const ctx = out.getContext('2d')!;
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
-  // plane space -> output space
+  // frame space -> output space
   ctx.scale(out.width / sw, out.height / sh);
   ctx.translate(-sx, -sy);
-  // original -> plane space (desqueeze, then rotate about the plane's center)
-  ctx.translate(plane.width / 2, plane.height / 2);
-  ctx.rotate((baseRotation * Math.PI) / 180);
+  // original -> frame space: desqueeze, then rotate (base + straighten) about the frame's center
+  ctx.translate(frame.width / 2, frame.height / 2);
+  ctx.rotate(((baseRotation + fineDeg) * Math.PI) / 180);
   const dw = original.naturalWidth * sf;
   const dh = original.naturalHeight;
   ctx.drawImage(original, -dw / 2, -dh / 2, dw, dh);
@@ -114,6 +137,10 @@ export class CropController {
   private originalImg: HTMLImageElement | null = null;
   private squeezePct = 100;
   private ready = false;
+  /** Bumped by every mount() and destroy(); an in-flight mount whose number is stale abandons itself. */
+  private mountSeq = 0;
+  /** Settles the in-flight mount's promise (with false) if it gets superseded before Cropper is ready. */
+  private settlePendingMount: ((ok: boolean) => void) | null = null;
 
   constructor(container: HTMLElement, options: CropControllerOptions = {}) {
     this.container = container;
@@ -128,14 +155,22 @@ export class CropController {
     return this.cropper;
   }
 
-  /** (Re)builds the proxy image for the current squeeze/base-rotation and mounts Cropper on it. */
-  async mount(original: HTMLImageElement, squeezePct: number): Promise<void> {
+  /**
+   * (Re)builds the proxy image for the current squeeze/base-rotation and mounts
+   * Cropper on it. Resolves true once Cropper is ready, or false if a newer
+   * mount() or a destroy() superseded this one first -- a superseded mount
+   * never touches the DOM or creates a Cropper, so overlapping rebuilds (e.g.
+   * two quick squeeze changes) can't leave a half-built instance behind.
+   */
+  async mount(original: HTMLImageElement, squeezePct: number): Promise<boolean> {
     this.destroy();
+    const seq = this.mountSeq;
+    const stale = () => seq !== this.mountSeq;
     this.originalImg = original;
     this.squeezePct = squeezePct;
 
-    const state = editState.get();
-    const proxy = await buildProxyImage(original, squeezePct, state.rotation.base);
+    const proxy = await buildProxyImage(original, squeezePct, editState.get().rotation.base);
+    if (stale()) return false;
     proxy.style.display = 'block';
     proxy.style.maxWidth = '100%';
     this.proxyNaturalWidth = proxy.naturalWidth;
@@ -144,8 +179,10 @@ export class CropController {
     this.container.innerHTML = '';
     this.container.appendChild(proxy);
 
-    await new Promise<void>((resolve) => {
+    return new Promise<boolean>((resolve) => {
+      this.settlePendingMount = resolve;
       requestAnimationFrame(() => {
+        if (stale()) return; // destroy() already settled this promise
         this.cropper = new Cropper(proxy, {
           viewMode: 1,
           dragMode: 'none',
@@ -153,6 +190,7 @@ export class CropController {
           background: false,
           checkOrientation: true,
           ready: () => {
+            if (stale()) return;
             // Snapshot the wanted crop *before* calling .crop()/setAspectRatio() below --
             // both fire their own 'crop' event with Cropper's transient default box, which
             // would otherwise clobber editState.crop before we get to restore it.
@@ -161,6 +199,9 @@ export class CropController {
 
             this.cropper.crop();
             this.applyAspectFromState();
+            // Straighten *before* placing the crop box: the stored rect is relative to
+            // the straightened frame, which only exists once Cropper has rotated.
+            this.cropper.rotateTo(editState.get().rotation.fine);
 
             if (isFresh) {
               this.centerDefaultCropBox();
@@ -168,9 +209,9 @@ export class CropController {
               this.restoreFromState(wanted);
             }
 
-            this.cropper.rotateTo(editState.get().rotation.fine);
             this.ready = true;
-            resolve();
+            this.settlePendingMount = null;
+            resolve(true);
           },
           crop: () => {
             this.onCropBoxChange();
@@ -182,6 +223,11 @@ export class CropController {
   }
 
   destroy(): void {
+    this.mountSeq++;
+    if (this.settlePendingMount) {
+      this.settlePendingMount(false);
+      this.settlePendingMount = null;
+    }
     // Null out the reference before calling the real destroy() so that any
     // crop/cropend event Cropper.js fires synchronously during its own
     // teardown is ignored by onCropBoxChange/updateSmartSnapBadge instead of
@@ -198,7 +244,13 @@ export class CropController {
 
   setFineAngle(deg: number): void {
     editState.update((s) => ({ ...s, rotation: { ...s.rotation, fine: deg } }));
-    if (this.cropper) this.cropper.rotateTo(editState.get().rotation.base + deg);
+    // The base rotation is already baked into the proxy image; Cropper only applies the straighten angle.
+    if (this.cropper) this.cropper.rotateTo(deg);
+  }
+
+  /** The straightened proxy's bounding box, in proxy pixels -- the space getData()/setData() work in. */
+  private frameSize(): { width: number; height: number } {
+    return rotatedBounds(this.proxyNaturalWidth, this.proxyNaturalHeight, editState.get().rotation.fine);
   }
 
   /** Rotates the base orientation by +/-90 and re-renders the proxy pre-rotated. */
@@ -231,9 +283,10 @@ export class CropController {
     const cy = c.y + c.height / 2;
 
     // newAspect is a *pixel* aspect ratio (width_px/height_px); normalized
-    // fractions only equal pixel ratios when the proxy image is square, so
-    // convert through the proxy's own pixel aspect ratio.
-    const imageAspect = this.proxyNaturalWidth && this.proxyNaturalHeight ? this.proxyNaturalWidth / this.proxyNaturalHeight : 1;
+    // fractions only equal pixel ratios when the crop frame is square, so
+    // convert through the (straightened) frame's own pixel aspect ratio.
+    const f = this.frameSize();
+    const imageAspect = f.width && f.height ? f.width / f.height : 1;
     const newFractionAspect = isNaN(newAspect) ? NaN : newAspect / imageAspect;
 
     let w = c.width;
@@ -308,22 +361,24 @@ export class CropController {
   private restoreFromState(rect?: CropRect): void {
     if (!this.cropper || !this.proxyNaturalWidth) return;
     const crop = rect ?? editState.get().crop;
+    const f = this.frameSize();
     this.cropper.setData({
-      x: crop.x * this.proxyNaturalWidth,
-      y: crop.y * this.proxyNaturalHeight,
-      width: crop.width * this.proxyNaturalWidth,
-      height: crop.height * this.proxyNaturalHeight,
+      x: crop.x * f.width,
+      y: crop.y * f.height,
+      width: crop.width * f.width,
+      height: crop.height * f.height,
     });
   }
 
   private onCropBoxChange(): void {
     if (!this.cropper || !this.proxyNaturalWidth || !this.proxyNaturalHeight) return;
     const data = this.cropper.getData();
+    const f = this.frameSize();
     const rect: CropRect = {
-      x: data.x / this.proxyNaturalWidth,
-      y: data.y / this.proxyNaturalHeight,
-      width: data.width / this.proxyNaturalWidth,
-      height: data.height / this.proxyNaturalHeight,
+      x: data.x / f.width,
+      y: data.y / f.height,
+      width: data.width / f.width,
+      height: data.height / f.height,
     };
     editState.update((s) => ({ ...s, crop: rect }));
   }

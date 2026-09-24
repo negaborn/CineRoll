@@ -1,6 +1,6 @@
 import JSZip from 'jszip';
 import type { BorderStyle, CropRect, LutChoice, SqueezeFactor, Strategy, TextPreset, WatermarkTarget } from './state';
-import { getDesqueezedPlaneSize, renderCroppedRegionFromOriginal } from './crop';
+import { getCropFrameSize, renderCroppedRegionFromOriginal } from './crop';
 import { Engine3D, buildToneFilterString, createGrainTile } from './compose';
 import { renderSlideBase, computeFontSizePx, computeGlowPx, drawWatermarkText, drawLogo, drawAppWatermark } from './render';
 
@@ -10,6 +10,8 @@ export interface ExportRequest {
   originalImg: HTMLImageElement;
   squeeze: SqueezeFactor;
   baseRotation: 0 | 90 | 180 | 270;
+  /** Straighten angle in degrees; the crop rect is relative to the frame straightened by it. */
+  fineRotation: number;
   crop: CropRect;
   strategy: Strategy;
   slides: number;
@@ -103,14 +105,14 @@ function computeTargetDimensions(req: ExportRequest, cropPxW: number, cropPxH: n
  * (download / zip / share) -- see packageAndDeliver().
  */
 export async function runExport(req: ExportRequest, onProgress: (msg: string) => void): Promise<ExportResult> {
-  const plane = getDesqueezedPlaneSize(req.originalImg, req.squeeze, req.baseRotation);
-  const cropPxW = req.crop.width * plane.width;
-  const cropPxH = req.crop.height * plane.height;
+  const frame = getCropFrameSize(req.originalImg, req.squeeze, req.baseRotation, req.fineRotation);
+  const cropPxW = req.crop.width * frame.width;
+  const cropPxH = req.crop.height * frame.height;
 
   const { targetW, mimeType, encQual } = computeTargetDimensions(req, cropPxW, cropPxH);
 
   await new Promise((r) => setTimeout(r, 50));
-  let mCvs: HTMLCanvasElement = renderCroppedRegionFromOriginal(req.originalImg, req.squeeze, req.baseRotation, req.crop, targetW);
+  let mCvs: HTMLCanvasElement = renderCroppedRegionFromOriginal(req.originalImg, req.squeeze, req.baseRotation, req.fineRotation, req.crop, targetW);
 
   // brightness/contrast/saturation + the kodak/fuji/cinematic CSS-emulated LUTs are baked into
   // the base composite via the same filterString the live preview uses (renderSlideBase below);

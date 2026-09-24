@@ -6,7 +6,7 @@
 // that haven't moved into EditState yet and so still read straight off the DOM.
 import UTIF from 'utif';
 import { editState, loadPresets, savePresets, installDebugHook, type EditState, type BorderStyle } from './state';
-import { CropController, getDesqueezedPlaneSize } from './crop';
+import { CropController, getCropFrameSize } from './crop';
 import { buildToneFilterString, createGrainTile, Engine3D } from './compose';
 import { renderSlideBase, computeFontSizePx, computeGlowPx, drawWatermarkText, drawLogo, drawAppWatermark } from './render';
 import { runExport, packageAndDeliver, type ExportRequest, type ExportQuality } from './export';
@@ -431,7 +431,8 @@ async function remountCropper() {
   if (!originalImg) return;
   mirrorFormatStateToEditState();
   isCropperReady = false;
-  await cropCtrl.mount(originalImg, parseInt(DOM.sSqueeze.value));
+  const mounted = await cropCtrl.mount(originalImg, parseInt(DOM.sSqueeze.value));
+  if (!mounted) return; // superseded by a newer rebuild or by leaving the Format tab
   isCropperReady = true;
   DOM.main.classList.remove('opacity-0'); DOM.main.classList.add('opacity-100');
 }
@@ -764,9 +765,9 @@ DOM.btnExport.addEventListener('click', async () => {
   if (!originalImg) return alert('크롭 영역을 다시 확인해주세요.');
 
   const exportState = editState.get();
-  const plane = getDesqueezedPlaneSize(originalImg, exportState.squeeze, exportState.rotation.base);
-  const cropPxW = exportState.crop.width * plane.width;
-  const cropPxH = exportState.crop.height * plane.height;
+  const frame = getCropFrameSize(originalImg, exportState.squeeze, exportState.rotation.base, exportState.rotation.fine);
+  const cropPxW = exportState.crop.width * frame.width;
+  const cropPxH = exportState.crop.height * frame.height;
   if (cropPxW && cropPxH) activeGlobalRatio = cropPxW / cropPxH;
 
   DOM.btnExport.classList.add('opacity-70', 'pointer-events-none'); showLoading('Rendering High-Res...');
@@ -779,6 +780,7 @@ DOM.btnExport.addEventListener('click', async () => {
       originalImg,
       squeeze: exportState.squeeze,
       baseRotation: exportState.rotation.base,
+      fineRotation: exportState.rotation.fine,
       crop: exportState.crop,
       strategy: currentStrategy as EditState['strategy'],
       slides: (currentStrategy === 'seamless' || currentStrategy === 'triptych') ? parseInt(DOM.sSlides.value) : 1,
