@@ -25,14 +25,12 @@ export function rotateRect90CW(r: CropRect): CropRect {
  */
 export async function buildProxyImage(original: HTMLImageElement, squeezePct: number, baseRotation: number): Promise<HTMLImageElement> {
   const sf = squeezePct / 100;
-  let tw = original.naturalWidth * sf;
-  let th = original.naturalHeight;
-  const maxW = 3500;
-  if (tw > maxW) {
-    const scale = maxW / tw;
-    th *= scale;
-    tw = maxW;
-  }
+  // Cap the longer side, not just the width: a tall portrait/scroll-shaped
+  // photo would otherwise produce a proxy far over mobile canvas limits.
+  const MAX_SIDE = 3500;
+  const scale = Math.min(1, MAX_SIDE / (original.naturalWidth * sf), MAX_SIDE / original.naturalHeight);
+  const tw = Math.round(original.naturalWidth * sf * scale);
+  const th = Math.round(original.naturalHeight * scale);
 
   const cvs = document.createElement('canvas');
   const rotated90 = baseRotation === 90 || baseRotation === 270;
@@ -67,10 +65,13 @@ export function getDesqueezedPlaneSize(original: HTMLImageElement, squeezePct: n
 }
 
 /**
- * Renders the full-resolution desqueezed+base-rotated source and extracts the
- * normalized crop region from it, scaled to targetWidth (height derived from
- * the crop's own aspect ratio). Used at export time, when no live Cropper
- * instance exists (Format tab is destroyed once the user navigates away).
+ * Renders the normalized crop region of the desqueezed+base-rotated source at
+ * targetWidth (height from the crop's own aspect), for export -- when no live
+ * Cropper exists. The desqueeze, rotation and crop are composed into a single
+ * transform and the original is drawn straight onto an output-sized canvas,
+ * so the only canvas allocated is the output itself: never the full
+ * desqueezed frame, which for a phone photo at 2x easily exceeds the
+ * ~16.7 MP per-canvas limit on iOS Safari.
  */
 export function renderCroppedRegionFromOriginal(
   original: HTMLImageElement,
@@ -81,29 +82,26 @@ export function renderCroppedRegionFromOriginal(
 ): HTMLCanvasElement {
   const sf = squeezePct / 100;
   const plane = getDesqueezedPlaneSize(original, squeezePct, baseRotation);
-
-  const full = document.createElement('canvas');
-  full.width = plane.width;
-  full.height = plane.height;
-  const fctx = full.getContext('2d')!;
-  fctx.save();
-  fctx.translate(full.width / 2, full.height / 2);
-  fctx.rotate((baseRotation * Math.PI) / 180);
-  fctx.drawImage(original, -(original.naturalWidth * sf) / 2, -original.naturalHeight / 2, original.naturalWidth * sf, original.naturalHeight);
-  fctx.restore();
-
   const sx = crop.x * plane.width;
   const sy = crop.y * plane.height;
   const sw = crop.width * plane.width;
   const sh = crop.height * plane.height;
-  const targetHeight = Math.max(1, Math.round(targetWidth * (sh / sw)));
 
   const out = document.createElement('canvas');
   out.width = Math.max(1, Math.round(targetWidth));
-  out.height = targetHeight;
-  out.getContext('2d')!.drawImage(full, sx, sy, sw, sh, 0, 0, out.width, out.height);
-  full.width = 0;
-  full.height = 0;
+  out.height = Math.max(1, Math.round(targetWidth * (sh / sw)));
+  const ctx = out.getContext('2d')!;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  // plane space -> output space
+  ctx.scale(out.width / sw, out.height / sh);
+  ctx.translate(-sx, -sy);
+  // original -> plane space (desqueeze, then rotate about the plane's center)
+  ctx.translate(plane.width / 2, plane.height / 2);
+  ctx.rotate((baseRotation * Math.PI) / 180);
+  const dw = original.naturalWidth * sf;
+  const dh = original.naturalHeight;
+  ctx.drawImage(original, -dw / 2, -dh / 2, dw, dh);
   return out;
 }
 

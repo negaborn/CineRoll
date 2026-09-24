@@ -45,3 +45,27 @@ test('export of a small crop from a 6000x4000 @ 2.0x photo stays under the iOS c
   expect(out[0]).toBe(3000);
   expect(peak, `peak canvas area during export (${peak} px)`).toBeLessThan(IOS_CANVAS_LIMIT);
 });
+
+test('uploading a very tall photo keeps the crop proxy under the iOS canvas limit', async ({ page, browser }) => {
+  await page.addInitScript(() => {
+    const w = window as unknown as { __maxCanvasArea: number };
+    w.__maxCanvasArea = 0;
+    for (const prop of ['width', 'height'] as const) {
+      const d = Object.getOwnPropertyDescriptor(HTMLCanvasElement.prototype, prop)!;
+      Object.defineProperty(HTMLCanvasElement.prototype, prop, {
+        configurable: true,
+        get: d.get,
+        set(v: number) {
+          d.set!.call(this, v);
+          w.__maxCanvasArea = Math.max(w.__maxCanvasArea, this.width * this.height);
+        },
+      });
+    }
+  });
+  await page.goto('/');
+  await page.setInputFiles('#upload-input', { name: 'tall.jpg', mimeType: 'image/jpeg', buffer: await createTestImageBuffer(browser, 3000, 12000) });
+  await page.waitForSelector('.cropper-container', { timeout: 20000 });
+  await page.waitForTimeout(500);
+  const peak = await page.evaluate(() => (window as unknown as { __maxCanvasArea: number }).__maxCanvasArea);
+  expect(peak, `peak canvas area while mounting the cropper (${peak} px)`).toBeLessThan(IOS_CANVAS_LIMIT);
+});

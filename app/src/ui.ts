@@ -315,7 +315,62 @@ DOM.upLogo.addEventListener('change', e => {
   reader.readAsDataURL(file);
 });
 
-function switchTab(target: string) {
+// --- Framing apply: leaving the Format tab always applies the current framing ---
+
+let currentTab = 'format';
+let switchSeq = 0;
+/** The latest in-flight Cropper (re)build, if any -- a capture must wait for it or it reads a stale/half-built Cropper. */
+let pendingMount: Promise<void> | null = null;
+/** Framing key at the last capture; null until something has been applied for the current photo. */
+let lastAppliedKey: string | null = null;
+
+function trackMount(p: Promise<void>): Promise<void> {
+  pendingMount = p;
+  p.finally(() => { if (pendingMount === p) pendingMount = null; });
+  return p;
+}
+
+const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+/** Everything that changes what the crop produces. Rounded so float drift from Cropper's setData/getData round-trip isn't mistaken for an edit. */
+function framingKey(): string {
+  const s = editState.get();
+  const r = (n: number) => Math.round(n * 1e4) / 1e4;
+  return JSON.stringify([r(s.crop.x), r(s.crop.y), r(s.crop.width), r(s.crop.height), s.rotation.base, s.rotation.fine, DOM.sSqueeze.value, currentStrategy, DOM.sRatio.value, DOM.sSlides.value]);
+}
+
+/** Snapshots the live Cropper's framing as the preview source. False if there is no valid crop to take. */
+function captureFraming(): boolean {
+  if (!cropCtrl.isReady || !isCropperReady) return false;
+  if (DOM.badge) DOM.badge.classList.add('opacity-0');
+  const cvs = cropCtrl.getCroppedCanvas({ maxWidth: 2560, maxHeight: 2560, fillColor: 'transparent', imageSmoothingEnabled: true, imageSmoothingQuality: 'high' });
+  if (!cvs || cvs.width === 0 || cvs.height === 0) { alert('크롭 영역을 다시 지정해주세요.'); return false; }
+  activeGlobalRatio = cvs.width / cvs.height;
+  baseProxyCropUrl = cvs.toDataURL('image/png');
+  cvs.width = 0; cvs.height = 0;
+  lastAppliedKey = framingKey();
+  return true;
+}
+
+function showPreview() {
+  DOM.previewArea.classList.remove('hidden'); DOM.zoomControls.classList.remove('hidden'); DOM.zoomControls.classList.add('flex');
+  DOM.btnBA.style.display = 'flex'; DOM.btnZen.style.display = 'flex';
+  applyZoom();
+}
+
+async function switchTab(target: string) {
+  const seq = ++switchSeq;
+  let reframed = false;
+  if (target !== 'format' && currentTab === 'format' && originalImg) {
+    if (pendingMount) await pendingMount;
+    if (seq !== switchSeq) return; // a newer tab click superseded this one while we waited
+    if (framingKey() !== lastAppliedKey) {
+      if (!captureFraming()) return; // stay on Format so the crop can be fixed
+      reframed = true;
+    }
+  }
+  currentTab = target;
+
   document.querySelectorAll<HTMLElement>('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === target));
   document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
   document.getElementById(`tab-${target}`)!.classList.remove('hidden');
@@ -323,14 +378,13 @@ function switchTab(target: string) {
   if (target === 'format') {
     DOM.previewArea.classList.add('hidden'); DOM.zoomControls.classList.add('hidden'); DOM.btnBA.style.display = 'none'; DOM.btnZen.style.display = 'none';
     DOM.main.classList.remove('hidden'); DOM.main.style.display = 'block'; void DOM.main.offsetWidth;
-    setTimeout(() => {
-      if (originalImg && !cropCtrl.isReady) { remountCropper(); }
-      else if (cropCtrl.isReady) { DOM.main.classList.add('opacity-100'); cropCtrl.resize(); }
-    }, 50);
+    if (originalImg && !cropCtrl.isReady) trackMount(delay(50).then(() => remountCropper()));
+    else if (cropCtrl.isReady) setTimeout(() => { DOM.main.classList.add('opacity-100'); cropCtrl.resize(); }, 50);
   } else {
     cropCtrl.destroy(); isCropperReady = false;
     DOM.main.classList.remove('opacity-100'); DOM.main.style.display = 'none';
-    if (proxyCropUrl) { DOM.previewArea.classList.remove('hidden'); DOM.zoomControls.classList.remove('hidden'); DOM.zoomControls.classList.add('flex'); DOM.btnBA.style.display = 'flex'; DOM.btnZen.style.display = 'flex'; applyZoom(); }
+    if (reframed) { showPreview(); ModuleColor.triggerEngine({ rebuild: true }); }
+    else if (proxyCropUrl) showPreview();
   }
 }
 
@@ -354,14 +408,14 @@ function resetFraming() {
   DOM.sAngle.value = '0'; DOM.inAngle.value = '0'; DOM.sSqueeze.value = '100';
   mirrorFormatStateToEditState();
   editState.update(s => ({ ...s, rotation: { base: 0, fine: 0 } }));
-  if (needsRebuild) { DOM.main.classList.remove('opacity-100'); DOM.main.classList.add('opacity-0'); setTimeout(() => remountCropper(), 300); }
+  if (needsRebuild) { DOM.main.classList.remove('opacity-100'); DOM.main.classList.add('opacity-0'); trackMount(delay(300).then(() => remountCropper())); }
   else if (cropCtrl.isReady) { cropCtrl.setFineAngle(0); cropCtrl.retarget(currentTargetAspect()); }
 }
 
 DOM.sSqueeze.addEventListener('change', () => {
   DOM.main.classList.remove('opacity-100');
   DOM.main.classList.add('opacity-0');
-  setTimeout(() => remountCropper(), 300);
+  trackMount(delay(300).then(() => remountCropper()));
 });
 
 DOM.sRatio.addEventListener('change', syncAspectToCropper); DOM.sSlides.addEventListener('change', syncAspectToCropper);
@@ -369,7 +423,7 @@ DOM.sRatio.addEventListener('change', syncAspectToCropper); DOM.sSlides.addEvent
 async function rotateBase(deg: 90) {
   if (!originalImg) return;
   DOM.main.classList.remove('opacity-100'); DOM.main.classList.add('opacity-0');
-  await cropCtrl.rotateBase(deg);
+  await trackMount(cropCtrl.rotateBase(deg));
   DOM.main.classList.remove('opacity-0'); DOM.main.classList.add('opacity-100');
 }
 
@@ -406,6 +460,7 @@ async function handleFile(file: File) {
 
   DOM.upText.innerText = 'Processing...'; if (DOM.sAngle) DOM.sAngle.value = '0'; if (DOM.inAngle) DOM.inAngle.value = '0';
   editState.update(s => ({ ...s, rotation: { base: 0, fine: 0 }, crop: { x: 0, y: 0, width: 0, height: 0 } }));
+  lastAppliedKey = null;
   try {
     if (file.name.match(/\.tiff?$/i)) {
       const arrayBuffer = await file.arrayBuffer(); const ifds = UTIF.decode(arrayBuffer); UTIF.decodeImage(arrayBuffer, ifds[0]);
@@ -418,15 +473,9 @@ async function handleFile(file: File) {
   } catch (_err) { alert('이미지 처리 오류.'); DOM.upText.innerText = 'Import Resource'; }
 }
 
+/** "Apply Crop" is simply leaving Format for Frame -- the tab switch does the applying. */
 function applyCropAndRender() {
-  if (!cropCtrl.isReady || !isCropperReady) return;
-  try {
-    if (DOM.badge) DOM.badge.classList.add('opacity-0');
-    const cvs = cropCtrl.getCroppedCanvas({ maxWidth: 2560, maxHeight: 2560, fillColor: 'transparent', imageSmoothingEnabled: true, imageSmoothingQuality: 'high' })!;
-    if (!cvs || cvs.width === 0 || cvs.height === 0) { alert('크롭 영역을 다시 지정해주세요.'); return; }
-    activeGlobalRatio = cvs.width / cvs.height; baseProxyCropUrl = cvs.toDataURL('image/png'); cvs.width = 0; cvs.height = 0;
-    ModuleColor.triggerEngine(true);
-  } catch (_err) { alert('오류가 발생했습니다.'); }
+  switchTab('frame');
 }
 
 function loadImage(url: string): Promise<HTMLImageElement> {
@@ -505,7 +554,19 @@ function redrawSlides() {
   });
 
   updateDragHitTargets(slides, isSingle, cssW, cssH, fontSizePx, uiLogoWidth);
+
+  // Canvas text, unlike DOM text, doesn't reflow when a web font arrives: if the
+  // caption's font isn't loaded yet, request it -- the 'loadingdone' listener
+  // below repaints once it lands.
+  if (txt) {
+    const spec = `${isBold ? 'bold ' : ''}${Math.max(1, fontSizePx)}px '${DOM.fontSel.value}'`;
+    if (!document.fonts.check(spec)) document.fonts.load(spec).catch(() => {});
+  }
 }
+
+// Repaint the canvas preview whenever any web font finishes loading (caption
+// font, or the app-watermark's Outfit), since canvas text never reflows itself.
+document.fonts.addEventListener('loadingdone', () => redrawSlides());
 
 /** Keeps the invisible drag hit-target overlays (for text/logo pointer interaction) in sync with what redrawSlides() just painted. */
 function updateDragHitTargets(slides: number, isSingle: boolean, cssW: number, cssH: number, fontSizePx: number, uiLogoWidth: number) {
@@ -592,7 +653,8 @@ const ModuleFrame = {
 };
 
 const ModuleColor = {
-  triggerEngine: function (isFirstLoad = false) {
+  /** Re-runs the tone pipeline on the applied framing. rebuild: also rebuild the preview's slide layout (framing/strategy changed). */
+  triggerEngine: function (opts: { rebuild?: boolean } = {}) {
     const lutSelect = document.getElementById('select-lut') as HTMLSelectElement | null;
     const lutVal = lutSelect ? lutSelect.value : 'none';
     const intensity = Number(el<HTMLInputElement>('slider-lut-intensity').value) / 100;
@@ -606,6 +668,18 @@ const ModuleColor = {
     } else {
       lutWrap.classList.add('opacity-50', 'pointer-events-none');
     }
+
+    if (!baseProxyCropUrl) { hideLoading(); return; } // nothing applied yet -- tone settings take effect on the first apply
+
+    const finish = async () => {
+      if (opts.rebuild) {
+        await ModuleFrame.build();
+        if (currentTab !== 'format') showPreview();
+      } else {
+        sourceImg = await loadImage(proxyCropUrl!);
+        redrawSlides();
+      }
+    };
 
     if (hasCustomLut || hlVal !== 0 || shVal !== 0) {
       showLoading('Rendering Core Tone...');
@@ -623,16 +697,13 @@ const ModuleColor = {
         const hlF = 1.0 + (hlVal / 100.0); const shF = 1.0 + (shVal / 100.0);
         const processedCanvas = await Engine3D.apply(cvs, intensity, hlF, shF, hasCustomLut);
         proxyCropUrl = processedCanvas.toDataURL('image/jpeg', 0.95);
-        setTimeout(async () => {
-          hideLoading();
-          if (isFirstLoad) { switchTab('frame'); await ModuleFrame.build(); } else { sourceImg = await loadImage(proxyCropUrl!); redrawSlides(); }
-        }, 50);
+        setTimeout(async () => { hideLoading(); await finish(); }, 50);
       }, 50);
       return;
     }
 
     proxyCropUrl = baseProxyCropUrl;
-    if (isFirstLoad) { switchTab('frame'); ModuleFrame.build(); } else { loadImage(proxyCropUrl!).then((img) => { sourceImg = img; redrawSlides(); }); }
+    finish();
   },
   updateCSSFilters: function () { redrawSlides(); },
 };
