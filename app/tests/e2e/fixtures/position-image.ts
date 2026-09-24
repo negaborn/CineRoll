@@ -135,6 +135,35 @@ export function planeToOriginal(u: number, v: number, baseRotation: number): [nu
   }
 }
 
+/**
+ * Like maxPositionError, but for a crop taken with a fine (straighten) angle.
+ * Crop fractions are relative to the rotated frame's bounding box (what
+ * Cropper.js crops within); samples falling outside the source are skipped.
+ */
+export function maxPositionErrorStraightened(img: SampledImage, crop: { x: number; y: number; width: number; height: number }, origW: number, origH: number, squeezePct: number, baseRotation: number, fineDeg: number): number {
+  const W0 = origW * (squeezePct / 100);
+  const H0 = origH;
+  const swapped = baseRotation === 90 || baseRotation === 270;
+  const pw = swapped ? H0 : W0;
+  const ph = swapped ? W0 : H0;
+  const t = (fineDeg * Math.PI) / 180;
+  const fw = pw * Math.abs(Math.cos(t)) + ph * Math.abs(Math.sin(t));
+  const fh = pw * Math.abs(Math.sin(t)) + ph * Math.abs(Math.cos(t));
+  const phi = ((baseRotation + fineDeg) * Math.PI) / 180;
+  let worst = 0;
+  for (const s of img.samples) {
+    const dx = (crop.x + s.a * crop.width) * fw - fw / 2;
+    const dy = (crop.y + s.b * crop.height) * fh - fh / 2;
+    const px = dx * Math.cos(phi) + dy * Math.sin(phi);
+    const py = -dx * Math.sin(phi) + dy * Math.cos(phi);
+    const u = px / W0 + 0.5;
+    const v = py / H0 + 0.5;
+    if (u < 0.02 || u > 0.98 || v < 0.02 || v > 0.98) continue;
+    worst = Math.max(worst, Math.abs(s.r / 255 - u), Math.abs(s.g / 255 - v));
+  }
+  return worst;
+}
+
 /** Max decoded-position error (0..1 units of the original image) over all samples. */
 export function maxPositionError(img: SampledImage, crop: { x: number; y: number; width: number; height: number }, baseRotation: number, displayTransform: (u: number, v: number) => [number, number] = (u, v) => [u, v]): number {
   let worst = 0;
