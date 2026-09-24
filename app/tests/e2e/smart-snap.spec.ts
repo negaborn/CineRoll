@@ -81,7 +81,8 @@ async function dragToRatio(page: Page, ratio: number) {
 
 test('dragging near 16:9 turns green mid-drag and snaps exactly on release (center kept, carried into export)', async ({ page, browser }) => {
   await setupFree(page, browser);
-  const { mid, after } = await dragToRatio(page, 1.745);
+  // ~1.3% short of 16:9: inside the ±2% window with margin for the handle's own offset from the box corner.
+  const { mid, after } = await dragToRatio(page, 1.755);
   expect(mid.green, 'green while dragging').toBe(true);
   expect(Math.abs(mid.box.ratio - 16 / 9) / (16 / 9), 'not yet snapped mid-drag').toBeGreaterThan(0.005);
   expect(Math.abs(after.box.ratio - 16 / 9) / (16 / 9), 'exact 16:9 after release').toBeLessThan(0.002);

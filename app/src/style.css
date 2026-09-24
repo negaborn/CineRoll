@@ -38,6 +38,10 @@ input[type="number"] { -moz-appearance: textfield; cursor: text;}
 
 .cropper-line, .cropper-point { background-color: #f43f5e !important; }
 .cropper-view-box { outline: 1px solid #f43f5e !important; }
+/* Smart snap: frame turns green near a target ratio (restored from v35-v40). */
+.cropper-container.cropper-snap .cropper-line, .cropper-container.cropper-snap .cropper-point { background-color: #22c55e !important; }
+.cropper-container.cropper-snap .cropper-view-box { outline: 2px solid #22c55e !important; outline-color: rgba(34, 197, 94, 0.9) !important; }
+.cropper-container.cropper-snap .cropper-center::before, .cropper-container.cropper-snap .cropper-center::after { background-color: #22c55e !important; }
 
 #preview-area { position: absolute; inset: 0; overflow: auto; user-select: none; -webkit-user-select: none; }
 #preview-area-inner { display: grid; place-items: center; min-width: 100%; min-height: 100%; padding: 2rem 1rem 8rem 1rem; transition: padding 0.3s ease; user-select: none; }

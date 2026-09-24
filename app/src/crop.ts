@@ -1,6 +1,7 @@
 import Cropper from 'cropperjs';
 import 'cropperjs/dist/cropper.css';
 import { editState, type CropRect } from './state';
+import { findSnapTarget, type SnapTarget } from './snap';
 
 export interface SmartSnapInfo {
   label: string | null;
@@ -217,6 +218,11 @@ export class CropController {
             this.onCropBoxChange();
             this.updateSmartSnapBadge();
           },
+          // Fires only on pointer release (never for programmatic setData/setCropBoxData).
+          cropend: () => {
+            if (stale()) return;
+            this.snapOnRelease();
+          },
         });
       });
     });
@@ -383,24 +389,57 @@ export class CropController {
     editState.update((s) => ({ ...s, crop: rect }));
   }
 
+  /** Smart snap only applies when no ratio is locked (Free mode). */
+  private isFreeRatio(): boolean {
+    return isNaN(this.computeTargetAspect());
+  }
+
+  /** The snap target the current crop box is within tolerance of (Free mode only). Display-px ratio == source-px ratio: Cropper scales uniformly. */
+  private currentSnapTarget(): SnapTarget | null {
+    if (!this.cropper || !this.isFreeRatio()) return null;
+    const d = this.cropper.getCropBoxData();
+    if (!d || !d.width || !d.height) return null;
+    return findSnapTarget(d.width / d.height);
+  }
+
+  /** Live feedback while dragging: green frame + label when near a target. Never moves the box. */
   private updateSmartSnapBadge(): void {
-    if (!this.options.onSmartSnap || !this.cropper) return;
-    const isFree = isNaN(this.cropper.options.aspectRatio);
-    if (!isFree) {
+    if (!this.cropper) return;
+    const target = this.currentSnapTarget();
+    this.container.querySelector('.cropper-container')?.classList.toggle('cropper-snap', !!target);
+    if (!this.options.onSmartSnap) return;
+    if (!target) {
       this.options.onSmartSnap({ label: null, box: null });
       return;
     }
     const d = this.cropper.getCropBoxData();
-    if (!d || d.width === 0 || d.height === 0) return;
-    const r = d.width / d.height;
-    let label: string | null = null;
-    if (r > 0.78 && r < 0.82) label = '4:5 Vertical IG';
-    else if (r > 0.98 && r < 1.02) label = '1:1 Square';
-    else if (r > 1.75 && r < 1.8) label = '16:9 Landscape';
-    else if (r > 0.65 && r < 0.68) label = '2:3 Vertical';
-    else if (r > 1.45 && r < 1.55) label = '3:2 Horizontal';
-    else if (r > 0.74 && r < 0.76) label = '3:4 Classic';
-    this.options.onSmartSnap({ label, box: label ? { top: d.top, left: d.left, width: d.width, height: d.height } : null });
+    this.options.onSmartSnap({ label: target.label, box: { top: d.top, left: d.left, width: d.width, height: d.height } });
+  }
+
+  /** On release: if the box is near a target, set it to that exact ratio, keeping its center and area where the frame allows. */
+  private snapOnRelease(): void {
+    const target = this.currentSnapTarget();
+    if (!this.cropper || !target) return;
+    const d = this.cropper.getCropBoxData();
+    const cd = this.cropper.getCanvasData();
+    const cont = this.cropper.getContainerData();
+    // The crop box must stay inside the (straightened) image canvas and the viewport.
+    const minL = Math.max(0, cd.left);
+    const minT = Math.max(0, cd.top);
+    const maxR = Math.min(cont.width, cd.left + cd.width);
+    const maxB = Math.min(cont.height, cd.top + cd.height);
+
+    const r = target.ratio;
+    const area = d.width * d.height;
+    let w = Math.sqrt(area * r);
+    let h = Math.sqrt(area / r);
+    if (w > maxR - minL) { w = maxR - minL; h = w / r; }
+    if (h > maxB - minT) { h = maxB - minT; w = h * r; }
+    const cx = d.left + d.width / 2;
+    const cy = d.top + d.height / 2;
+    const left = Math.min(Math.max(cx - w / 2, minL), maxR - w);
+    const top = Math.min(Math.max(cy - h / 2, minT), maxB - h);
+    this.cropper.setCropBoxData({ left, top, width: w, height: h });
   }
 
   /** Test-only: force the normalized crop rect and reflect it onto the live Cropper instance if mounted. */
