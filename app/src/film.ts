@@ -505,6 +505,21 @@ function halate(od: Uint8ClampedArray, lum: Float32Array, W: number, H: number, 
   }
 }
 
+/**
+ * Film "Intensity": blends the developed film over the undeveloped image
+ * (amount 1 = the film exactly as developed, 0 = no film). Drawn in place onto
+ * `developed` (base painted over it at 1 - amount), so no third canvas is needed.
+ */
+export function mixFilmInPlace(developed: HTMLCanvasElement, base: HTMLCanvasElement, amount: number): HTMLCanvasElement {
+  if (amount >= 1) return developed;
+  const x = developed.getContext('2d')!;
+  x.save();
+  x.globalAlpha = 1 - Math.max(0, amount);
+  x.drawImage(base, 0, 0);
+  x.restore();
+  return developed;
+}
+
 export interface ApplyFilmOptions {
   /** Pre-computed statistics (defaults to analyzeFilm on the source). */
   stats?: FilmStats;

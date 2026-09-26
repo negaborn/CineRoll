@@ -23,7 +23,6 @@ export interface SlideBaseParams {
   slidesCount: number;
   isPanned: boolean; // true for seamless/triptych (pans across `source`), false for single (draws it whole)
   source: SlideSource;
-  filterString: string;
   frame: FrameGeometry;
   grain: { tile: HTMLCanvasElement | null; amountPct: number };
 }
@@ -62,7 +61,6 @@ export function renderSlideBase(p: SlideBaseParams): DrawRect {
   }
 
   ctx.save();
-  ctx.filter = p.filterString;
   const sliceW = p.source.naturalWidth / p.slidesCount;
   if (p.isPanned) {
     ctx.drawImage(p.source.image, p.slideIndex * sliceW, 0, sliceW, p.source.naturalHeight, dx, dy, dw, dh);

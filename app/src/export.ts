@@ -1,8 +1,8 @@
 import JSZip from 'jszip';
 import type { BorderStyle, CropRect, LutChoice, SqueezeFactor, Strategy, TextPreset, WatermarkTarget } from './state';
 import { getCropFrameSize, renderCroppedRegionFromOriginal } from './crop';
-import { Engine3D, buildToneFilterString, createGrainTile } from './compose';
-import { applyFilm, FILM_IDS, type FilmId } from './film';
+import { Engine3D, createGrainTile, colorAdjustFromTone, isNeutralColor } from './compose';
+import { applyFilm, mixFilmInPlace, FILM_IDS, type FilmId } from './film';
 import { renderSlideBase, computeFontSizePx, computeGlowPx, drawWatermarkText, drawLogo, drawAppWatermark } from './render';
 
 export type ExportQuality = 'ig' | 'web' | 'png';
@@ -116,22 +116,25 @@ export async function runExport(req: ExportRequest, onProgress: (msg: string) =>
   let mCvs: HTMLCanvasElement = renderCroppedRegionFromOriginal(req.originalImg, req.squeeze, req.baseRotation, req.fineRotation, req.crop, targetW);
 
   // Same order as the live preview: film simulation (film.ts, on the whole
-  // composite so panorama slides share one development), then the WebGL
-  // custom-LUT/highlight-shadow pass, then brightness/contrast/saturation via the
-  // filterString in renderSlideBase below.
+  // composite so panorama slides share one development) mixed by Intensity,
+  // then the tone pass (custom LUT, highlights/shadows, brightness/contrast/
+  // saturation).
   if ((FILM_IDS as string[]).includes(req.tone.lut)) {
     onProgress('Developing Film...');
     const developed = await applyFilm(mCvs, req.tone.lut as FilmId, { onStrip: () => new Promise((r) => setTimeout(r, 0)) });
+    mixFilmInPlace(developed, mCvs, req.tone.lutIntensity / 100);
     mCvs.width = 0; mCvs.height = 0;
     mCvs = developed;
   }
-  if (req.tone.hasCustomLut || req.tone.highlights !== 0 || req.tone.shadows !== 0) {
+  const color = colorAdjustFromTone(req.tone);
+  if (req.tone.hasCustomLut || req.tone.highlights !== 0 || req.tone.shadows !== 0 || !isNeutralColor(color)) {
     const hlF = 1.0 + req.tone.highlights / 100.0;
     const shF = 1.0 + req.tone.shadows / 100.0;
-    mCvs = await Engine3D.apply(mCvs, req.tone.lutIntensity / 100, hlF, shF, req.tone.hasCustomLut);
+    const toned = await Engine3D.apply(mCvs, req.tone.lutIntensity / 100, hlF, shF, req.tone.hasCustomLut, color);
+    if (toned !== mCvs) { mCvs.width = 0; mCvs.height = 0; }
+    mCvs = toned;
   }
 
-  const filterString = buildToneFilterString(req.tone);
   const isSingle = req.strategy === 'single';
   const isPanned = req.strategy === 'seamless' || req.strategy === 'triptych';
   const eH = mCvs.height;
@@ -158,7 +161,7 @@ export async function runExport(req: ExportRequest, onProgress: (msg: string) =>
     renderSlideBase({
       ctx, width: finalSliceW, height: finalExportH, slideIndex: i, slidesCount: req.slides, isPanned,
       source: { image: mCvs, naturalWidth: mCvs.width, naturalHeight: mCvs.height },
-      filterString, frame: req.frame, grain: { tile: grainTile, amountPct: req.tone.grain },
+      frame: req.frame, grain: { tile: grainTile, amountPct: req.tone.grain },
     });
 
     const shouldShowTypo = isSingle || req.typo.target === 'all' || req.typo.target === i + 1;

@@ -1,5 +1,6 @@
 import Cropper from 'cropperjs';
 import 'cropperjs/dist/cropper.css';
+import { areaDownscale } from './resample';
 import { editState, type CropRect } from './state';
 import { findSnapTarget, type SnapTarget } from './snap';
 
@@ -125,7 +126,33 @@ export function renderCroppedRegionFromOriginal(
   ctx.rotate(((baseRotation + fineDeg) * Math.PI) / 180);
   const dw = original.naturalWidth * sf;
   const dh = original.naturalHeight;
-  ctx.drawImage(original, -dw / 2, -dh / 2, dw, dh);
+  const k = out.width / sw; // output px per frame px
+  if (k >= 0.9) {
+    ctx.drawImage(original, -dw / 2, -dh / 2, dw, dh);
+    return out;
+  }
+  // Big downscale (the preview's working image, small exports): browsers resample
+  // this very differently -- on WebKit the same photo came out ~2x "sharper"
+  // (aliased) than in the film prototypes, and the film passes amplify that. So
+  // first area-average just the source region we need (resample.ts, identical on
+  // every engine), then rotate/crop that at ~1:1.
+  const inv = ctx.getTransform().inverse();
+  let u0 = Infinity; let v0 = Infinity; let u1 = -Infinity; let v1 = -Infinity;
+  for (const [ox, oy] of [[0, 0], [out.width, 0], [0, out.height], [out.width, out.height]]) {
+    const p = inv.transformPoint(new DOMPoint(ox, oy));
+    const u = (p.x + dw / 2) / sf; // back to original pixels
+    const v = p.y + dh / 2;
+    u0 = Math.min(u0, u); u1 = Math.max(u1, u); v0 = Math.min(v0, v); v1 = Math.max(v1, v);
+  }
+  u0 = Math.max(0, Math.floor(u0) - 2); v0 = Math.max(0, Math.floor(v0) - 2);
+  u1 = Math.min(original.naturalWidth, Math.ceil(u1) + 2); v1 = Math.min(original.naturalHeight, Math.ceil(v1) + 2);
+  if (u1 <= u0 || v1 <= v0) return out; // crop lies entirely outside the photo
+  // Reduce only (a desqueeze stretch beyond 1:1 is left to the final draw).
+  const pw = Math.max(1, Math.round((u1 - u0) * Math.min(1, sf * k)));
+  const ph = Math.max(1, Math.round((v1 - v0) * k));
+  const pre = areaDownscale(original, u0, v0, u1 - u0, v1 - v0, pw, ph);
+  ctx.drawImage(pre, -dw / 2 + u0 * sf, -dh / 2 + v0, (u1 - u0) * sf, v1 - v0);
+  pre.width = 0; pre.height = 0;
   return out;
 }
 

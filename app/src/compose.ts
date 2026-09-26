@@ -1,18 +1,49 @@
 
-export interface ToneFilterInput {
+/** Brightness / contrast / saturation as factors (1 = unchanged), CSS filter-function semantics. */
+export interface ColorAdjust {
   brightness: number;
   contrast: number;
   saturation: number;
 }
 
+export const NEUTRAL_COLOR: ColorAdjust = { brightness: 1, contrast: 1, saturation: 1 };
+
+export function colorAdjustFromTone(tone: { brightness: number; contrast: number; saturation: number }): ColorAdjust {
+  return { brightness: tone.brightness / 100, contrast: tone.contrast / 100, saturation: tone.saturation / 100 };
+}
+
+export const isNeutralColor = (c: ColorAdjust) => c.brightness === 1 && c.contrast === 1 && c.saturation === 1;
+
 /**
- * CSS filter string for brightness/contrast/saturation, shared by the preview
- * canvas and export. (Looks -- film simulations, custom .cube LUTs -- are
- * pixel passes that run before this: film.ts and Engine3D.)
+ * CPU version of the tone pass (no WebGL available): highlights/shadows and
+ * brightness/contrast/saturation with the shader's exact formulas. (A custom
+ * .cube LUT needs WebGL and is skipped here.)
  */
-export function buildToneFilterString(tone: ToneFilterInput): string {
-  if (tone.brightness === 100 && tone.contrast === 100 && tone.saturation === 100) return 'none';
-  return `brightness(${tone.brightness}%) contrast(${tone.contrast}%) saturate(${tone.saturation}%)`;
+function toneCpu(src: HTMLCanvasElement, hl: number, sh: number, c: ColorAdjust): HTMLCanvasElement {
+  const out = document.createElement('canvas');
+  out.width = src.width; out.height = src.height;
+  const x = out.getContext('2d')!;
+  x.drawImage(src, 0, 0);
+  const id = x.getImageData(0, 0, out.width, out.height);
+  const d = id.data;
+  const cl = (v: number) => Math.min(1, Math.max(0, v));
+  const s = c.saturation;
+  for (let i = 0; i < d.length; i += 4) {
+    let r = d[i] / 255; let g = d[i + 1] / 255; let b = d[i + 2] / 255;
+    const lum = r * 0.299 + g * 0.587 + b * 0.114;
+    const sm = Math.pow(cl(1 - lum / 0.5), 1.5);
+    const hm = Math.pow(cl((lum - 0.5) / 0.5), 1.5);
+    const f = (1 + (sh - 1) * sm) * (1 + (hl - 1) * hm);
+    r = cl(r * f); g = cl(g * f); b = cl(b * f);
+    r = cl(r * c.brightness); g = cl(g * c.brightness); b = cl(b * c.brightness);
+    r = cl((r - 0.5) * c.contrast + 0.5); g = cl((g - 0.5) * c.contrast + 0.5); b = cl((b - 0.5) * c.contrast + 0.5);
+    const R = (0.213 + 0.787 * s) * r + (0.715 - 0.715 * s) * g + (0.072 - 0.072 * s) * b;
+    const G = (0.213 - 0.213 * s) * r + (0.715 + 0.285 * s) * g + (0.072 - 0.072 * s) * b;
+    const B = (0.213 - 0.213 * s) * r + (0.715 - 0.715 * s) * g + (0.072 + 0.928 * s) * b;
+    d[i] = cl(R) * 255; d[i + 1] = cl(G) * 255; d[i + 2] = cl(B) * 255;
+  }
+  x.putImageData(id, 0, 0);
+  return out;
 }
 
 /** A tileable black/white noise canvas used as a soft-light grain overlay. */
@@ -95,17 +126,22 @@ export const Engine3D = {
     this.lutData = { size, data };
   },
 
-  apply: async function (sourceCanvas: HTMLCanvasElement, intensity: number, hl: number, sh: number, hasCustomLut: boolean): Promise<HTMLCanvasElement> {
+  /**
+   * The tone pass: optional custom 3D LUT (mixed by intensity), highlights /
+   * shadows, then brightness / contrast / saturation. Pixel maths rather than
+   * the canvas ctx.filter, which WebKit (iPhone Safari) ignores.
+   */
+  apply: async function (sourceCanvas: HTMLCanvasElement, intensity: number, hl: number, sh: number, hasCustomLut: boolean, color: ColorAdjust = NEUTRAL_COLOR): Promise<HTMLCanvasElement> {
     if (!this.gl) {
       this.gl = this.canvas.getContext('webgl2', { preserveDrawingBuffer: true });
       this.initIdentityLut();
     }
     const gl = this.gl;
-    if (!gl) return sourceCanvas;
+    if (!gl) return toneCpu(sourceCanvas, hl, sh, color);
 
     if (!this.program) {
       const vsSource = `#version 300 es\n in vec2 a_position; out vec2 v_texCoord; void main() { gl_Position = vec4(a_position, 0.0, 1.0); v_texCoord = vec2((a_position.x + 1.0) / 2.0, 1.0 - (a_position.y + 1.0) / 2.0); }`;
-      const fsSource = `#version 300 es\n precision highp float; precision highp sampler3D; in vec2 v_texCoord; uniform sampler2D u_image; uniform sampler3D u_lut; uniform float u_intensity; uniform float u_hl; uniform float u_sh; uniform int u_hasLut; out vec4 outColor; float getLum(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); } void main() { vec4 texColor = texture(u_image, v_texCoord); vec3 color = texColor.rgb; float lum = getLum(color); float shadowMask = pow(clamp(1.0 - (lum / 0.5), 0.0, 1.0), 1.5); float hlMask = pow(clamp((lum - 0.5) / 0.5, 0.0, 1.0), 1.5); color *= 1.0 + (u_sh - 1.0) * shadowMask; color *= 1.0 + (u_hl - 1.0) * hlMask; color = clamp(color, 0.0, 1.0); vec3 finalColor = color; if (u_hasLut == 1) { vec3 lutColor = texture(u_lut, color).rgb; finalColor = mix(color, lutColor, u_intensity); } outColor = vec4(finalColor, texColor.a); }`;
+      const fsSource = `#version 300 es\n precision highp float; precision highp sampler3D; in vec2 v_texCoord; uniform sampler2D u_image; uniform sampler3D u_lut; uniform float u_intensity; uniform float u_hl; uniform float u_sh; uniform int u_hasLut; uniform float u_br; uniform float u_co; uniform float u_sa; out vec4 outColor; float getLum(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); } void main() { vec4 texColor = texture(u_image, v_texCoord); vec3 color = texColor.rgb; float lum = getLum(color); float shadowMask = pow(clamp(1.0 - (lum / 0.5), 0.0, 1.0), 1.5); float hlMask = pow(clamp((lum - 0.5) / 0.5, 0.0, 1.0), 1.5); color *= 1.0 + (u_sh - 1.0) * shadowMask; color *= 1.0 + (u_hl - 1.0) * hlMask; color = clamp(color, 0.0, 1.0); vec3 finalColor = color; if (u_hasLut == 1) { vec3 lutColor = texture(u_lut, color).rgb; finalColor = mix(color, lutColor, u_intensity); } vec3 c = clamp(finalColor * u_br, 0.0, 1.0); c = clamp((c - 0.5) * u_co + 0.5, 0.0, 1.0); float s = u_sa; c = clamp(vec3(dot(c, vec3(0.213 + 0.787 * s, 0.715 - 0.715 * s, 0.072 - 0.072 * s)), dot(c, vec3(0.213 - 0.213 * s, 0.715 + 0.285 * s, 0.072 - 0.072 * s)), dot(c, vec3(0.213 - 0.213 * s, 0.715 - 0.715 * s, 0.072 + 0.928 * s))), 0.0, 1.0); outColor = vec4(c, texColor.a); }`;
       const createShader = (type: number, source: string) => {
         const s = gl.createShader(type)!;
         gl.shaderSource(s, source);
@@ -143,6 +179,9 @@ export const Engine3D = {
     gl.uniform1f(gl.getUniformLocation(this.program, 'u_hl'), hl);
     gl.uniform1f(gl.getUniformLocation(this.program, 'u_sh'), sh);
     gl.uniform1i(gl.getUniformLocation(this.program, 'u_hasLut'), hasCustomLut ? 1 : 0);
+    gl.uniform1f(gl.getUniformLocation(this.program, 'u_br'), color.brightness);
+    gl.uniform1f(gl.getUniformLocation(this.program, 'u_co'), color.contrast);
+    gl.uniform1f(gl.getUniformLocation(this.program, 'u_sa'), color.saturation);
 
     const isHuge = sourceCanvas.width > 4096 || sourceCanvas.height > 4096;
 

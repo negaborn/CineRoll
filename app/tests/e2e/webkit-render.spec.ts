@@ -40,7 +40,7 @@ async function startFullFrame(page: Page, buf: Buffer) {
   await page.waitForTimeout(500);
 }
 
-test('the preview working image is downscaled as smoothly as a plain drawImage (the prototypes\' path)', async ({ page, browserName }) => {
+test('the preview working image is an engine-independent area-average of the photo (no WebKit aliasing)', async ({ page, browserName }) => {
   test.setTimeout(180_000);
   await page.goto('/');
   const photo = await detailedPhoto(page);
@@ -48,14 +48,50 @@ test('the preview working image is downscaled as smoothly as a plain drawImage (
   const r = await page.evaluate(async (b64) => {
     const src = (window.__CINEROLL_DEBUG__ as unknown as { preview(): { source: HTMLCanvasElement } }).preview().source;
     const W = src.width; const H = src.height;
+    // Independent reference: straightforward box filter over the full-resolution pixels.
     const img = new Image(); img.src = `data:image/jpeg;base64,${b64}`; await img.decode();
-    const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d')!; x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high'; x.drawImage(img, 0, 0, W, H);
-    const tex = (p: Uint8ClampedArray) => { let hp = 0; let n = 0; for (let i = 0; i < p.length - 4; i += 4) { if ((i / 4) % W === W - 1) continue; hp += Math.abs(p[i + 1] - p[i + 5]); n++; } return hp / n; };
-    return { app: tex(src.getContext('2d')!.getImageData(0, 0, W, H).data), plain: tex(x.getImageData(0, 0, W, H).data) };
+    const full = document.createElement('canvas'); full.width = img.naturalWidth; full.height = img.naturalHeight;
+    full.getContext('2d')!.drawImage(img, 0, 0);
+    const fd = full.getContext('2d')!.getImageData(0, 0, full.width, full.height).data;
+    const sx = full.width / W; const sy = full.height / H;
+    const ref = new Float32Array(W * H);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const a0 = x * sx; const a1 = (x + 1) * sx; const b0 = y * sy; const b1 = (y + 1) * sy; let acc = 0; let wsum = 0;
+      for (let v = Math.floor(b0); v < Math.min(b1, full.height); v++) { const wy = Math.min(b1, v + 1) - Math.max(b0, v); for (let u = Math.floor(a0); u < Math.min(a1, full.width); u++) { const wx = Math.min(a1, u + 1) - Math.max(a0, u); acc += fd[(v * full.width + u) * 4 + 1] * wx * wy; wsum += wx * wy; } }
+      ref[y * W + x] = acc / wsum;
+    }
+    const a = src.getContext('2d')!.getImageData(0, 0, W, H).data;
+    let diff = 0; let ta = 0; let tr = 0;
+    for (let i = 0; i < W * H; i++) { diff += Math.abs(a[i * 4 + 1] - ref[i]); if (i % W < W - 1) { ta += Math.abs(a[i * 4 + 1] - a[i * 4 + 5]); tr += Math.abs(ref[i] - ref[i + 1]); } }
+    return { meanAbs: diff / (W * H), app: ta / (W * H), ref: tr / (W * H) };
   }, photo.toString('base64'));
-  console.log(browserName, 'texture app/plain', r.app.toFixed(2), r.plain.toFixed(2));
-  expect(r.app / r.plain, 'no extra aliasing in the film input').toBeLessThan(1.1);
-  expect(r.app / r.plain).toBeGreaterThan(0.9);
+  console.log(browserName, 'area-average reference: meanAbs', r.meanAbs.toFixed(2), 'texture app/ref', r.app.toFixed(2), r.ref.toFixed(2));
+  expect(r.meanAbs, 'matches an exact box filter').toBeLessThan(1);
+  expect(r.app / r.ref, 'no extra aliasing').toBeLessThan(1.05);
+  expect(r.app / r.ref).toBeGreaterThan(0.95);
+});
+
+test('the on-screen preview is reduced without aliasing (canvas drawImage is coarse on WebKit)', async ({ page, browserName }) => {
+  test.setTimeout(180_000);
+  await page.goto('/');
+  await startFullFrame(page, await detailedPhoto(page));
+  const r = await page.evaluate(() => {
+    const cv = document.querySelector('.preview-slide-canvas') as HTMLCanvasElement;
+    const src = (window.__CINEROLL_DEBUG__ as unknown as { preview(): { source: HTMLCanvasElement } }).preview().source;
+    const W = cv.width; const H = cv.height;
+    // Reference: box-average of the working image to the canvas size (same geometry: single, no margin).
+    const sd = src.getContext('2d')!.getImageData(0, 0, src.width, src.height).data;
+    const sx = src.width / W; const sy = src.height / H; let diff = 0; let n = 0;
+    const d = cv.getContext('2d')!.getImageData(0, 0, W, H).data;
+    for (let y = 2; y < H - 2; y += 3) for (let x = 2; x < W - 2; x += 3) {
+      let acc = 0; let ws = 0; const a0 = x * sx; const a1 = (x + 1) * sx; const b0 = y * sy; const b1 = (y + 1) * sy;
+      for (let v = Math.floor(b0); v < b1; v++) for (let u = Math.floor(a0); u < a1; u++) { const w = (Math.min(b1, v + 1) - Math.max(b0, v)) * (Math.min(a1, u + 1) - Math.max(a0, u)); acc += sd[(v * src.width + u) * 4 + 1] * w; ws += w; }
+      diff += Math.abs(d[(y * W + x) * 4 + 1] - acc / ws); n++;
+    }
+    return { canvas: [W, H], meanAbs: diff / n };
+  });
+  console.log(browserName, 'display vs box-average', JSON.stringify(r));
+  expect(r.meanAbs, 'display close to an ideal reduction').toBeLessThan(6);
 });
 
 test('Color tab brightness / contrast / saturation change the preview and the export', async ({ page }) => {

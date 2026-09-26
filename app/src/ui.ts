@@ -9,8 +9,8 @@
 import UTIF from 'utif';
 import { editState, patchGroup, loadPresets, savePresets, installDebugHook, type EditState, type TextPresetRecord } from './state';
 import { CropController, getCropFrameSize, renderCroppedRegionFromOriginal } from './crop';
-import { applyFilm, analyzeFilm, FILM_IDS, FILM_SPECS, newsprintToneCurve, NEWSPRINT_CURVE_POINTS, type FilmId } from './film';
-import { buildToneFilterString, createGrainTile, Engine3D } from './compose';
+import { applyFilm, analyzeFilm, mixFilmInPlace, FILM_IDS, FILM_SPECS, newsprintToneCurve, NEWSPRINT_CURVE_POINTS, type FilmId } from './film';
+import { createGrainTile, Engine3D, colorAdjustFromTone, isNeutralColor } from './compose';
 import { renderSlideBase, computeFontSizePx, computeGlowPx, drawWatermarkText, drawLogo, drawAppWatermark } from './render';
 import { runExport, packageAndDeliver, type ExportRequest, type ExportQuality } from './export';
 
@@ -96,7 +96,7 @@ installDebugHook((rect) => cropCtrl.setCropForTest(rect), {
   preview: () => {
     const lut = S().tone.lut;
     const filmReady = !isFilm(lut) || (!toneRunning && !!filmCache && filmCache.film === lut && filmCache.base === baseCanvas && previewSource !== null);
-    return { w: baseCanvas?.width ?? 0, h: baseCanvas?.height ?? 0, filmReady, filmRuns };
+    return { w: baseCanvas?.width ?? 0, h: baseCanvas?.height ?? 0, filmReady, filmRuns, source: previewSource };
   },
 });
 
@@ -129,9 +129,9 @@ function syncControls(s: EditState) {
   setVal(DOM.sLut, s.tone.lut);
   setVal(DOM.sLutIntensity, String(s.tone.lutIntensity));
   DOM.valLutIntensity.innerText = `${s.tone.lutIntensity}%`;
-  // Intensity mixes a custom .cube LUT; the films use their confirmed parameters as is.
-  DOM.lutWrap.classList.toggle('opacity-50', s.tone.lut !== 'custom');
-  DOM.lutWrap.classList.toggle('pointer-events-none', s.tone.lut !== 'custom');
+  // Intensity: how much of the film / custom LUT is mixed in (100% = as developed).
+  DOM.lutWrap.classList.toggle('opacity-50', s.tone.lut === 'none');
+  DOM.lutWrap.classList.toggle('pointer-events-none', s.tone.lut === 'none');
   setVal(DOM.sHl, String(s.tone.highlights)); setVal(DOM.inHl, String(s.tone.highlights));
   setVal(DOM.sSh, String(s.tone.shadows)); setVal(DOM.inSh, String(s.tone.shadows));
   setVal(DOM.sBr, String(s.tone.brightness)); setVal(DOM.inBr, String(s.tone.brightness));
@@ -165,7 +165,8 @@ function syncControls(s: EditState) {
 /** Inputs of the WebGL tone pass (custom .cube LUT and highlight/shadow); CSS-only tone changes just redraw. */
 function toneEngineKey(s: EditState): string {
   const custom = s.tone.lut === 'custom' && !!Engine3D.lutData;
-  return JSON.stringify([isFilm(s.tone.lut) ? s.tone.lut : null, custom, custom ? s.tone.lutIntensity : null, s.tone.highlights, s.tone.shadows, s.tone.customLutRev]);
+  const film = isFilm(s.tone.lut) ? s.tone.lut : null;
+  return JSON.stringify([film, custom, custom || film ? s.tone.lutIntensity : null, s.tone.highlights, s.tone.shadows, s.tone.brightness, s.tone.contrast, s.tone.saturation, s.tone.customLutRev]);
 }
 
 function react(s: EditState, prev: EditState) {
@@ -712,7 +713,6 @@ function redrawSlides() {
   const s = S();
   const slides = slideCount(s);
   const isSingle = s.strategy === 'single';
-  const filterString = buildToneFilterString(s.tone);
   const dpr = window.devicePixelRatio || 1;
 
   const cssH = pW.clientHeight;
@@ -733,7 +733,7 @@ function redrawSlides() {
     renderSlideBase({
       ctx, width: cssW, height: cssH, slideIndex: i, slidesCount: slides, isPanned: isPannedStrategy(s),
       source: { image: previewSource!, naturalWidth: previewSource!.width, naturalHeight: previewSource!.height },
-      filterString, frame, grain: { tile: grainTile, amountPct: s.tone.grain },
+      frame, grain: { tile: grainTile, amountPct: s.tone.grain },
     });
 
     const shouldShow = isSingle || s.typo.target === 'all' || s.typo.target === i + 1;
@@ -932,14 +932,25 @@ async function tonePass() {
       throw e;
     }
   }
+  if (!baseCanvas) return; // released (new photo) while the film developed
+  // Film Intensity: mix onto a copy -- the cached film must stay as developed.
+  if (isFilm(s.tone.lut) && s.tone.lutIntensity < 100) {
+    const mixed = document.createElement('canvas');
+    mixed.width = src.width; mixed.height = src.height;
+    mixed.getContext('2d')!.drawImage(src, 0, 0);
+    src = mixFilmInPlace(mixed, baseCanvas, s.tone.lutIntensity / 100);
+  }
   const hasCustomLut = s.tone.lut === 'custom' && !!Engine3D.lutData;
-  const needsGl = hasCustomLut || s.tone.highlights !== 0 || s.tone.shadows !== 0;
+  const color = colorAdjustFromTone(s.tone);
+  const needsGl = hasCustomLut || s.tone.highlights !== 0 || s.tone.shadows !== 0 || !isNeutralColor(color);
   const next = needsGl
-    ? await Engine3D.apply(src, s.tone.lutIntensity / 100, 1 + s.tone.highlights / 100, 1 + s.tone.shadows / 100, hasCustomLut)
+    ? await Engine3D.apply(src, s.tone.lutIntensity / 100, 1 + s.tone.highlights / 100, 1 + s.tone.shadows / 100, hasCustomLut, color)
     : src;
+  const keep = (c: HTMLCanvasElement | null) => c === baseCanvas || c === filmCache?.out || c === next;
+  if (src !== next && !keep(src)) { src.width = 0; src.height = 0; } // intermediate film mix
   if (!baseCanvas) return; // released (new photo) while the pass ran
-  // Free the previous WebGL output (never the base or the cached film).
-  if (previewSource && previewSource !== baseCanvas && previewSource !== filmCache?.out && previewSource !== next) { previewSource.width = 0; previewSource.height = 0; }
+  // Free the previous output (never the base or the cached film).
+  if (previewSource && !keep(previewSource)) { previewSource.width = 0; previewSource.height = 0; }
   previewSource = next;
   if (rebuildRequested) {
     rebuildRequested = false;

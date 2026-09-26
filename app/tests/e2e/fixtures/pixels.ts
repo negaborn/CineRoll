@@ -42,10 +42,11 @@ export async function previewStats(page: Page, index = 0, region: Region = [0, 0
 
 export async function exportStats(page: Page, index = 0, region: Region = [0, 0, 1, 1]): Promise<Stats> {
   return page.evaluate(`(async () => {
+    // Decode the exported file itself: WebKit draws a large PNG <img> as black.
     const img = document.querySelectorAll('.export-img-item')[${index}];
-    await img.decode();
-    const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
-    const x = c.getContext('2d'); x.drawImage(img, 0, 0);
+    const bmp = await createImageBitmap(await (await fetch(img.src)).blob());
+    const c = document.createElement('canvas'); c.width = bmp.width; c.height = bmp.height;
+    const x = c.getContext('2d'); x.drawImage(bmp, 0, 0);
     return (${STATS})(x.getImageData(0, 0, c.width, c.height).data, c.width, c.height, ${region.join(',')});
   })()`) as Promise<Stats>;
 }
