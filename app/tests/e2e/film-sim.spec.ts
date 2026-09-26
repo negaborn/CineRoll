@@ -22,6 +22,36 @@ const REFS: { film: FilmId; file: string; w: number; h: number; dpr: number; pro
 ];
 
 /**
+ * Classic Pan tone curve as changed on 2026-09-26 (real backlit portraits clipped the
+ * sky and left face shadows unlifted): the midtone gain now runs BEFORE the shoulder,
+ * which then rolls the gained highlights smoothly into 1.0 instead of the gain pushing
+ * them past it; the texture-based shadow lift reaches up to 0.45 (was 0.32). Shadows
+ * and midtones up to the shoulder are unchanged. Written in the prototype's own style.
+ */
+const CLASSIC_CURVE_V2 = `  function toneCurve(v, strength, shadowLift){
+    const toeLen = 0.32, shoulderLen = 0.22, liftEnd = 0.45;
+    let out;
+    if(strength<=0){ out = v; }
+    else {
+      const G = 1+0.35*strength;
+      if(v < toeLen){ out = Math.pow(v/toeLen, 1-0.35*strength)*toeLen; out = (out-0.5)*G+0.5; }
+      else {
+        const g = (v-0.5)*G+0.5;
+        if(g > 1-shoulderLen){
+          const t = (g-(1-shoulderLen))/((0.5+0.5*G)-(1-shoulderLen));
+          out = (1-shoulderLen) + (1-Math.pow(1-t, 1.8+strength*0.9))*shoulderLen;
+        } else { out = g; }
+      }
+    }
+    if(shadowLift>0 && v<liftEnd){
+      const fade = Math.pow(1 - v/liftEnd, 1.4);
+      out += shadowLift*0.22*fade;
+    }
+    return Math.min(1, Math.max(0, out));
+  }
+`;
+
+/**
  * A deterministic photo-like test scene: sky gradient, flat deep-blue field,
  * textured shadow, foliage, skin, saturated warm/cool swatches, fine texture,
  * a bright light source (halation) and a smooth gray ramp (banding).
@@ -75,10 +105,20 @@ test.describe('fidelity: the port reproduces each prototype render()', () => {
         await page.goto('/');
         expect(await debugFilm(page), 'film engine exposed to tests').toBe('object');
         const png = await makeScene(page, ref.w, ref.h);
-        await page.evaluate((file) => new Promise<void>((res) => {
-          const f = document.createElement('iframe'); f.id = 'ref'; f.style.cssText = 'width:1200px;height:900px'; f.src = `/reference/film-sim/${file}`;
-          f.onload = () => res(); document.body.appendChild(f);
-        }), ref.file);
+        await page.evaluate(({ file, patch }) => new Promise<void>((res, rej) => {
+          const f = document.createElement('iframe'); f.id = 'ref'; f.style.cssText = 'width:1200px;height:900px';
+          f.onload = () => res();
+          if (!patch) { f.src = `/reference/film-sim/${file}`; document.body.appendChild(f); return; }
+          // Classic Pan: the prototype with ONLY its toneCurve() replaced by the agreed change
+          // (gain before the shoulder; shadow lift up to 0.45) -- every other stage must still match.
+          fetch(`/reference/film-sim/${file}`).then((r) => r.text()).then((html) => {
+            const start = html.indexOf('  function toneCurve(v, strength, shadowLift){');
+            const end = html.indexOf('\n  }\n', start) + 5;
+            if (start < 0 || end < 5) return rej(new Error('toneCurve not found in prototype'));
+            f.srcdoc = html.slice(0, start) + patch + html.slice(end);
+            document.body.appendChild(f);
+          });
+        }), { file: ref.file, patch: ref.film === 'classic-pan-400' ? CLASSIC_CURVE_V2 : null });
         const frame = page.frameLocator('#ref');
         await frame.locator('#fileInput').setInputFiles({ name: 'scene.png', mimeType: 'image/png', buffer: png });
         await expect(frame.locator('#uploadHint')).toContainText('scene.png');
@@ -123,6 +163,33 @@ test.describe('guarded details', () => {
     expect(specs['provia-100f']).toMatchObject({ contrast: 0.62, saturation: 0.58, warmPriority: 0.18, localContrast: 0.52 });
     expect(specs['classic-pan-400']).toMatchObject({ redWeight: 0.74, contrast: 0.55, grain: 0.19, halation: 0.10, exposureShift: 0 });
     expect(specs['newsprint-400']).toMatchObject({ redWeight: 0.65, contrast: 0.70, grain: 0.24, halation: 0.08, localContrast: 0.38, exposureShift: 0 });
+  });
+
+  test('Classic Pan curve (2026-09-26 change): highlights roll off without clipping, shadows/midtones unchanged, lift reaches 0.45', async ({ page }) => {
+    await page.goto('/');
+    const r = await page.evaluate(() => {
+      const f = (window.__CINEROLL_DEBUG__ as unknown as { film: { classicToneCurve(v: number, s: number, l: number): number } }).film;
+      // The prototype's original curve, for the unchanged range.
+      const orig = (v: number, s: number, l: number) => { const toe = 0.32; const sh = 0.22; let o: number; if (v < toe) o = Math.pow(v / toe, 1 - 0.35 * s) * toe; else if (v > 1 - sh) { const t = (v - (1 - sh)) / sh; o = (1 - sh) + (1 - Math.pow(1 - t, 1.8 + s * 0.9)) * sh; } else o = v; o = (o - 0.5) * (1 + 0.35 * s) + 0.5; if (l > 0 && v < toe) o += l * 0.22 * Math.pow(1 - v / toe, 1.4); return Math.min(1, Math.max(0, o)); };
+      let unchanged = 0; for (let v = 0; v <= 0.73; v += 0.005) unchanged = Math.max(unchanged, Math.abs(f.classicToneCurve(v, 0.55, 0) - orig(v, 0.55, 0)));
+      let monotonic = true; let prev = -1; for (let v = 0.7; v <= 1.0001; v += 0.005) { const o = f.classicToneCurve(Math.min(1, v), 0.55, 0); if (o <= prev) monotonic = false; prev = o; }
+      return { unchanged, monotonic, at90: f.classicToneCurve(0.9, 0.55, 0), at97: f.classicToneCurve(0.97, 0.55, 0), at100: f.classicToneCurve(1, 0.55, 0),
+        lift40: f.classicToneCurve(0.4, 0.55, 0.5) - f.classicToneCurve(0.4, 0.55, 0), lift46: f.classicToneCurve(0.46, 0.55, 0.5) - f.classicToneCurve(0.46, 0.55, 0) };
+    });
+    expect(r.unchanged, 'shadows/midtones up to the shoulder unchanged').toBeLessThan(1e-12);
+    expect(r.monotonic, 'highlights keep separating up to white').toBe(true);
+    expect(r.at90).toBeLessThan(0.99);
+    expect(r.at97).toBeLessThan(0.999);
+    expect(r.at100).toBe(1);
+    expect(r.lift40, 'lift now reaches face-shadow tones (0.40)').toBeGreaterThan(0.004);
+    expect(r.lift46, 'but not above 0.45').toBe(0);
+  });
+
+  test('Newsprint: highlights already roll off (no gain stage to re-clip them)', async ({ page }) => {
+    await page.goto('/');
+    const r = await page.evaluate(() => { const f = (window.__CINEROLL_DEBUG__ as unknown as { film: FilmApi }).film; return [0.85, 0.9, 0.95, 0.99].map((v) => f.newsprintToneCurve(v, 0.7, 0)); });
+    expect(r[3]).toBeLessThan(0.995);
+    for (let i = 1; i < r.length; i++) expect(r[i]).toBeGreaterThan(r[i - 1]);
   });
 
   test('Newsprint: the curve is an identity->keyframe blend with no extra global gain', async ({ page }) => {
