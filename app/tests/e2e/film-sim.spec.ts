@@ -14,7 +14,8 @@ import { previewStats, exportStats, runExport, closeExport, meanDiff, setControl
 type FilmId = 'classic-pan-400' | 'newsprint-400' | 'velvia-50' | 'provia-100f';
 
 const REFS: { film: FilmId; file: string; w: number; h: number; dpr: number; provia?: boolean }[] = [
-  { film: 'classic-pan-400', file: 'classic-pan-400-CURRENT.html', w: 900, h: 600, dpr: 1 },
+  // The CURRENT prototype keeps the photo's ratio and works at <= 1100px (the older (10) cover-cropped to 900x600).
+  { film: 'classic-pan-400', file: 'classic-pan-400-CURRENT.html', w: 1100, h: 733, dpr: 1 },
   { film: 'newsprint-400', file: 'newsprint-400-CURRENT.html', w: 1100, h: 733, dpr: 1 },
   { film: 'velvia-50', file: 'vivid-slide-50-FINAL.html', w: 2600, h: 1733, dpr: 2 },
   { film: 'provia-100f', file: 'vivid-slide-50-FINAL.html', w: 2600, h: 1733, dpr: 2, provia: true },

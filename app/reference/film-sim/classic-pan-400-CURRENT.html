@@ -115,7 +115,7 @@
   .viewer{
     position: relative;
     width: 100%;
-    aspect-ratio: 3 / 2;
+    aspect-ratio: 3 / 2; /* default for synthetic scene; overridden by JS per uploaded photo */
     background:#000;
     overflow:hidden;
   }
@@ -352,14 +352,15 @@
     <b>2026-07 업데이트 9</b>: 진한 파란 하늘이 프레임 80% 가까이 차지하는 사진에서, 자동 섀도우 리프트가 "암부 79%"로 잘못 판단해 리프트를 70%까지 올리는 문제 발견. 1차 시도로 중립 휘도(Rec.709) 기준으로 그림자 비율을 재계산.<br>
     <b>2026-07 업데이트 10</b>: 중립 휘도로 바꿔도 암부 비율이 74%로 거의 그대로였음. 채도 높은 파란색은 인간 인지 밝기 가중치가 가장 낮아 중립 휘도로도 실제로 어둡게 측정됩니다. 진짜 문제는 균일한 하늘(텍스처 없음)과 실제 그림자(텍스처 있음)를 구분 못한 것 — <b>국소 텍스처 조건</b>을 추가해 어둡고 동시에 텍스처가 있는 영역만 "그림자"로 인정하도록 변경.<br>
     <b>2026-07 업데이트 11</b>: 텍스처 기준이 반영되어 하늘이 더 이상 잘못 리프트되지 않게 되자, 판크로매틱 74%가 만드는 진짜 반응(레드필터 같은 어두운 하늘)이 가려지지 않고 드러남을 확인. 이걸 기본으로 고정하는 대신 <b>무필터(48%)/레드필터(74%)</b> 두 프리셋 버튼으로 분리.<br>
-    <b>2026-07 업데이트 12</b>: 하늘 등 균일한 색면에서 동심원 형태의 밴딩(계조 끊김)이 보인다는 지적. 원인은 8비트 캔버스에서 강한 톤커브가 완만한 그라데이션을 몇 단계로 압축시켰기 때문 — 지후님의 보정 문제가 아니라 처리 파이프라인의 양자화 아티팩트입니다. 그레인 슬라이더와 무관하게 항상 켜져 있는 미세한 <b>디더링</b>을 추가해 계조 경계를 흩어 밴딩을 제거했습니다.
+    <b>2026-07 업데이트 12</b>: 하늘 등 균일한 색면에서 동심원 형태의 밴딩(계조 끊김)이 보인다는 지적. 그레인 슬라이더와 무관하게 항상 켜져 있는 미세한 <b>디더링</b>을 추가해 계조 경계를 흩어 밴딩을 완화.<br>
+    <b>2026-07 업데이트 13</b>: 링 아티팩트가 원본에도 이미 있었고, 이 사진이 아나모픽(2.4:1)인데 도구가 강제로 3:2 캔버스에 크롭해서 넣고 있었다는 지적. 실제로 도구가 모든 업로드 사진을 고정 900×600(3:2) 캔버스에 크롭해 넣고 있었고, 이 과정에서 원본 프레임의 일부가 잘려나가거나 광학적 특성이 왜곡되어 보일 수 있었습니다. <b>업로드한 사진의 실제 비율에 맞춰 캔버스 크기를 동적으로 조정</b>하도록 변경 — 크롭이나 왜곡 없이 원본 프레임 그대로 처리합니다. 이제부터는 필름 시뮬레이션 자체의 결과만 순수하게 볼 수 있습니다.
   </footer>
 
 </div>
 
 <script>
 (function(){
-  const W = 900, H = 600;
+  let W = 900, H = 600;
   const procCanvas = document.getElementById('canvasProcessed');
   const origCanvas = document.getElementById('canvasOriginal');
   const pctx = procCanvas.getContext('2d');
@@ -422,23 +423,26 @@
   drawScene(octx);
   octx.drawImage(origCanvas,0,0); // ensure original captured
 
-  // ---------- 1b. Photo upload: cover-fit into working canvas ----------
+  // ---------- 1b. Photo upload: resize canvas to match the photo's real aspect ratio ----------
+  // Anamorphic frames (e.g. 2.4:1) must NOT be force-cropped into a fixed 3:2 canvas —
+  // that crops out real content and can visually distort or exaggerate optical artifacts
+  // that belong to the original frame, not to the film simulation.
   const fileInput = document.getElementById('fileInput');
   const resetSceneBtn = document.getElementById('resetSceneBtn');
   const uploadHint = document.getElementById('uploadHint');
+  const viewerEl = document.querySelector('.viewer');
 
-  function drawImageCover(ctx, img){
+  function resizeCanvasesTo(w, h){
+    W = w; H = h;
+    [procCanvas, origCanvas].forEach(c => { c.width = W; c.height = H; });
+    viewerEl.style.aspectRatio = W + ' / ' + H;
+  }
+
+  function drawImageFit(ctx, img){
+    // canvas already resized to the image's own aspect ratio, so this is a direct draw —
+    // no cropping, no geometry distortion.
     ctx.clearRect(0,0,W,H);
-    const imgRatio = img.width/img.height, canvasRatio = W/H;
-    let sx,sy,sw,sh;
-    if(imgRatio > canvasRatio){
-      sh = img.height; sw = sh*canvasRatio;
-      sx = (img.width-sw)/2; sy = 0;
-    } else {
-      sw = img.width; sh = sw/canvasRatio;
-      sx = 0; sy = (img.height-sh)/2;
-    }
-    ctx.drawImage(img, sx,sy,sw,sh, 0,0,W,H);
+    ctx.drawImage(img, 0,0,W,H);
   }
 
   fileInput.addEventListener('change', (e)=>{
@@ -447,7 +451,10 @@
     const url = URL.createObjectURL(file);
     const img = new Image();
     img.onload = ()=>{
-      drawImageCover(octx, img);
+      const maxDim = 1100;
+      const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+      resizeCanvasesTo(Math.round(img.width*scale), Math.round(img.height*scale));
+      drawImageFit(octx, img);
       uploadHint.textContent = '현재: ' + file.name;
       URL.revokeObjectURL(url);
       render();
@@ -456,6 +463,7 @@
   });
 
   resetSceneBtn.addEventListener('click', ()=>{
+    resizeCanvasesTo(900, 600);
     drawScene(octx);
     uploadHint.textContent = '현재: 합성 캘리브레이션 씬';
     fileInput.value = '';
