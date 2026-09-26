@@ -52,9 +52,10 @@ const DOM = {
 
 // --- Runtime assets and view state (not edit settings) ---
 let originalImg: HTMLImageElement | null = null;
-let baseProxyCropUrl: string | null = null; // applied framing, before the WebGL tone pass
-let proxyCropUrl: string | null = null; // applied framing, after the WebGL tone pass
-let sourceImg: HTMLImageElement | null = null; // proxyCropUrl, decoded -- what the preview canvases draw
+let baseCanvas: HTMLCanvasElement | null = null; // applied framing, before the WebGL tone pass
+let baseUrl: string | null = null; // baseCanvas as an image URL, made lazily for the Split View "before" layer
+/** What the preview canvases draw: baseCanvas, or the WebGL tone pass's output canvas. */
+let previewSource: HTMLCanvasElement | null = null;
 let logoObj: HTMLImageElement | null = null;
 let logoUrl: string | null = null;
 const grainTile = createGrainTile();
@@ -257,9 +258,9 @@ bindSlider(DOM.sBr, DOM.inBr, (v) => patchGroup('tone', { brightness: v }));
 bindSlider(DOM.sCo, DOM.inCo, (v) => patchGroup('tone', { contrast: v }));
 bindSlider(DOM.sSa, DOM.inSa, (v) => patchGroup('tone', { saturation: v }));
 bindSlider(DOM.sGrain, DOM.inGrain, (v) => patchGroup('tone', { grain: v }));
-bindSlider(DOM.sHl, DOM.inHl, (v) => patchGroup('tone', { highlights: v }), 'change');
-bindSlider(DOM.sSh, DOM.inSh, (v) => patchGroup('tone', { shadows: v }), 'change');
-bindSlider(DOM.sLutIntensity, null, (v) => patchGroup('tone', { lutIntensity: v }), 'change', (v) => { DOM.valLutIntensity.innerText = `${v}%`; });
+bindSlider(DOM.sHl, DOM.inHl, (v) => patchGroup('tone', { highlights: v }));
+bindSlider(DOM.sSh, DOM.inSh, (v) => patchGroup('tone', { shadows: v }));
+bindSlider(DOM.sLutIntensity, null, (v) => patchGroup('tone', { lutIntensity: v }));
 DOM.sLut.addEventListener('change', () => patchGroup('tone', { lut: DOM.sLut.value as EditState['tone']['lut'] }));
 el('btn-reset-tone').addEventListener('click', () => patchGroup('tone', { highlights: 0, shadows: 0, lut: 'none' }));
 el('btn-reset-color').addEventListener('click', () => patchGroup('tone', { brightness: 100, contrast: 100, saturation: 100, grain: 0 }));
@@ -274,7 +275,7 @@ el<HTMLInputElement>('uploadLut').addEventListener('change', async (e) => {
   } catch (_err) {
     alert('LUT 파일을 읽는 중 오류가 발생했습니다.');
   } finally {
-    if (!baseProxyCropUrl) hideLoading();
+    hideLoading();
   }
 });
 
@@ -395,7 +396,7 @@ function flashExitZen(btn: HTMLElement) {
 }
 
 function toggleZenMode() {
-  if (!proxyCropUrl) return;
+  if (!previewSource) return;
   document.body.classList.toggle('zen-mode');
   const isZen = document.body.classList.contains('zen-mode');
   const exitBtn = el('btn-exit-zen');
@@ -532,8 +533,8 @@ function captureFraming(): boolean {
   const cvs = cropCtrl.getCroppedCanvas({ maxWidth: 2560, maxHeight: 2560, fillColor: 'transparent', imageSmoothingEnabled: true, imageSmoothingQuality: 'high' });
   if (!cvs || cvs.width === 0 || cvs.height === 0) { alert('크롭 영역을 다시 지정해주세요.'); return false; }
   activeGlobalRatio = cvs.width / cvs.height;
-  baseProxyCropUrl = cvs.toDataURL('image/png');
-  cvs.width = 0; cvs.height = 0;
+  releaseApplied();
+  baseCanvas = cvs;
   lastAppliedKey = framingKey();
   return true;
 }
@@ -570,7 +571,7 @@ async function switchTab(target: string) {
     cropCtrl.destroy(); isCropperReady = false;
     DOM.main.classList.remove('opacity-100'); DOM.main.style.display = 'none';
     if (reframed) { showPreview(); runToneEngine({ rebuild: true }); }
-    else if (proxyCropUrl) showPreview();
+    else if (previewSource) showPreview();
   }
 }
 
@@ -664,7 +665,7 @@ async function handleFile(file: File) {
   cropCtrl.destroy(); isCropperReady = false;
   pendingMount = null; // destroy() already cancelled any in-flight mount of the old photo
   originalImg = img;
-  baseProxyCropUrl = null; proxyCropUrl = null; sourceImg = null; lastAppliedKey = null;
+  releaseApplied(); lastAppliedKey = null;
   DOM.previewInner.innerHTML = '';
   DOM.upZone.classList.add('hidden');
   editState.update((s) => ({ ...s, rotation: { base: 0, fine: 0 }, crop: FRESH_CROP }));
@@ -677,7 +678,7 @@ async function handleFile(file: File) {
 
 /** Redraws every visible slide's canvas (background/image/border/grain/text/logo/watermark) from EditState, without touching DOM structure. */
 function redrawSlides() {
-  if (!sourceImg) return;
+  if (!previewSource) return;
   const pW = document.getElementById('preview-wrapper-parent'); if (!pW) return;
   const s = S();
   const slides = slideCount(s);
@@ -702,7 +703,7 @@ function redrawSlides() {
 
     renderSlideBase({
       ctx, width: cssW, height: cssH, slideIndex: i, slidesCount: slides, isPanned: isPannedStrategy(s),
-      source: { image: sourceImg!, naturalWidth: sourceImg!.naturalWidth, naturalHeight: sourceImg!.naturalHeight },
+      source: { image: previewSource!, naturalWidth: previewSource!.width, naturalHeight: previewSource!.height },
       filterString, frame, grain: { tile: grainTile, amountPct: s.tone.grain },
     });
 
@@ -763,9 +764,8 @@ function updateDragHitTargets(s: EditState, fontSizePx: number, uiLogoWidth: num
 
 const ModuleFrame = {
   /** Rebuilds the preview's slide layout (count/strategy) around the applied framing, then redraws. */
-  build: async function () {
-    if (!proxyCropUrl) return;
-    sourceImg = await loadImage(proxyCropUrl);
+  build: function () {
+    if (!previewSource) return;
     const s = S();
     const slides = slideCount(s);
     const panned = isPannedStrategy(s);
@@ -809,7 +809,7 @@ const ModuleFrame = {
       if (panned) sc.style.borderRightWidth = '4px';
       sc.style.backgroundColor = '#000000';
       const iw = document.createElement('div'); iw.className = 'absolute overflow-hidden pointer-events-none preview-img-wrapper'; iw.style.cssText += 'width:100%;height:100%;left:0;top:0;';
-      const img = document.createElement('img'); img.src = proxyCropUrl!;
+      const img = document.createElement('img'); img.src = baseUrl ??= baseCanvas!.toDataURL('image/jpeg', 0.92);
       if (panned) { img.className = 'preview-img absolute max-w-none h-full'; img.style.width = `${slides * 100}%`; img.style.transform = `translateX(-${(i / slides) * 100}%)`; } else { img.className = 'preview-img absolute w-full h-full object-cover'; }
       iw.appendChild(img); sc.appendChild(iw); col.appendChild(sc); layer.appendChild(col);
     }
@@ -821,56 +821,62 @@ const ModuleFrame = {
 // WebGL tone pass (custom LUT + highlights/shadows) on the applied framing
 // ============================================================================
 
-let toneSeq = 0;
+let toneRunning = false;
+let toneDirty = false;
 let rebuildRequested = false;
 
+/** Drops the applied framing and its tone output (a new photo, or a new capture replacing it). */
+function releaseApplied() {
+  if (previewSource && previewSource !== baseCanvas) { previewSource.width = 0; previewSource.height = 0; }
+  if (baseCanvas) { baseCanvas.width = 0; baseCanvas.height = 0; }
+  baseCanvas = null; baseUrl = null; previewSource = null;
+}
+
 /**
- * Re-runs the tone pass on the applied framing, then redraws (or rebuilds the
- * layout if requested). Each run takes a sequence number; a run superseded by
- * a newer one abandons itself, so a slow older pass can never overwrite the
- * result of a newer one. A requested rebuild survives being superseded.
+ * Re-runs the tone pass on the applied framing and redraws (or rebuilds the
+ * layout if requested). Live: slider scrubs call this on every input event.
+ * Single-flight -- at most one pass per animation frame; calls arriving while
+ * one is pending just mark it dirty, and the next pass reads the newest
+ * EditState, so a burst of inputs costs one pass and always settles on the
+ * final values. No loading overlay: the pass is a quick GPU step on the
+ * <=2560px preview framing, and an overlay per scrub step would flicker.
  */
 function runToneEngine(opts: { rebuild?: boolean } = {}) {
-  const seq = ++toneSeq;
   rebuildRequested = rebuildRequested || !!opts.rebuild;
-  if (!baseProxyCropUrl) { hideLoading(); return; } // nothing applied yet -- takes effect on the first apply
+  toneDirty = true;
+  if (toneRunning) return;
+  toneRunning = true;
+  (async () => {
+    try {
+      while (toneDirty) {
+        toneDirty = false;
+        await new Promise<void>((r) => requestAnimationFrame(() => r()));
+        await tonePass();
+      }
+    } finally {
+      toneRunning = false;
+    }
+  })();
+}
+
+async function tonePass() {
+  if (!baseCanvas) return; // nothing applied yet -- takes effect on the first apply
   const s = S();
   const hasCustomLut = s.tone.lut === 'custom' && !!Engine3D.lutData;
   const needsGl = hasCustomLut || s.tone.highlights !== 0 || s.tone.shadows !== 0;
-  const base = baseProxyCropUrl;
-
-  const finish = async () => {
-    if (seq !== toneSeq) return;
-    const rebuild = rebuildRequested;
+  const next = needsGl
+    ? await Engine3D.apply(baseCanvas, s.tone.lutIntensity / 100, 1 + s.tone.highlights / 100, 1 + s.tone.shadows / 100, hasCustomLut)
+    : baseCanvas;
+  if (!baseCanvas) return; // released (new photo) while the pass ran
+  if (previewSource && previewSource !== baseCanvas && previewSource !== next) { previewSource.width = 0; previewSource.height = 0; }
+  previewSource = next;
+  if (rebuildRequested) {
     rebuildRequested = false;
-    if (rebuild) {
-      await ModuleFrame.build();
-      if (currentTab !== 'format') showPreview();
-    } else {
-      sourceImg = await loadImage(proxyCropUrl!);
-      if (seq === toneSeq) redrawSlides();
-    }
-  };
-
-  if (!needsGl) {
-    hideLoading();
-    proxyCropUrl = base;
-    finish();
-    return;
+    ModuleFrame.build();
+    if (currentTab !== 'format') showPreview();
+  } else {
+    redrawSlides();
   }
-
-  showLoading('Rendering Core Tone...');
-  setTimeout(async () => {
-    if (seq !== toneSeq) return;
-    const img = await loadImage(base);
-    if (seq !== toneSeq) return;
-    const cvs = document.createElement('canvas'); cvs.width = img.width; cvs.height = img.height;
-    cvs.getContext('2d')!.drawImage(img, 0, 0);
-    const processed = await Engine3D.apply(cvs, s.tone.lutIntensity / 100, 1 + s.tone.highlights / 100, 1 + s.tone.shadows / 100, hasCustomLut);
-    if (seq !== toneSeq) return;
-    proxyCropUrl = processed.toDataURL('image/jpeg', 0.95);
-    setTimeout(async () => { if (seq === toneSeq) hideLoading(); await finish(); }, 50);
-  }, 50);
 }
 
 // ============================================================================

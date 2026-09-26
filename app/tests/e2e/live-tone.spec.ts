@@ -37,9 +37,11 @@ async function dragAndHold(page: Page, sel: string, frac: number) {
   const b = (await page.locator(sel).boundingBox())!;
   const y = b.y + b.height / 2;
   const cur = await page.$eval(sel, (e: HTMLInputElement) => (Number(e.value) - Number(e.min)) / (Number(e.max) - Number(e.min)));
-  await page.mouse.move(b.x + b.width * cur, y);
+  // The thumb's center travels between the track ends inset by its radius.
+  const at = (f: number) => b.x + 8 + (b.width - 16) * f;
+  await page.mouse.move(at(cur), y);
   await page.mouse.down();
-  for (let i = 1; i <= 10; i++) await page.mouse.move(b.x + b.width * (cur + (frac - cur) * i / 10), y);
+  for (let i = 1; i <= 10; i++) await page.mouse.move(at(cur + (frac - cur) * i / 10), y);
 }
 
 const cases = [
@@ -75,6 +77,7 @@ test('LUT intensity (CSS LUT) follows the drag before release', async ({ page, b
   const before = await previewStats(page);
   await dragAndHold(page, '#slider-lut-intensity', 0.05);
   await page.waitForTimeout(300);
+  expect(Number(await page.inputValue('#slider-lut-intensity')), 'thumb actually moved').toBeLessThan(20);
   expect((await state(page)).tone.lutIntensity).toBe(Number(await page.inputValue('#slider-lut-intensity')));
   expect(await page.innerText('#val-lut-intensity')).toBe(`${await page.inputValue('#slider-lut-intensity')}%`);
   expect(change(before, await previewStats(page)), 'preview changes while dragging').toBeGreaterThan(3);
@@ -93,6 +96,7 @@ test('custom .cube LUT intensity follows the drag before release', async ({ page
   const full = await previewStats(page);
   await dragAndHold(page, '#slider-lut-intensity', 0.5);
   await page.waitForTimeout(400);
+  expect(Number(await page.inputValue('#slider-lut-intensity')), 'thumb actually moved').toBeLessThan(70);
   expect((await state(page)).tone.lutIntensity).toBe(Number(await page.inputValue('#slider-lut-intensity')));
   expect(change(full, await previewStats(page)), 'custom LUT preview changes while dragging').toBeGreaterThan(3);
   await page.mouse.up();
