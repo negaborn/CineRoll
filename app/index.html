@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>cineRoll 150.0 | Final Unlock</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;700&family=Inter:wght@400;500;700&family=Cinzel:wght@400;700&family=Cormorant+Garamond:wght@400;700&family=Montserrat:wght@400;700&family=Playfair+Display:wght@400;700&family=Oswald:wght@400;700&family=Lato:wght@400;700&family=Bebas+Neue&family=Lora:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body class="fixed inset-0 w-full h-[100dvh] flex flex-col overflow-hidden overscroll-none bg-background">
+
+    <div style="position: absolute; width: 0; height: 0; overflow: hidden; visibility: hidden; pointer-events: none; z-index: -1;">
+        <span style="font-family: 'Inter'; font-weight: 400;">preload</span>
+        <span style="font-family: 'Outfit'; font-weight: 700;">preload</span>
+    </div>
+
+    <div id="export-modal" class="fixed inset-0 z-[99999] bg-[#000000] flex flex-col">
+        <div class="h-16 px-6 flex justify-between items-center bg-gradient-to-b from-black/80 to-transparent absolute top-0 left-0 w-full z-10">
+            <div class="text-white text-xs font-bold uppercase tracking-widest">Output Gallery</div>
+            <button id="btn-close-export" class="text-white/70 hover:text-white p-2 text-xl font-bold">✕</button>
+        </div>
+        <div class="flex-1 overflow-y-auto pt-20 pb-28 px-6 flex flex-col items-center gap-8" id="export-gallery-container"></div>
+        <div class="h-28 flex flex-col items-center justify-center bg-gradient-to-t from-black/95 to-transparent absolute bottom-0 left-0 w-full pointer-events-none">
+            <span class="text-coral-400 font-bold text-[9px] uppercase tracking-widest bg-black/50 px-4 py-1.5 rounded-full backdrop-blur-md mb-3">
+                Right-Click or Long Press to Save
+            </span>
+            <button id="btn-return-workspace" class="text-white text-[11px] uppercase font-bold tracking-widest bg-coral-600 hover:bg-coral-500 px-8 py-3 rounded-full pointer-events-auto transition-colors shadow-2xl border border-coral-400 active:scale-95">
+                RETURN TO WORKSPACE
+            </button>
+        </div>
+    </div>
+
+    <button id="btn-exit-zen" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 z-[99999] bg-zinc-800/90 hover:bg-coral-500 text-white px-6 py-3 rounded-full transition-opacity duration-500 backdrop-blur-md items-center justify-center shadow-2xl font-bold text-[10px] uppercase tracking-widest hidden opacity-0">
+        Exit Zen Mode
+    </button>
+
+    <div id="loading-overlay" class="fixed inset-0 z-[999999] bg-black/90 hidden flex-col items-center justify-center transition-opacity duration-300">
+        <div id="loading-text" class="text-white text-xs md:text-sm font-bold uppercase tracking-widest mb-6 font-mono transition-all duration-300 text-center">Processing Cinematic Core...</div>
+        <div class="w-48 h-1 bg-zinc-800 rounded overflow-hidden"><div class="w-full h-full bg-coral-500 animate-pulse"></div></div>
+    </div>
+
+    <header class="h-12 border-b border-border bg-panel flex items-center justify-between px-4 shrink-0 z-30 relative">
+        <div class="flex items-center gap-2 cursor-pointer" id="btn-reload-logo">
+            <h1 class="logo-font text-lg font-bold tracking-tight text-white">cine<span class="text-coral-500">Roll</span></h1>
+        </div>
+        <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2 border-r border-border pr-3 mr-1">
+                <button id="btn-zen-mode" style="display: none;" class="items-center justify-center w-7 h-7 bg-background text-zinc-400 hover:text-white rounded border border-border transition-colors cursor-pointer" title="Zen Mode (F)">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+                </button>
+                <button id="btn-split-view" style="display: none;" class="items-center justify-center w-7 h-7 bg-background text-zinc-400 hover:text-white rounded border border-border transition-colors cursor-pointer" title="Split View (Before & After)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" /><line x1="12" y1="3" x2="12" y2="21" /><rect x="12" y="3" width="9" height="18" fill="currentColor" opacity="0.3" /></svg>
+                </button>
+            </div>
+            <button id="btn-new-photo" class="flex md:flex items-center gap-1.5 text-[9px] font-bold text-zinc-400 hover:text-white bg-background px-3 py-1.5 rounded border border-border transition-colors">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                <span class="hidden sm:inline">NEW PHOTO</span>
+            </button>
+        </div>
+    </header>
+
+    <div class="flex-1 flex flex-col md:flex-row overflow-hidden w-full relative">
+        <main id="main-stage" class="w-full h-[40%] md:h-full md:flex-1 relative flex bg-background overflow-hidden select-none transition-colors duration-300 shrink-0">
+            <div id="upload-zone" class="absolute inset-0 flex flex-col items-center justify-center z-50 bg-background transition-opacity duration-300">
+                <label class="relative w-[240px] md:w-[280px] h-[140px] md:h-[160px] border border-dashed border-zinc-800 rounded-xl flex flex-col items-center justify-center text-zinc-500 hover:border-coral-500 hover:text-coral-400 transition-colors bg-[#111] cursor-pointer">
+                    <input type="file" id="upload-input" accept="image/*,.tif,.tiff" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                    <svg class="w-6 h-6 mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    <span id="uploadText" class="text-[10px] font-bold tracking-widest uppercase">Import Resource</span>
+                    <span class="text-[8px] mt-2 opacity-50 tracking-wider">JPEG, PNG, TIFF, RAW(OS)</span>
+                </label>
+            </div>
+
+            <div id="smart-snap-badge" class="absolute transform -translate-x-1/2 bg-green-500 text-black px-4 py-1.5 rounded-full font-bold text-[10px] uppercase tracking-wider opacity-0 transition-all duration-100 z-50 pointer-events-none shadow-[0_0_20px_rgba(34,197,94,0.5)]"></div>
+
+            <div id="zoom-controls" class="hidden absolute bottom-4 md:bottom-6 left-1/2 transform -translate-x-1/2 z-[60] bg-[#111]/80 backdrop-blur-xl px-4 py-2 rounded-full border border-white/5 shadow-2xl items-center gap-3 transition-opacity duration-300">
+                <button id="btn-zoom-fit" class="text-[9px] font-bold text-coral-400 hover:text-white uppercase tracking-widest px-1 outline-none">FIT</button>
+                <input type="range" id="slider-zoom" min="20" max="400" value="100" class="w-20 md:w-28 h-1 bg-zinc-800 rounded-full appearance-none outline-none">
+                <div class="flex items-center w-12 justify-end"><input type="number" id="in-zoom" class="bg-transparent text-right outline-none w-full text-white font-mono text-[10px]" value="100"><span class="text-[9px] text-zinc-500 ml-0.5">%</span></div>
+            </div>
+
+            <div id="image-container" class="absolute inset-0 z-10 w-full h-full hidden opacity-0 transition-opacity duration-300"></div>
+            <div id="preview-area" class="hidden z-20 w-full h-full"><div id="preview-area-inner"></div></div>
+        </main>
+
+        <aside class="w-full flex-1 md:flex-none md:w-[300px] md:h-full bg-panel border-t md:border-t-0 md:border-l border-border flex flex-col shrink-0 z-40 relative select-none overflow-hidden">
+            <nav class="flex border-b border-border shrink-0 bg-panel px-1">
+                <button class="tab-btn active" data-tab="format">Format</button>
+                <button class="tab-btn" data-tab="frame">Frame</button>
+                <button class="tab-btn" data-tab="tone">Tone</button>
+                <button class="tab-btn" data-tab="color">Color</button>
+                <button class="tab-btn" data-tab="typo">Typo</button>
+            </nav>
+
+            <div class="flex-1 overflow-y-auto custom-scroll p-4 md:p-5 overscroll-contain">
+                <div id="tab-format" class="tab-content space-y-5">
+                    <div>
+                        <label class="min-label"><span>Strategy</span></label>
+                        <div class="grid grid-cols-3 gap-1.5" id="strategy-btns">
+                            <button class="min-btn active" data-val="seamless">Seamless</button>
+                            <button class="min-btn" data-val="triptych">Triptych</button>
+                            <button class="min-btn" data-val="single">Single</button>
+                        </div>
+                    </div>
+
+                    <div id="ratio-wrapper">
+                        <div class="flex justify-between items-center mb-1.5"><label class="min-label mb-0"><span>Base Ratio</span></label><button id="btn-reset-framing" class="text-[9px] text-zinc-500 hover:text-white">↺</button></div>
+                        <select class="min-select" id="select-ratio">
+                            <option value="NaN">Free (Smart Snap)</option>
+                            <option value="1">1:1 (Square)</option>
+                            <option value="0.8" selected>4:5 (Vertical IG)</option>
+                            <option value="0.75">3:4 (Classic Portrait)</option>
+                            <option value="0.666">2:3 (35mm Vertical)</option>
+                            <option value="1.5">3:2 (35mm Horizontal)</option>
+                            <option value="1.777">16:9 (Landscape)</option>
+                        </select>
+                    </div>
+
+                    <div id="seamless-count-wrapper">
+                        <label class="min-label mb-1.5"><span>Pan Slides</span></label>
+                        <select class="min-select" id="select-slides"><option value="2">2 Slides</option><option value="3" selected>3 Slides</option><option value="4">4 Slides</option></select>
+                    </div>
+
+                    <div class="pt-3 border-t border-border">
+                        <label class="min-label mb-1.5"><span>De-squeeze</span></label>
+                        <select class="min-select" id="select-squeeze">
+                            <option value="100" selected>1.0x (Standard)</option>
+                            <option value="133">1.33x</option>
+                            <option value="150">1.50x</option>
+                            <option value="160">1.60x (Sirui)</option>
+                            <option value="180">1.80x</option>
+                            <option value="200">2.00x</option>
+                        </select>
+                    </div>
+
+                    <div class="pt-3 border-t border-border">
+                        <label class="min-label mb-1.5"><span>Rotate &amp; Straighten</span></label>
+                        <button id="btn-rotate-90" class="w-full bg-background border border-border hover:border-coral-500 text-zinc-400 hover:text-white py-1.5 rounded transition-colors text-[10px] font-bold mb-2 flex items-center justify-center gap-1">
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg> Rotate 90°
+                        </button>
+                        <div class="flex items-center gap-2">
+                            <input type="range" id="slider-angle" min="-45" max="45" value="0" step="0.5" class="flex-1">
+                            <div class="flex items-center"><input type="number" id="in-angle" class="bg-transparent text-right outline-none w-8 text-white text-[10px] font-mono" value="0"><span>°</span></div>
+                        </div>
+                    </div>
+
+                    <button id="btn-apply-crop" class="w-full text-[10px] font-bold text-white bg-transparent border border-coral-500 hover:bg-coral-500/20 py-2.5 rounded mt-2 transition-colors uppercase tracking-widest">
+                        Apply Crop
+                    </button>
+                </div>
+
+                <div id="tab-frame" class="tab-content space-y-5 hidden">
+                    <div>
+                        <label class="min-label mb-1.5"><span>Paper Texture</span></label>
+                        <div class="grid grid-cols-2 gap-1.5 mb-1.5"><button class="min-btn active" data-bg="#000000">Pure Black</button><button class="min-btn" data-bg="#ffffff">Pure White</button></div>
+                        <div class="grid grid-cols-2 gap-1.5"><button class="min-btn" data-bg="#141414">Archival Blk</button><button class="min-btn" data-bg="#F4F0E6">Baryta Wht</button></div>
+                    </div>
+                    <div class="pt-3 border-t border-border">
+                        <label class="min-label mb-1.5"><span>Layout</span></label>
+                        <div class="grid grid-cols-2 gap-1.5"><button class="min-btn active" id="btn-edge">Edge-to-Edge</button><button class="min-btn" id="btn-margin">Margin Frame</button></div>
+                    </div>
+                    <div id="margin-scale-wrapper" class="pt-3 border-t border-border hidden">
+                        <label class="min-label mb-1.5"><span>Padding</span><div class="flex items-center"><input type="number" id="in-margin-scale" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="85"><span>%</span></div></label>
+                        <input type="range" id="slider-margin-scale" min="50" max="100" value="85">
+
+                        <div class="mt-4 border-t border-border pt-3">
+                            <label class="min-label mb-1.5"><span class="text-coral-400">Film Borders</span></label>
+                            <select id="select-border" class="min-select"><option value="none">None (Clean)</option><option value="fineart">Fine-Art Line</option><option value="vnotch">120mm V-Notch</option><option value="instant">Type-100</option></select>
+                            <div id="border-weight-wrapper" class="mt-2 hidden">
+                                <label class="min-label mb-1"><span>Weight</span><div class="flex items-center"><input type="number" id="in-borderWeight" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="3"></div></label>
+                                <input type="range" id="slider-borderWeight" min="1" max="10" value="3" step="0.5">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-tone" class="tab-content space-y-5 hidden">
+                    <div class="pb-3 border-b border-border mb-3">
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="min-label mb-0"><span class="text-coral-400">Cinematic LUT</span></label>
+                            <button id="btn-upload-lut-trigger" class="text-[9px] text-zinc-400 hover:text-white flex items-center gap-1 font-bold"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg> .CUBE</button>
+                            <input type="file" id="uploadLut" accept=".cube" class="hidden">
+                        </div>
+                        <select id="select-lut" class="min-select mb-2">
+                            <option value="none">None (Original)</option>
+                            <option value="kodak">Warm Nostalgia</option>
+                            <option value="fuji">Cool Fade</option>
+                            <option value="cinematic">Teal &amp; Orange</option>
+                            <option value="custom" id="opt-custom-lut" class="hidden font-bold text-coral-400">My Custom LUT (.cube)</option>
+                        </select>
+                        <div id="lut-intensity-wrapper" class="opacity-50 pointer-events-none transition-opacity">
+                            <label class="min-label mb-1"><span class="text-[9px] text-zinc-500">Intensity</span><span id="val-lut-intensity" class="text-[9px] text-zinc-500 font-mono">100%</span></label>
+                            <input type="range" id="slider-lut-intensity" min="0" max="100" value="100">
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <label class="min-label mb-0"><span class="text-coral-400">Advanced Tone (Pro)</span></label>
+                        <div>
+                            <label class="min-label mb-1"><span class="text-[9px] text-zinc-400">Highlights</span><div class="flex items-center"><input type="number" id="in-hl" class="bg-transparent text-right outline-none w-8 text-white font-mono text-[10px]" value="0"></div></label>
+                            <input type="range" id="slider-hl" min="-100" max="100" value="0">
+                        </div>
+                        <div>
+                            <label class="min-label mb-1"><span class="text-[9px] text-zinc-400">Shadows</span><div class="flex items-center"><input type="number" id="in-sh" class="bg-transparent text-right outline-none w-8 text-white font-mono text-[10px]" value="0"></div></label>
+                            <input type="range" id="slider-sh" min="-100" max="100" value="0">
+                        </div>
+                    </div>
+                    <button id="btn-reset-tone" class="w-full text-[9px] text-zinc-500 hover:text-white py-1.5 border border-border rounded mt-3 transition-colors uppercase tracking-widest">Reset Tone</button>
+                </div>
+
+                <div id="tab-color" class="tab-content space-y-5 hidden">
+                    <div><label class="min-label mb-1.5"><span>Brightness</span><div class="flex items-center"><input type="number" id="in-br" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="100"><span>%</span></div></label><input type="range" id="slider-br" min="50" max="150" value="100"></div>
+                    <div><label class="min-label mb-1.5"><span>Contrast</span><div class="flex items-center"><input type="number" id="in-co" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="100"><span>%</span></div></label><input type="range" id="slider-co" min="50" max="150" value="100"></div>
+                    <div><label class="min-label mb-1.5"><span>Saturation</span><div class="flex items-center"><input type="number" id="in-sa" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="100"><span>%</span></div></label><input type="range" id="slider-sa" min="0" max="200" value="100"></div>
+                    <div class="pt-3 border-t border-border"><label class="min-label mb-1.5"><span>Film Grain</span><div class="flex items-center"><input type="number" id="in-grain" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="0"><span>%</span></div></label><input type="range" id="slider-grain" min="0" max="100" value="0"></div>
+                    <button id="btn-reset-color" class="w-full text-[9px] text-zinc-500 hover:text-white py-1.5 border border-border rounded mt-3 transition-colors uppercase tracking-widest">Reset Basic</button>
+                </div>
+
+                <div id="tab-typo" class="tab-content space-y-5 hidden">
+                    <div class="space-y-3">
+                        <div class="flex flex-col gap-1.5">
+                            <div class="flex items-center justify-between">
+                                <label class="min-label mb-0"><span>Style</span></label>
+                                <button id="btn-save-preset" class="text-[8px] font-bold text-coral-400 hover:text-coral-300 transition-colors uppercase tracking-widest">SAVE PRESET</button>
+                            </div>
+                            <div class="flex gap-1">
+                                <button class="preset-pill" id="btn-preset-gold">GOLD</button>
+                                <button class="preset-pill" id="btn-preset-silver">SILVER</button>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-2 bg-background p-1.5 rounded border border-border">
+                            <input type="color" id="textColorPicker" value="#FFFFFF">
+                            <div class="w-px h-3 bg-border mx-1"></div>
+                            <button id="btnBold" class="style-btn px-1.5 py-0.5 rounded border border-transparent text-[10px] text-zinc-400 hover:text-white">B</button>
+                            <button id="btnGlow" class="style-btn active px-1.5 py-0.5 rounded border border-transparent text-[10px] text-zinc-400 hover:text-white">Glow</button>
+                            <select id="fontSelect" class="bg-transparent text-[10px] outline-none text-zinc-300 ml-auto w-full max-w-[90px]">
+                                <optgroup label="Modern Sans">
+                                    <option value="Inter">Inter</option><option value="Outfit">Outfit</option><option value="Montserrat">Montserrat</option><option value="Lato">Lato</option><option value="Roboto">Roboto</option>
+                                </optgroup>
+                                <optgroup label="Editorial">
+                                    <option value="Playfair Display">Playfair</option><option value="Cinzel">Cinzel</option><option value="Cormorant Garamond">Garamond</option><option value="Lora">Lora</option>
+                                </optgroup>
+                                <optgroup label="Display">
+                                    <option value="Oswald">Oswald</option><option value="Bebas Neue">Bebas Neue</option>
+                                </optgroup>
+                            </select>
+                        </div>
+
+                        <div class="pt-1"><label class="min-label mb-1"><span>Font Scale</span><div class="flex items-center"><input type="number" id="in-fontScale" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="100"><span>%</span></div></label><input type="range" id="slider-fontScale" min="30" max="200" value="100"></div>
+                        <div id="glow-slider-wrapper" class="pt-1"><label class="min-label mb-1"><span class="text-[9px] text-zinc-500">Glow Intensity</span></label><input type="range" id="slider-glow-amount" min="1" max="50" value="15"></div>
+
+                        <div class="flex items-center gap-1.5"><input type="text" id="watermarkText" placeholder="Caption or Signature..." class="min-input flex-1"></div>
+
+                        <div id="custom-presets-container" class="flex flex-wrap gap-1 pt-1 empty:hidden"></div>
+
+                        <div id="target-display-wrapper" class="pt-3 border-t border-border space-y-2">
+                            <label class="min-label mb-0"><span>Target Display</span></label>
+                            <select id="watermarkTarget" class="min-select"><option value="all">Apply to All Slides</option><option value="1">Slide 1 (Cover)</option><option value="2">Slide 2 Only</option><option value="3">Slide 3 Only</option><option value="4">Slide 4 Only</option></select>
+                        </div>
+
+                        <div class="pt-3 border-t border-border space-y-2">
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="min-label mb-0 flex items-center gap-2 cursor-pointer hover:text-white transition-colors">
+                                    <input type="checkbox" id="toggle-logo" class="w-3 h-3 accent-coral-500 cursor-pointer">
+                                    <span>Custom Logo (.PNG)</span>
+                                </label>
+                                <span id="logoStatus" class="text-[8px] text-green-400 hidden">✅ Loaded</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button id="btn-upload-logo-trigger" class="bg-background border border-border px-3 py-1.5 rounded text-[9px] flex-1 hover:text-white transition-colors">+ Upload</button>
+                                <input type="file" id="uploadLogo" accept="image/png" class="hidden">
+                            </div>
+                            <div id="logoSettings" class="opacity-30 pointer-events-none transition-opacity duration-300 space-y-2 pt-1">
+                                <div><label class="min-label mb-1"><span>Scale</span><div class="flex items-center"><input type="number" id="in-logoScale" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="50"><span>%</span></div></label><input type="range" id="sliderLogoScale" min="1" max="100" value="50"></div>
+                                <div><label class="min-label mb-1"><span>Opacity</span><div class="flex items-center"><input type="number" id="in-logoOp" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="100"><span>%</span></div></label><input type="range" id="sliderLogoOp" min="10" max="100" value="100"></div>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between pt-3 border-t border-border mt-2">
+                            <label class="min-label mb-0 flex items-center gap-1.5">
+                                <span>App Watermark</span>
+                            </label>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="toggleAppLogo" class="sr-only peer">
+                                <div class="w-7 h-4 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-coral-500"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-4 border-t border-border shrink-0 bg-panel z-50">
+                <div class="flex flex-row gap-2 items-center">
+                    <select id="exportQuality" class="min-select bg-background border-border font-bold w-[120px] h-9 m-0 text-[9px] uppercase tracking-wider">
+                        <option value="ig">IG Opt. (Free)</option>
+                        <option value="web">Web Res. (PRO)</option>
+                        <option value="png">Lossless (PRO)</option>
+                    </select>
+                    <button class="flex-1 bg-transparent border border-coral-500 text-white hover:bg-coral-500/20 font-bold h-9 rounded text-[10px] uppercase transition-all active:scale-95 tracking-widest" id="btn-export">
+                        Export
+                    </button>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
