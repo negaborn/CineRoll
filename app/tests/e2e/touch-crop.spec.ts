@@ -86,12 +86,19 @@ test.describe('Single mode switches to Free (Smart Snap)', () => {
     const cdp = await start(page, browser);
     await page.locator('#strategy-btns [data-val="single"]').tap();
     await page.waitForTimeout(300);
-    const v0 = await view(page);
     const e = await handle(page, 'e');
-    // Stretch the east edge until the box is ~1:1 (within snap tolerance, not exact).
-    const targetW = v0.box.h * 1.012;
-    await touchDrag(cdp, e, { x: e.x + (targetW - v0.box.w), y: e.y }, false);
-    const mid = await view(page);
+    // Single starts as a 4:5 box; walk the east edge out until it is ~1:1
+    // (within snap tolerance, not exact) -- the finger is still down.
+    expect((await view(page)).box.w / (await view(page)).box.h).toBeCloseTo(0.8, 1);
+    await touch(cdp, 'touchStart', [e]);
+    let x = e.x;
+    let mid = await view(page);
+    for (let i = 0; i < 200 && mid.box.w / mid.box.h < 0.988; i++) {
+      x += 2;
+      await touch(cdp, 'touchMove', [{ x, y: e.y }]);
+      mid = await view(page);
+    }
+    expect(mid.box.w / mid.box.h).toBeLessThan(0.998); // near, not already exact
     expect(mid.snap, 'green frame while dragging').toBe(true);
     expect(mid.badge ?? '').toMatch(/1:1/i);
     await touch(cdp, 'touchEnd', []);
@@ -128,6 +135,26 @@ test.describe('the photo never zooms behind the crop box', () => {
       for (const k of ['x', 'y', 'width', 'height'] as const) expect(crop1[k], `crop.${k} unchanged`).toBeCloseTo(crop0[k], 3);
     });
   }
+
+  test('a second finger landing mid-drag puts the box back and ignores the rest of the gesture', async ({ page, browser }) => {
+    const cdp = await start(page, browser);
+    await page.locator('#strategy-btns [data-val="single"]').tap();
+    await page.waitForTimeout(300);
+    const before = await view(page);
+    const crop0 = (await state(page)).crop;
+    const a = center(before.box);
+    await touch(cdp, 'touchStart', [a]);
+    for (let i = 1; i <= 6; i++) await touch(cdp, 'touchMove', [{ x: a.x + 5 * i, y: a.y }]); // box moves 30px
+    const b = { x: a.x + 30, y: a.y };
+    await touch(cdp, 'touchStart', [b, { x: b.x + 60, y: b.y + 40 }]);
+    for (let i = 1; i <= 8; i++) await touch(cdp, 'touchMove', [{ x: b.x - 4 * i, y: b.y }, { x: b.x + 60 + 6 * i, y: b.y + 40 }]);
+    await touch(cdp, 'touchEnd', []);
+    await page.waitForTimeout(250);
+    const after = await view(page);
+    expect(after.image.w).toBeCloseTo(before.image.w, 0);
+    const crop1 = (await state(page)).crop;
+    for (const k of ['x', 'y', 'width', 'height'] as const) expect(crop1[k], `crop.${k} back to the gesture start`).toBeCloseTo(crop0[k], 3);
+  });
 
   test('wheel / trackpad scroll over the crop area', async ({ page, browser }) => {
     await start(page, browser);

@@ -220,8 +220,12 @@ function bindSlider(slider: HTMLInputElement, input: HTMLInputElement | null, co
 document.querySelectorAll<HTMLElement>('#strategy-btns .min-btn').forEach((btn) => {
   btn.addEventListener('click', () => {
     const strategy = btn.dataset.val as EditState['strategy'];
-    // Single has no "Free across slides" meaning -- fall back to 4:5 like v150 did.
-    editState.update((s) => ({ ...s, strategy, baseRatio: strategy === 'single' && s.baseRatio == null ? 0.8 : s.baseRatio }));
+    if (strategy === S().strategy) return; // re-tapping the active strategy keeps its ratio
+    editState.update((s) => ({ ...s, strategy }));
+    // Single opens in Free (Smart Snap) so the snap guides work without a trip
+    // to the ratio menu. The box first takes the single-frame shape above (as
+    // before), then only the ratio lock is released; a fixed ratio can still be picked.
+    if (strategy === 'single') editState.update((s) => ({ ...s, baseRatio: null }));
   });
 });
 DOM.sRatio.addEventListener('change', () => { const v = parseFloat(DOM.sRatio.value); editState.update((s) => ({ ...s, baseRatio: isNaN(v) ? null : v })); });

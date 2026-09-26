@@ -140,10 +140,41 @@ export class CropController {
   private mountSeq = 0;
   /** Settles the in-flight mount's promise (with false) if it gets superseded before Cropper is ready. */
   private settlePendingMount: ((ok: boolean) => void) | null = null;
+  /** Touch pointers currently down (tracked in the capture phase, ahead of Cropper's own handlers). */
+  private activeTouches = new Set<number>();
+  /** True once a second finger joined the current touch gesture; cleared when the next gesture starts. */
+  private multiTouch = false;
+  /** Crop box when the current touch gesture began -- restored if it turns into a multi-finger gesture. */
+  private gestureStartBox: { left: number; top: number; width: number; height: number } | null = null;
 
   constructor(container: HTMLElement, options: CropControllerOptions = {}) {
     this.container = container;
     this.options = options;
+    window.addEventListener('pointerdown', (e) => { if (e.pointerType === 'touch') this.activeTouches.add(e.pointerId); }, true);
+    const lift = (e: PointerEvent) => { if (e.pointerType === 'touch') this.activeTouches.delete(e.pointerId); };
+    window.addEventListener('pointerup', lift, true);
+    window.addEventListener('pointercancel', lift, true);
+  }
+
+  /**
+   * Cropper's cropstart. A pinch must not edit the crop (photo zoom is off, and
+   * Cropper would otherwise drag the box with one of the fingers): when a second
+   * finger lands, put the box back where the gesture started and ignore the
+   * gesture until every finger is lifted.
+   */
+  private onCropStart(e: CustomEvent): void {
+    const pe = e.detail?.originalEvent as PointerEvent | undefined;
+    if (!this.cropper || !pe || pe.pointerType !== 'touch') return;
+    if (this.activeTouches.size > 1) {
+      if (!this.multiTouch) {
+        this.multiTouch = true;
+        if (this.gestureStartBox) this.cropper.setCropBoxData(this.gestureStartBox);
+      }
+      e.preventDefault();
+      return;
+    }
+    this.multiTouch = false;
+    this.gestureStartBox = this.cropper.getCropBoxData();
   }
 
   get isReady(): boolean {
@@ -183,6 +214,9 @@ export class CropController {
         this.cropper = new Cropper(proxy, {
           viewMode: 1,
           dragMode: 'none',
+          // No photo zoom: a pinch or wheel/trackpad scroll would scale the photo
+          // behind a fixed crop box and silently change the crop.
+          zoomable: false,
           autoCrop: false,
           background: false,
           checkOrientation: true,
@@ -214,9 +248,11 @@ export class CropController {
             this.onCropBoxChange();
             this.updateSmartSnapBadge();
           },
+          cropstart: (e: CustomEvent) => this.onCropStart(e),
+          cropmove: (e: CustomEvent) => { if (this.multiTouch) e.preventDefault(); },
           // Fires only on pointer release (never for programmatic setData/setCropBoxData).
           cropend: () => {
-            if (stale()) return;
+            if (stale() || this.multiTouch) return;
             this.snapOnRelease();
           },
         });
