@@ -134,9 +134,14 @@
 
                     <div class="pt-3 border-t border-border">
                         <label class="min-label mb-1.5"><span>Rotate &amp; Straighten</span></label>
-                        <button id="btn-rotate-90" class="w-full bg-background border border-border hover:border-coral-500 text-zinc-400 hover:text-white py-1.5 rounded transition-colors text-[10px] font-bold mb-2 flex items-center justify-center gap-1">
-                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg> Rotate 90°
-                        </button>
+                        <div class="flex gap-1.5 mb-2">
+                            <button id="btn-rotate-90" class="flex-1 bg-background border border-border hover:border-coral-500 text-zinc-400 hover:text-white py-1.5 rounded transition-colors text-[10px] font-bold flex items-center justify-center gap-1">
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg> 90°
+                            </button>
+                            <button id="btn-rotate-180" class="flex-1 bg-background border border-border hover:border-coral-500 text-zinc-400 hover:text-white py-1.5 rounded transition-colors text-[10px] font-bold flex items-center justify-center gap-1">
+                                180°
+                            </button>
+                        </div>
                         <div class="flex items-center gap-2">
                             <input type="range" id="slider-angle" min="-45" max="45" value="0" step="0.5" class="flex-1">
                             <div class="flex items-center"><input type="number" id="in-angle" class="bg-transparent text-right outline-none w-8 text-white text-[10px] font-mono" value="0"><span>°</span></div>
