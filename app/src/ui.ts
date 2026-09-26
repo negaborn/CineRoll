@@ -619,6 +619,37 @@ async function decodePhoto(file: File): Promise<HTMLImageElement> {
   return loadImage(url);
 }
 
+/** Apple's proprietary "auxiliary rotation" (gyro-derived orientation) marker.
+ *  Only Apple's own software honors it; standard EXIF-orientation decoders
+ *  (this app included) can't read it, so a photo carrying it may render
+ *  upside-down/sideways even though its plain EXIF Orientation tag looks fine. */
+async function hasAppleAuxRotation(file: File): Promise<boolean> {
+  if (!/^image\/(jpe?g|heic|heif)$/i.test(file.type) && !file.name.match(/\.(jpe?g|heic|heif)$/i)) return false;
+  const buf = new Uint8Array(await file.slice(0, 262144).arrayBuffer());
+  const needle = [0x41, 0x52, 0x4f, 0x54]; // 'AROT'
+  outer: for (let i = 0; i < buf.length - needle.length; i++) {
+    for (let j = 0; j < needle.length; j++) if (buf[i + j] !== needle[j]) continue outer;
+    return true;
+  }
+  return false;
+}
+
+function showOrientationWarning() {
+  let el = document.getElementById('orientation-warning');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'orientation-warning';
+    el.className = 'text-[10px] text-amber-400 bg-amber-400/10 border border-amber-400/30 rounded px-2 py-1.5 mb-2 leading-snug';
+    el.textContent = '⚠ 이 사진은 아이폰 메타데이터 특성상 방향이 부정확하게 표시될 수 있습니다. 뒤집혀 보이면 아래 90°/180° 버튼으로 보정하세요.';
+    const anchor = document.getElementById('btn-rotate-90')?.parentElement;
+    anchor?.parentElement?.insertBefore(el, anchor);
+  }
+  el.classList.remove('hidden');
+}
+function hideOrientationWarning() {
+  document.getElementById('orientation-warning')?.classList.add('hidden');
+}
+
 async function handleFile(file: File) {
   if (!file) return;
   const validExts = /\.(jpe?g|png|tiff?|webp|gif|rw2|cr2|cr3|nef|arw|dng)$/i;
@@ -626,6 +657,7 @@ async function handleFile(file: File) {
   DOM.upText.innerText = 'Processing...';
   let img: HTMLImageElement;
   try { img = await decodePhoto(file); } catch (_err) { alert('이미지 처리 오류.'); DOM.upText.innerText = 'Import Resource'; return; }
+  if (await hasAppleAuxRotation(file)) showOrientationWarning(); else hideOrientationWarning();
 
   // A new photo replaces everything tied to the old one -- including a Cropper
   // that may still be mounted (a second photo dropped onto the Format tab).
@@ -917,6 +949,7 @@ DOM.btnBA.addEventListener('click', toggleSplitView);
 el('btn-zoom-fit').addEventListener('click', () => setZoom('fit'));
 el('btn-reset-framing').addEventListener('click', resetFraming);
 el('btn-rotate-90').addEventListener('click', () => { if (originalImg) cropCtrl.rotateBase(90); });
+el('btn-rotate-180').addEventListener('click', () => { if (originalImg) { cropCtrl.rotateBase(90); cropCtrl.rotateBase(90); } });
 el('btn-apply-crop').addEventListener('click', applyCropAndRender);
 
 savedCustomPresets = loadPresets();
