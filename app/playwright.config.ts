@@ -12,6 +12,9 @@ export default defineConfig({
   },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    // iPhone Safari's engine. Runs the specs whose behaviour differs by engine
+    // (canvas features, colour); the rest of the suite stays Chromium-only.
+    { name: 'webkit', use: { ...devices['Desktop Safari'] }, testMatch: /(webkit|zz-).*\.spec\.ts/ },
   ],
   webServer: {
     command: 'npm run dev -- --port 5183 --strictPort',
