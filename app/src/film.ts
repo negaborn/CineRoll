@@ -33,7 +33,7 @@ type Curve = [number, number][];
 
 interface BwSpec {
   kind: 'bw';
-  /** Long side (px) the prototype was tuned at: classic 900x600 working canvas, newsprint <=1100. */
+  /** Long side (px) of the prototype's working canvas for a photo: both B&W CURRENT prototypes work at <= 1100px. */
   refLongSide: number;
   curve: 'classic' | 'newsprint';
   redWeight: number;
@@ -85,7 +85,7 @@ const VIVID_SHARED = { refLongSide: 2600, contrast: 0.62, grain: 0.09, halation:
 
 export const FILM_SPECS: Record<FilmId, BwSpec | ColorSpec> = {
   'classic-pan-400': {
-    kind: 'bw', refLongSide: 900, curve: 'classic',
+    kind: 'bw', refLongSide: 1100, curve: 'classic',
     redWeight: 0.74, contrast: 0.55, grain: 0.19, halation: 0.10, localContrast: 0, exposureShift: 0,
     toeLen: 0.32, autoShadowCeil: 0.70, autoShadowMult: 1.4, grainGain: 26,
   },
