@@ -9,7 +9,7 @@
 import UTIF from 'utif';
 import { editState, patchGroup, loadPresets, savePresets, installDebugHook, type EditState, type TextPresetRecord } from './state';
 import { CropController, getCropFrameSize, renderCroppedRegionFromOriginal } from './crop';
-import { applyFilm, analyzeFilm, mixFilmInPlace, FILM_IDS, FILM_SPECS, newsprintToneCurve, NEWSPRINT_CURVE_POINTS, type FilmId } from './film';
+import { applyFilm, analyzeFilm, mixFilmInPlace, FILM_IDS, FILM_SPECS, classicToneCurve, newsprintToneCurve, NEWSPRINT_CURVE_POINTS, type FilmId } from './film';
 import { createGrainTile, Engine3D, colorAdjustFromTone, isNeutralColor } from './compose';
 import { renderSlideBase, computeFontSizePx, computeGlowPx, drawWatermarkText, drawLogo, drawAppWatermark } from './render';
 import { runExport, packageAndDeliver, type ExportRequest, type ExportQuality } from './export';
@@ -92,7 +92,7 @@ const cropCtrl = new CropController(DOM.main, {
 });
 
 installDebugHook((rect) => cropCtrl.setCropForTest(rect), {
-  film: { apply: applyFilm, analyze: analyzeFilm, specs: FILM_SPECS, newsprintToneCurve, newsprintCurvePoints: NEWSPRINT_CURVE_POINTS },
+  film: { apply: applyFilm, analyze: analyzeFilm, specs: FILM_SPECS, classicToneCurve, newsprintToneCurve, newsprintCurvePoints: NEWSPRINT_CURVE_POINTS },
   preview: () => {
     const lut = S().tone.lut;
     const filmReady = !isFilm(lut) || (!toneRunning && !!filmCache && filmCache.film === lut && filmCache.base === baseCanvas && previewSource !== null);

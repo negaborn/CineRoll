@@ -158,22 +158,42 @@ export function boxBlur(src: Float32Array, w: number, h: number, radius: number)
 
 // --- Classic Pan 400 ---
 
-/** Asymmetric toe/shoulder + straight-line gain + independent shadow lift (classic-pan-400 toneCurve). */
+/**
+ * Classic Pan 400 tone curve: asymmetric toe/shoulder, midtone gain, independent
+ * texture-based shadow lift.
+ *
+ * Deliberate deviation from the prototype (2026-09-26, real backlit portraits):
+ *  - The prototype applied the midtone gain AFTER the shoulder, which pushed the
+ *    shoulder's compressed highlights back past 1.0: every input above 0.858 came
+ *    out pure white (a blank sky). The gain now runs first and the shoulder rolls
+ *    the gained highlights smoothly into 1.0.
+ *  - The shadow lift reaches up to 0.45 (was 0.32), so shadowed faces under a
+ *    hat/backlight are lifted too. How much lift a photo gets is still decided by
+ *    the dark-AND-textured coverage (detection threshold unchanged).
+ * Shadows and midtones up to the shoulder (input <= 0.735 at the default
+ * strength) are exactly the prototype's.
+ */
 export function classicToneCurve(v: number, strength: number, shadowLift: number): number {
   const toeLen = 0.32;
   const shoulderLen = 0.22;
+  const liftEnd = 0.45;
   let out: number;
   if (strength <= 0) out = v;
-  else if (v < toeLen) {
-    const t = v / toeLen;
-    out = Math.pow(t, 1 - 0.35 * strength) * toeLen;
-  } else if (v > 1 - shoulderLen) {
-    const t = (v - (1 - shoulderLen)) / shoulderLen;
-    out = (1 - shoulderLen) + (1 - Math.pow(1 - t, 1.8 + strength * 0.9)) * shoulderLen;
-  } else out = v;
-  out = (out - 0.5) * (1 + 0.35 * strength) + 0.5;
-  if (shadowLift > 0 && v < toeLen) {
-    const fade = Math.pow(1 - v / toeLen, 1.4);
+  else {
+    const G = 1 + 0.35 * strength;
+    if (v < toeLen) {
+      out = Math.pow(v / toeLen, 1 - 0.35 * strength) * toeLen;
+      out = (out - 0.5) * G + 0.5;
+    } else {
+      const g = (v - 0.5) * G + 0.5;
+      if (g > 1 - shoulderLen) {
+        const t = (g - (1 - shoulderLen)) / ((0.5 + 0.5 * G) - (1 - shoulderLen));
+        out = (1 - shoulderLen) + (1 - Math.pow(1 - t, 1.8 + strength * 0.9)) * shoulderLen;
+      } else out = g;
+    }
+  }
+  if (shadowLift > 0 && v < liftEnd) {
+    const fade = Math.pow(1 - v / liftEnd, 1.4);
     out += shadowLift * 0.22 * fade;
   }
   return Math.min(1, Math.max(0, out));
