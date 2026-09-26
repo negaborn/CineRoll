@@ -47,14 +47,14 @@ test('every edit control is reflected in EditState immediately', async ({ page, 
   await setControl(page, '#slider-br', '120'); await setControl(page, '#slider-co', '90');
   await setControl(page, '#slider-sa', '110'); await setControl(page, '#slider-grain', '30'); await tick();
   await page.click('[data-tab="tone"]');
-  await setControl(page, '#select-lut', 'fuji', ['change']);
+  await setControl(page, '#select-lut', 'classic-pan-400', ['change']);
   await setControl(page, '#slider-lut-intensity', '70');
   await setControl(page, '#slider-hl', '20');
   await setControl(page, '#slider-sh', '-10');
   await page.waitForFunction(() => document.getElementById('loading-overlay')!.classList.contains('hidden'));
   const tone = (await state(page)).tone;
   expect({ lut: tone.lut, lutIntensity: tone.lutIntensity, highlights: tone.highlights, shadows: tone.shadows, brightness: tone.brightness, contrast: tone.contrast, saturation: tone.saturation, grain: tone.grain })
-    .toEqual({ lut: 'fuji', lutIntensity: 70, highlights: 20, shadows: -10, brightness: 120, contrast: 90, saturation: 110, grain: 30 });
+    .toEqual({ lut: 'classic-pan-400', lutIntensity: 70, highlights: 20, shadows: -10, brightness: 120, contrast: 90, saturation: 110, grain: 30 });
 
   await page.click('[data-tab="typo"]');
   await page.fill('#watermarkText', 'HELLO');

@@ -2,6 +2,7 @@ import JSZip from 'jszip';
 import type { BorderStyle, CropRect, LutChoice, SqueezeFactor, Strategy, TextPreset, WatermarkTarget } from './state';
 import { getCropFrameSize, renderCroppedRegionFromOriginal } from './crop';
 import { Engine3D, buildToneFilterString, createGrainTile } from './compose';
+import { applyFilm, FILM_IDS, type FilmId } from './film';
 import { renderSlideBase, computeFontSizePx, computeGlowPx, drawWatermarkText, drawLogo, drawAppWatermark } from './render';
 
 export type ExportQuality = 'ig' | 'web' | 'png';
@@ -114,9 +115,16 @@ export async function runExport(req: ExportRequest, onProgress: (msg: string) =>
   await new Promise((r) => setTimeout(r, 50));
   let mCvs: HTMLCanvasElement = renderCroppedRegionFromOriginal(req.originalImg, req.squeeze, req.baseRotation, req.fineRotation, req.crop, targetW);
 
-  // brightness/contrast/saturation + the kodak/fuji/cinematic CSS-emulated LUTs are baked into
-  // the base composite via the same filterString the live preview uses (renderSlideBase below);
-  // only the WebGL-only custom-LUT/highlight-shadow pass needs a separate pre-processing step here.
+  // Same order as the live preview: film simulation (film.ts, on the whole
+  // composite so panorama slides share one development), then the WebGL
+  // custom-LUT/highlight-shadow pass, then brightness/contrast/saturation via the
+  // filterString in renderSlideBase below.
+  if ((FILM_IDS as string[]).includes(req.tone.lut)) {
+    onProgress('Developing Film...');
+    const developed = await applyFilm(mCvs, req.tone.lut as FilmId, { onStrip: () => new Promise((r) => setTimeout(r, 0)) });
+    mCvs.width = 0; mCvs.height = 0;
+    mCvs = developed;
+  }
   if (req.tone.hasCustomLut || req.tone.highlights !== 0 || req.tone.shadows !== 0) {
     const hlF = 1.0 + req.tone.highlights / 100.0;
     const shF = 1.0 + req.tone.shadows / 100.0;

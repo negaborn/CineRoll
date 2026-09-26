@@ -69,22 +69,6 @@ for (const c of cases) {
   });
 }
 
-test('LUT intensity (CSS LUT) follows the drag before release', async ({ page, browser }) => {
-  await start(page, browser);
-  await page.click('[data-tab="tone"]');
-  await page.selectOption('#select-lut', 'kodak');
-  await page.waitForTimeout(300);
-  const before = await previewStats(page);
-  await dragAndHold(page, '#slider-lut-intensity', 0.05);
-  await page.waitForTimeout(300);
-  expect(Number(await page.inputValue('#slider-lut-intensity')), 'thumb actually moved').toBeLessThan(20);
-  expect((await state(page)).tone.lutIntensity).toBe(Number(await page.inputValue('#slider-lut-intensity')));
-  expect(await page.innerText('#val-lut-intensity')).toBe(`${await page.inputValue('#slider-lut-intensity')}%`);
-  expect(change(before, await previewStats(page)), 'preview changes while dragging').toBeGreaterThan(3);
-  await page.mouse.up();
-  expect(await overlayShown(page)).toBe(0);
-});
-
 test('custom .cube LUT intensity follows the drag before release', async ({ page, browser }) => {
   await start(page, browser);
   await page.click('[data-tab="tone"]');

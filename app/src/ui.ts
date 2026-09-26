@@ -8,7 +8,8 @@
 // preview proxy URLs) and pure view state (tab, zoom, split view) live here.
 import UTIF from 'utif';
 import { editState, patchGroup, loadPresets, savePresets, installDebugHook, type EditState, type TextPresetRecord } from './state';
-import { CropController, getCropFrameSize } from './crop';
+import { CropController, getCropFrameSize, renderCroppedRegionFromOriginal } from './crop';
+import { applyFilm, analyzeFilm, FILM_IDS, FILM_SPECS, newsprintToneCurve, NEWSPRINT_CURVE_POINTS, type FilmId } from './film';
 import { buildToneFilterString, createGrainTile, Engine3D } from './compose';
 import { renderSlideBase, computeFontSizePx, computeGlowPx, drawWatermarkText, drawLogo, drawAppWatermark } from './render';
 import { runExport, packageAndDeliver, type ExportRequest, type ExportQuality } from './export';
@@ -68,6 +69,7 @@ let splitPos = 50;
 let savedCustomPresets: TextPresetRecord[] = [];
 
 const S = () => editState.get();
+const isFilm = (lut: string): lut is FilmId => (FILM_IDS as string[]).includes(lut);
 const FRESH_CROP = { x: 0, y: 0, width: 0, height: 0 };
 const isFreshCrop = (c: EditState['crop']) => c.width <= 0 || c.height <= 0;
 const slideCount = (s: EditState) => (s.strategy === 'single' ? 1 : s.slides);
@@ -89,7 +91,14 @@ const cropCtrl = new CropController(DOM.main, {
   },
 });
 
-installDebugHook((rect) => cropCtrl.setCropForTest(rect));
+installDebugHook((rect) => cropCtrl.setCropForTest(rect), {
+  film: { apply: applyFilm, analyze: analyzeFilm, specs: FILM_SPECS, newsprintToneCurve, newsprintCurvePoints: NEWSPRINT_CURVE_POINTS },
+  preview: () => {
+    const lut = S().tone.lut;
+    const filmReady = !isFilm(lut) || (!toneRunning && !!filmCache && filmCache.film === lut && filmCache.base === baseCanvas && previewSource !== null);
+    return { w: baseCanvas?.width ?? 0, h: baseCanvas?.height ?? 0, filmReady, filmRuns };
+  },
+});
 
 // ============================================================================
 // State -> controls
@@ -120,8 +129,9 @@ function syncControls(s: EditState) {
   setVal(DOM.sLut, s.tone.lut);
   setVal(DOM.sLutIntensity, String(s.tone.lutIntensity));
   DOM.valLutIntensity.innerText = `${s.tone.lutIntensity}%`;
-  DOM.lutWrap.classList.toggle('opacity-50', s.tone.lut === 'none');
-  DOM.lutWrap.classList.toggle('pointer-events-none', s.tone.lut === 'none');
+  // Intensity mixes a custom .cube LUT; the films use their confirmed parameters as is.
+  DOM.lutWrap.classList.toggle('opacity-50', s.tone.lut !== 'custom');
+  DOM.lutWrap.classList.toggle('pointer-events-none', s.tone.lut !== 'custom');
   setVal(DOM.sHl, String(s.tone.highlights)); setVal(DOM.inHl, String(s.tone.highlights));
   setVal(DOM.sSh, String(s.tone.shadows)); setVal(DOM.inSh, String(s.tone.shadows));
   setVal(DOM.sBr, String(s.tone.brightness)); setVal(DOM.inBr, String(s.tone.brightness));
@@ -155,7 +165,7 @@ function syncControls(s: EditState) {
 /** Inputs of the WebGL tone pass (custom .cube LUT and highlight/shadow); CSS-only tone changes just redraw. */
 function toneEngineKey(s: EditState): string {
   const custom = s.tone.lut === 'custom' && !!Engine3D.lutData;
-  return JSON.stringify([custom, custom ? s.tone.lutIntensity : null, s.tone.highlights, s.tone.shadows, s.tone.customLutRev]);
+  return JSON.stringify([isFilm(s.tone.lut) ? s.tone.lut : null, custom, custom ? s.tone.lutIntensity : null, s.tone.highlights, s.tone.shadows, s.tone.customLutRev]);
 }
 
 function react(s: EditState, prev: EditState) {
@@ -527,11 +537,30 @@ function framingKey(s: EditState = S()): string {
 }
 
 /** Snapshots the live Cropper's framing as the preview source. False if there is no valid crop to take. */
+/**
+ * Long side of the preview's working image: at least 2600px (smaller blurs the
+ * film passes), more on screens whose device pixels exceed that, capped for memory.
+ */
+function previewProcessLongSide(): number {
+  const dpr = window.devicePixelRatio || 1;
+  const screenLong = Math.max(window.screen.width, window.screen.height) * dpr;
+  return Math.min(4096, Math.max(2600, Math.ceil(screenLong)));
+}
+
 function captureFraming(): boolean {
-  if (!cropCtrl.isReady || !isCropperReady) return false;
+  if (!cropCtrl.isReady || !isCropperReady || !originalImg) return false;
   DOM.badge.classList.add('opacity-0');
-  const cvs = cropCtrl.getCroppedCanvas({ maxWidth: 2560, maxHeight: 2560, fillColor: 'transparent', imageSmoothingEnabled: true, imageSmoothingQuality: 'high' });
-  if (!cvs || cvs.width === 0 || cvs.height === 0) { alert('크롭 영역을 다시 지정해주세요.'); return false; }
+  // Rendered from the original with the export's own renderer (not Cropper's
+  // proxy), so preview and export start from the same pixels, at >= 2600px
+  // unless the crop itself is smaller.
+  const s = S();
+  const frame = getCropFrameSize(originalImg, s.squeeze, s.rotation.base, s.rotation.fine);
+  const cw = s.crop.width * frame.width;
+  const ch = s.crop.height * frame.height;
+  if (!(cw >= 1 && ch >= 1)) { alert('크롭 영역을 다시 지정해주세요.'); return false; }
+  const long = Math.max(cw, ch);
+  const scale = Math.min(1, previewProcessLongSide() / long);
+  const cvs = renderCroppedRegionFromOriginal(originalImg, s.squeeze, s.rotation.base, s.rotation.fine, s.crop, cw * scale);
   activeGlobalRatio = cvs.width / cvs.height;
   releaseApplied();
   baseCanvas = cvs;
@@ -827,9 +856,40 @@ let rebuildRequested = false;
 
 /** Drops the applied framing and its tone output (a new photo, or a new capture replacing it). */
 function releaseApplied() {
-  if (previewSource && previewSource !== baseCanvas) { previewSource.width = 0; previewSource.height = 0; }
-  if (baseCanvas) { baseCanvas.width = 0; baseCanvas.height = 0; }
-  baseCanvas = null; baseUrl = null; previewSource = null;
+  for (const c of new Set([previewSource, filmCache?.out, baseCanvas])) if (c) { c.width = 0; c.height = 0; }
+  baseCanvas = null; baseUrl = null; previewSource = null; filmCache = null;
+}
+
+/** The film developed from the current baseCanvas -- kept so tone scrubs on top of a film don't re-develop it. */
+let filmCache: { base: HTMLCanvasElement; film: FilmId; out: HTMLCanvasElement } | null = null;
+let filmRuns = 0;
+class FilmSuperseded extends Error {}
+
+function setFilmStatus(on: boolean) {
+  el('film-status').classList.toggle('hidden', !on);
+}
+
+/** Develops `film` from baseCanvas (strip by strip, yielding to the page); aborts if the film or framing changes meanwhile. */
+async function developFilm(film: FilmId): Promise<HTMLCanvasElement> {
+  const base = baseCanvas!;
+  if (filmCache && filmCache.base === base && filmCache.film === film) return filmCache.out;
+  setFilmStatus(true);
+  try {
+    const out = await applyFilm(base, film, {
+      stripPixels: 500_000, // short slices keep the page responsive while developing
+      onStrip: async () => {
+        await new Promise((r) => setTimeout(r, 0));
+        if (baseCanvas !== base || S().tone.lut !== film) throw new FilmSuperseded();
+      },
+    });
+    filmRuns++;
+    const old = filmCache?.out;
+    filmCache = { base, film, out };
+    if (old && old !== previewSource) { old.width = 0; old.height = 0; }
+    return out;
+  } finally {
+    setFilmStatus(false);
+  }
 }
 
 /**
@@ -862,13 +922,24 @@ function runToneEngine(opts: { rebuild?: boolean } = {}) {
 async function tonePass() {
   if (!baseCanvas) return; // nothing applied yet -- takes effect on the first apply
   const s = S();
+  // Same order as the export: film, then the WebGL custom-LUT/highlight-shadow pass.
+  let src: HTMLCanvasElement = baseCanvas;
+  if (isFilm(s.tone.lut)) {
+    try {
+      src = await developFilm(s.tone.lut);
+    } catch (e) {
+      if (e instanceof FilmSuperseded) { toneDirty = true; return; } // the loop re-runs with the new film/framing
+      throw e;
+    }
+  }
   const hasCustomLut = s.tone.lut === 'custom' && !!Engine3D.lutData;
   const needsGl = hasCustomLut || s.tone.highlights !== 0 || s.tone.shadows !== 0;
   const next = needsGl
-    ? await Engine3D.apply(baseCanvas, s.tone.lutIntensity / 100, 1 + s.tone.highlights / 100, 1 + s.tone.shadows / 100, hasCustomLut)
-    : baseCanvas;
+    ? await Engine3D.apply(src, s.tone.lutIntensity / 100, 1 + s.tone.highlights / 100, 1 + s.tone.shadows / 100, hasCustomLut)
+    : src;
   if (!baseCanvas) return; // released (new photo) while the pass ran
-  if (previewSource && previewSource !== baseCanvas && previewSource !== next) { previewSource.width = 0; previewSource.height = 0; }
+  // Free the previous WebGL output (never the base or the cached film).
+  if (previewSource && previewSource !== baseCanvas && previewSource !== filmCache?.out && previewSource !== next) { previewSource.width = 0; previewSource.height = 0; }
   previewSource = next;
   if (rebuildRequested) {
     rebuildRequested = false;

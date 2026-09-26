@@ -181,15 +181,16 @@
                 <div id="tab-tone" class="tab-content space-y-5 hidden">
                     <div class="pb-3 border-b border-border mb-3">
                         <div class="flex justify-between items-center mb-2">
-                            <label class="min-label mb-0"><span class="text-coral-400">Cinematic LUT</span></label>
+                            <label class="min-label mb-0"><span class="text-coral-400">Film Simulation</span><span id="film-status" class="hidden ml-2 text-[9px] text-zinc-500 font-mono">Developing…</span></label>
                             <button id="btn-upload-lut-trigger" class="text-[9px] text-zinc-400 hover:text-white flex items-center gap-1 font-bold"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg> .CUBE</button>
                             <input type="file" id="uploadLut" accept=".cube" class="hidden">
                         </div>
                         <select id="select-lut" class="min-select mb-2">
                             <option value="none">None (Original)</option>
-                            <option value="kodak">Warm Nostalgia</option>
-                            <option value="fuji">Cool Fade</option>
-                            <option value="cinematic">Teal &amp; Orange</option>
+                            <option value="classic-pan-400">Classic Pan 400 (B&amp;W)</option>
+                            <option value="newsprint-400">Newsprint 400 (B&amp;W)</option>
+                            <option value="velvia-50">Vivid Slide 50 · Velvia 50</option>
+                            <option value="provia-100f">Vivid Slide 50 · Provia 100F</option>
                             <option value="custom" id="opt-custom-lut" class="hidden font-bold text-coral-400">My Custom LUT (.cube)</option>
                         </select>
                         <div id="lut-intensity-wrapper" class="opacity-50 pointer-events-none transition-opacity">

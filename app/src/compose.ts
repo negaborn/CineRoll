@@ -1,34 +1,18 @@
-import type { LutChoice } from './state';
-
-const CSS_LUT_FILTERS: Record<Exclude<LutChoice, 'none' | 'custom'>, (intensity: number) => string> = {
-  kodak: (i) => `sepia(${50 * i}%) contrast(${100 + 15 * i}%) saturate(${100 + 20 * i}%) hue-rotate(${-10 * i}deg)`,
-  fuji: (i) => `sepia(${30 * i}%) hue-rotate(${10 * i}deg) saturate(${100 - 10 * i}%) contrast(${100 - 5 * i}%)`,
-  cinematic: (i) => `contrast(${100 + 20 * i}%) saturate(${100 + 10 * i}%) sepia(${40 * i}%) hue-rotate(${-15 * i}deg)`,
-};
-
-/** The CSS-filter-emulated LUT string ('none' for the WebGL-only 'custom' LUT, which has no CSS equivalent). */
-export function buildCssLutFilter(lut: LutChoice, intensityPct: number): string {
-  if (lut === 'none' || lut === 'custom') return 'none';
-  const i = intensityPct / 100;
-  return CSS_LUT_FILTERS[lut](i);
-}
 
 export interface ToneFilterInput {
-  lut: LutChoice;
-  lutIntensity: number;
   brightness: number;
   contrast: number;
   saturation: number;
 }
 
-/** Combined CSS filter string (LUT + brightness/contrast/saturation), shared by the preview canvas and export. */
+/**
+ * CSS filter string for brightness/contrast/saturation, shared by the preview
+ * canvas and export. (Looks -- film simulations, custom .cube LUTs -- are
+ * pixel passes that run before this: film.ts and Engine3D.)
+ */
 export function buildToneFilterString(tone: ToneFilterInput): string {
-  let f = buildCssLutFilter(tone.lut, tone.lutIntensity);
-  if (tone.brightness !== 100 || tone.contrast !== 100 || tone.saturation !== 100) {
-    if (f === 'none') f = '';
-    f += ` brightness(${tone.brightness}%) contrast(${tone.contrast}%) saturate(${tone.saturation}%)`;
-  }
-  return f === '' ? 'none' : f;
+  if (tone.brightness === 100 && tone.contrast === 100 && tone.saturation === 100) return 'none';
+  return `brightness(${tone.brightness}%) contrast(${tone.contrast}%) saturate(${tone.saturation}%)`;
 }
 
 /** A tileable black/white noise canvas used as a soft-light grain overlay. */

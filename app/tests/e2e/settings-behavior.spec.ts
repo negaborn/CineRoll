@@ -39,13 +39,14 @@ test('color: brightness/contrast/saturation and a CSS LUT look the same in previ
 
   await page.click('#btn-reset-color');
   await page.click('[data-tab="tone"]');
-  await setControl(page, '#select-lut', 'kodak', ['change']);
-  await setControl(page, '#slider-lut-intensity', '60', ['input', 'change']);
-  await page.waitForTimeout(400);
+  // The CSS "LUTs" (kodak/fuji/cinematic) were replaced by film simulations.
+  await setControl(page, '#select-lut', 'velvia-50', ['change']);
+  await page.waitForFunction(() => (window.__CINEROLL_DEBUG__ as unknown as { preview(): { filmReady: boolean } }).preview().filmReady, null, { timeout: 60_000 });
+  await page.waitForTimeout(300);
   const pl = await previewStats(page);
-  expect(meanDiff(pl, base), 'LUT changes the look').toBeGreaterThan(4);
+  expect(meanDiff(pl, base), 'film changes the look').toBeGreaterThan(4);
   await runExport(page);
-  expect(meanDiff(pl, await exportStats(page)), 'LUT preview vs export').toBeLessThan(6);
+  expect(meanDiff(pl, await exportStats(page)), 'film preview vs export').toBeLessThan(6);
 });
 
 test('tone: WebGL highlights look the same in preview and export', async ({ page, browser }) => {
@@ -134,8 +135,8 @@ test('reset buttons restore defaults in controls and preview', async ({ page, br
   await setControl(page, '#slider-grain', '50');
   await page.click('#btn-reset-color');
   await page.click('[data-tab="tone"]');
-  await setControl(page, '#select-lut', 'fuji', ['change']);
-  await page.waitForTimeout(300);
+  await setControl(page, '#select-lut', 'newsprint-400', ['change']);
+  await page.waitForFunction(() => (window.__CINEROLL_DEBUG__ as unknown as { preview(): { filmReady: boolean } }).preview().filmReady, null, { timeout: 60_000 });
   await page.click('#btn-reset-tone');
   await page.waitForTimeout(400);
   expect(await page.inputValue('#slider-br')).toBe('100');

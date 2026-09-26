@@ -242,16 +242,23 @@ test.describe('integration: Tone tab film selector', () => {
     test(`${film}: preview (>=2600px) and full-resolution export match`, async ({ page, browser }) => {
       test.setTimeout(180_000);
       await startWithScene(page, browser, 6000, 4000);
-      await page.click('#strategy-btns [data-val="single"]');
+      await page.click('#strategy-btns [data-val="single"]'); // Free
+      await page.evaluate(() => window.__CINEROLL_DEBUG__!.setCropForTest({ x: 0, y: 0, width: 1, height: 1 })); // 6000px crop
       await page.click('#btn-apply-crop');
       await page.waitForSelector('.preview-slide-canvas');
-      const plain = await previewStats(page);
+      await page.evaluate(() => { const c = document.querySelector('.preview-slide-canvas') as HTMLCanvasElement; (window as unknown as { __plain: Uint8ClampedArray }).__plain = c.getContext('2d')!.getImageData(0, 0, c.width, c.height).data; });
       await selectFilm(page, film);
       expect((await page.evaluate(() => window.__CINEROLL_DEBUG__!.getState())).tone.lut).toBe(film);
       const info = await page.evaluate(() => (window.__CINEROLL_DEBUG__ as unknown as { preview(): { w: number; h: number; filmReady: boolean } }).preview());
-      expect(Math.max(info.w, info.h), 'preview film processed at >= 2600px').toBeGreaterThanOrEqual(2600);
+      expect(Math.max(info.w, info.h), 'preview film processed at >= 2600px (the crop has 6000)').toBeGreaterThanOrEqual(2600);
       const p = await previewStats(page);
-      expect(meanDiff(plain, p), 'the film changes the look').toBeGreaterThan(3);
+      const pixelChange = await page.evaluate(() => {
+        const c = document.querySelector('.preview-slide-canvas') as HTMLCanvasElement;
+        const a = (window as unknown as { __plain: Uint8ClampedArray }).__plain; const d = c.getContext('2d')!.getImageData(0, 0, c.width, c.height).data;
+        let sum = 0; for (let i = 0; i < d.length; i += 4) sum += Math.abs(d[i] - a[i]) + Math.abs(d[i + 1] - a[i + 1]) + Math.abs(d[i + 2] - a[i + 2]);
+        return sum / (d.length * 0.75);
+      });
+      expect(pixelChange, 'the film changes the look (mean per-pixel change)').toBeGreaterThan(3);
       if (film.includes('pan') || film.includes('news')) expect(p.sat, 'B&W').toBeLessThan(8);
       await runExport(page, 'png');
       const e = await exportStats(page);
@@ -265,7 +272,17 @@ test.describe('integration: Tone tab film selector', () => {
     });
   }
 
-  test('2.4:1 anamorphic panorama keeps its ratio through film + export (no crop to 3:2)', async ({ page, browser }) => {
+  test('a crop smaller than 2600px is processed at its own resolution (no upscale)', async ({ page, browser }) => {
+    await startWithScene(page, browser, 6000, 4000);
+    await page.click('#strategy-btns [data-val="single"]');
+    await page.evaluate(() => window.__CINEROLL_DEBUG__!.setCropForTest({ x: 0.3, y: 0.3, width: 0.3, height: 0.3 })); // 1800x1200
+    await page.click('#btn-apply-crop');
+    await page.waitForSelector('.preview-slide-canvas');
+    const info = await page.evaluate(() => (window.__CINEROLL_DEBUG__ as unknown as { preview(): { w: number; h: number } }).preview());
+    expect([info.w, info.h]).toEqual([1800, 1200]);
+  });
+
+    test('2.4:1 anamorphic panorama keeps its ratio through film + export (no crop to 3:2)', async ({ page, browser }) => {
     test.setTimeout(180_000);
     await startWithScene(page, browser, 4800, 2000);
     await setControl(page, '#select-ratio', 'NaN', ['change']); // Seamless, Free

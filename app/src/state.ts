@@ -1,7 +1,8 @@
 export type Strategy = 'seamless' | 'triptych' | 'single';
 export type SqueezeFactor = 100 | 133 | 150 | 160 | 180 | 200;
 export type BorderStyle = 'none' | 'fineart' | 'vnotch' | 'instant';
-export type LutChoice = 'none' | 'kodak' | 'fuji' | 'cinematic' | 'custom';
+/** 'none', one of the film simulations (film.ts), or a user-loaded .cube LUT. */
+export type LutChoice = 'none' | 'classic-pan-400' | 'newsprint-400' | 'velvia-50' | 'provia-100f' | 'custom';
 export type TextPreset = 'none' | 'gold' | 'silver';
 export type WatermarkTarget = 'all' | 1 | 2 | 3 | 4;
 
@@ -156,6 +157,8 @@ export interface CineRollDebug {
   setCropForTest(rect: CropRect): void;
   /** Merges a per-group partial state, e.g. { frame: { margin: true }, strategy: 'single' }. */
   updateState(patch: Record<string, unknown>): void;
+  /** Extra test-only probes supplied by the UI layer (film engine, preview info). */
+  [extra: string]: unknown;
 }
 
 declare global {
@@ -164,9 +167,10 @@ declare global {
   }
 }
 
-export function installDebugHook(setCropForTest: (rect: CropRect) => void): void {
+export function installDebugHook(setCropForTest: (rect: CropRect) => void, extras: Record<string, unknown> = {}): void {
   if (!import.meta.env.DEV) return;
   window.__CINEROLL_DEBUG__ = {
+    ...extras,
     getState: () => editState.get(),
     setCropForTest,
     updateState: (patch) =>
