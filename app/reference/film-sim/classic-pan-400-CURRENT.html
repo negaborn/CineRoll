@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Classic Pan 400 — 톤 실험실</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #151412;
+    --bg-elevated: #1d1b17;
+    --ink: #ede8df;
+    --muted: #948c7e;
+    --muted-2: #6b6559;
+    --safelight: #c23b22;
+    --amber: #d9a441;
+    --line: #3a362f;
+    --line-soft: #2a2721;
+  }
+  *{ box-sizing: border-box; }
+  body{
+    margin:0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'IBM Plex Mono', monospace;
+    padding: 32px 24px 60px;
+    min-height: 100vh;
+  }
+  .wrap{ max-width: 980px; margin: 0 auto; }
+
+  /* --- header, spec-sheet style --- */
+  header{
+    display:flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 18px;
+    margin-bottom: 28px;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .title-block h1{
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 42px;
+    letter-spacing: 0.5px;
+    margin: 0 0 4px;
+    text-transform: uppercase;
+  }
+  .title-block .sub{
+    color: var(--muted);
+    font-size: 13px;
+    letter-spacing: 0.3px;
+  }
+  .spec-tag{
+    text-align: right;
+    font-size: 11px;
+    color: var(--muted-2);
+    line-height: 1.7;
+  }
+  .spec-tag b{ color: var(--amber); font-weight: 600; }
+
+  /* --- upload row --- */
+  .upload-row{
+    display:flex; align-items:center; gap:14px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .upload-btn{
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 14px; font-weight: 600; letter-spacing: 0.5px;
+    text-transform: uppercase;
+    background: var(--amber);
+    color: var(--bg);
+    padding: 9px 16px;
+    cursor: pointer;
+    border: 1px solid var(--amber);
+    transition: opacity 0.15s;
+  }
+  .upload-btn:hover{ opacity: 0.85; }
+  .reset-btn{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px; letter-spacing: 0.3px;
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--line);
+    padding: 9px 14px;
+    cursor: pointer;
+  }
+  .reset-btn:hover{ color: var(--ink); border-color: var(--muted); }
+  .upload-hint{
+    font-size: 11px; color: var(--muted-2);
+    margin-left: auto;
+  }
+
+  /* --- filmstrip framed viewer --- */
+  .filmstrip{
+    background: var(--bg-elevated);
+    border: 1px solid var(--line);
+    padding: 14px 14px 18px;
+    position: relative;
+  }
+  .sprockets{
+    display:flex;
+    justify-content: space-between;
+    padding: 0 4px 10px;
+  }
+  .sprockets span{
+    width: 10px; height: 7px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 1px;
+  }
+  .viewer{
+    position: relative;
+    width: 100%;
+    aspect-ratio: 3 / 2;
+    background:#000;
+    overflow:hidden;
+  }
+  .viewer canvas{
+    position:absolute; top:0; left:0;
+    width:100%; height:100%;
+    display:block;
+  }
+  #canvasOriginal{ clip-path: inset(0 0 0 0); }
+  .divider-line{
+    position:absolute; top:0; bottom:0;
+    width:1px; background: var(--amber);
+    box-shadow: 0 0 6px rgba(217,164,65,0.6);
+    pointer-events:none;
+  }
+  .compare-label{
+    position:absolute; top:10px;
+    font-size: 10px; letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 3px 7px;
+    background: rgba(21,20,18,0.75);
+    border: 1px solid var(--line);
+    pointer-events:none;
+  }
+  .lbl-before{ left:10px; color: var(--muted); }
+  .lbl-after{ right:10px; color: var(--amber); }
+
+  .compare-slider-row{
+    display:flex; align-items:center; gap:12px;
+    margin-top: 14px;
+    padding: 0 4px;
+  }
+  .compare-slider-row .cap{
+    font-size: 10px; letter-spacing: 1px; color: var(--muted-2); text-transform: uppercase;
+  }
+  input[type="range"]{
+    -webkit-appearance:none; appearance:none;
+    flex:1; height: 2px;
+    background: var(--line);
+    outline:none;
+  }
+  input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none;
+    width: 12px; height: 12px;
+    background: var(--amber);
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid var(--bg-elevated);
+  }
+  input[type="range"]::-moz-range-thumb{
+    width: 10px; height: 10px;
+    background: var(--amber);
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid var(--bg-elevated);
+  }
+
+  .filter-preset-btn{
+    flex:1;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--line);
+    padding: 7px 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .filter-preset-btn:hover{ color: var(--ink); border-color: var(--amber); }
+  .filter-preset-btn.active{ color: var(--bg); background: var(--amber); border-color: var(--amber); }
+
+  /* --- control deck --- */
+  .deck{
+    margin-top: 30px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+  }
+  .ctrl{
+    background: var(--bg-elevated);
+    padding: 16px 18px;
+  }
+  .ctrl-top{
+    display:flex; justify-content: space-between; align-items:baseline;
+    margin-bottom: 10px;
+  }
+  .ctrl-name{
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 16px; font-weight: 600;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+  .ctrl-val{
+    font-size: 12px; color: var(--amber);
+    min-width: 42px; text-align:right;
+  }
+  .ctrl-desc{
+    font-size: 11px; color: var(--muted-2);
+    margin-top: 8px; line-height: 1.5;
+  }
+
+  footer{
+    margin-top: 34px;
+    border-top: 1px solid var(--line);
+    padding-top: 16px;
+    font-size: 11px;
+    color: var(--muted-2);
+    line-height: 1.7;
+  }
+  footer b{ color: var(--muted); }
+
+  @media (max-width: 640px){
+    .deck{ grid-template-columns: 1fr; }
+    .title-block h1{ font-size: 32px; }
+    header{ flex-direction:column; align-items:flex-start; }
+    .spec-tag{ text-align:left; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="title-block">
+      <h1>Classic Pan 400</h1>
+      <div class="sub">필름 시뮬레이션 프로토타입 · 톤커브 / 판크로매틱 감도 / 그레인 / 헤일레이션</div>
+    </div>
+    <div class="spec-tag">
+      TYPE: <b>B&amp;W NEGATIVE, ISO 400</b><br>
+      CALIBRATION: <b>지후 우에우에치리온 기준 확정</b><br>
+      STAGE: <b>1 / 1 — CONFIRMED</b>
+    </div>
+  </header>
+
+  <div class="upload-row">
+    <label class="upload-btn" for="fileInput">＋ 내 사진 불러오기</label>
+    <input type="file" id="fileInput" accept="image/*" hidden>
+    <button class="reset-btn" id="resetSceneBtn" type="button">합성 캘리브레이션 씬으로 되돌리기</button>
+    <span class="upload-hint" id="uploadHint">현재: 합성 캘리브레이션 씬</span>
+  </div>
+
+  <div class="filmstrip">
+    <div class="sprockets" id="sprocketsTop"></div>
+    <div class="viewer">
+      <canvas id="canvasProcessed" width="900" height="600"></canvas>
+      <canvas id="canvasOriginal" width="900" height="600"></canvas>
+      <div class="divider-line" id="dividerLine" style="left:50%"></div>
+      <div class="compare-label lbl-before">ORIGINAL</div>
+      <div class="compare-label lbl-after">CLASSIC PAN 400</div>
+    </div>
+    <div class="sprockets" id="sprocketsBottom"></div>
+    <div class="compare-slider-row">
+      <span class="cap">Before</span>
+      <input type="range" id="compareSlider" min="0" max="100" value="50">
+      <span class="cap">After</span>
+    </div>
+  </div>
+
+  <div class="deck">
+    <div class="ctrl">
+      <div class="ctrl-top">
+        <span class="ctrl-name">노출 앵커</span>
+        <span class="ctrl-val" id="valAnchor" style="min-width:110px;">자동</span>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);margin-bottom:10px;">
+        <input type="checkbox" id="autoAnchor"> 사진마다 중간톤 자동 감지
+      </label>
+      <input type="range" id="manualAnchor" min="-40" max="40" value="0">
+      <div class="ctrl-desc">사진마다 밝기 분포가 다르면 같은 곡선도 다르게 느껴집니다. 이 사진 자체의 중간톤을 찾아 곡선 중심에 맞춘 뒤 토우/숄더를 적용합니다 (노출계가 하는 일과 동일한 원리). 끄면 수동으로 직접 이동 가능.</div>
+    </div>
+    <div class="ctrl">
+      <div class="ctrl-top">
+        <span class="ctrl-name">Panchromatic 감도</span>
+        <span class="ctrl-val" id="valRed">74%</span>
+      </div>
+      <input type="range" id="redWeight" min="20" max="90" value="74">
+      <div class="ctrl-desc">흑백 변환 시 적색 채널 반응 비중. 높을수록 피부톤·붉은 벽돌이 밝게, 하늘이 어둡게 나옵니다 (판크로매틱 유제 특성). 파란 하늘이 있는 사진에서 74% 이상은 실질적으로 <b>레드필터를 낀 효과</b>에 가깝습니다.</div>
+      <div style="display:flex; gap:8px; margin-top:10px;">
+        <button type="button" class="filter-preset-btn" id="presetNoFilter">무필터 (48%)</button>
+        <button type="button" class="filter-preset-btn" id="presetRedFilter">레드필터 (74%)</button>
+      </div>
+    </div>
+    <div class="ctrl">
+      <div class="ctrl-top">
+        <span class="ctrl-name">섀도우 리프트</span>
+        <span class="ctrl-val" id="valShadowLift" style="min-width:150px;">자동</span>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);margin-bottom:10px;">
+        <input type="checkbox" id="autoShadow" checked> 그림자 비율에 따라 자동 조정
+      </label>
+      <input type="range" id="shadowLift" min="0" max="100" value="35" disabled>
+      <div class="ctrl-desc">깊은 그림자만 독립적으로 들어올림 — 하이라이트/중간톤 대비는 그대로 둡니다. 프레임에서 그림자가 차지하는 비율을 자동 감지해 비율이 크면(벽 그림자 등) 많이, 작으면(작은 그림자 영역) 거의 0에 가깝게 조정합니다. 끄면 수동 고정값 사용.</div>
+    </div>
+    <div class="ctrl">
+      <div class="ctrl-top">
+        <span class="ctrl-name">톤커브 강도</span>
+        <span class="ctrl-val" id="valContrast">55%</span>
+      </div>
+      <input type="range" id="contrast" min="0" max="100" value="55">
+      <div class="ctrl-desc">긴 토우(그림자 디테일 유지) + 완만한 숄더(하이라이트 급클리핑 방지). 대칭 S커브가 아니라 HP5 계열 특성으로 비대칭 조정.</div>
+    </div>
+    <div class="ctrl">
+      <div class="ctrl-top">
+        <span class="ctrl-name">그레인 강도</span>
+        <span class="ctrl-val" id="valGrain">19%</span>
+      </div>
+      <input type="range" id="grain" min="0" max="100" value="19">
+      <div class="ctrl-desc">밝기 의존형 입자 노이즈. 중간톤~하이라이트에서 가장 강하게, 깊은 섀도우에서는 억제됩니다.</div>
+    </div>
+    <div class="ctrl">
+      <div class="ctrl-top">
+        <span class="ctrl-name">헤일레이션</span>
+        <span class="ctrl-val" id="valHalation">10%</span>
+      </div>
+      <input type="range" id="halation" min="0" max="100" value="10">
+      <div class="ctrl-desc">고휘도 영역 주변 광 산란. 필름 베이스를 투과했다 반사되며 생기는 따뜻한 헤일로입니다.</div>
+    </div>
+  </div>
+
+  <footer>
+    <b>합성 캘리브레이션 씬</b>: 실제 촬영 이미지가 아닌, 톤커브 검증을 위해 하늘 그라데이션 · 스텝 테이블(0/18/50/90% 그레이) · 피부톤 패치 · 식물 패치 · 고휘도 광원을 코드로 생성한 테스트 차트입니다.<br>
+    이름 <b>Classic Pan 400</b>은 특정 상표를 지칭하지 않는 독자적 명칭이며, 재현 대상은 브랜드가 아니라 판크로매틱 흑백 필름 일반의 공개된 색채·감광 특성입니다.<br>
+    <b>2026-07 업데이트</b>: 동급 필름의 공개 기술 자료에 "현상 과정에서 지워지는 안티헤일레이션 백킹" 사양이 명시되어 있어, 정상 현상 조건에서는 헤일레이션이 강하게 나타나지 않는 것이 실제에 가깝습니다. 기본값을 낮추고, 강한 헤일레이션은 역광·손상 필름 등 의도적 연출 옵션으로 남겨두었습니다.<br>
+    <b>2026-07 업데이트 2</b>: 익명 온라인 사진 대신, 필름사 공식 특성곡선을 근거로 재구성·비교한 자료(HP5 vs Tri-X)를 참고해 토우/숄더를 비대칭으로 재설계했습니다 — 그림자는 길게 유지되고 하이라이트는 급격히 클리핑되지 않는 방향.<br>
+    <b>2026-07 업데이트 3</b>: <i>우에우에치리온</i> 시리즈에서 이미 확정하신 흑백 톤(Capture One 그레이딩 결과물) 한 장을 기준으로 직접 대조한 결과, Panchromatic 감도를 74%로 올리고 노출 앵커를 수동 +0%로 두었을 때 매우 근접한 결과를 확인했습니다. 이건 익명 사진이나 데이터시트보다 신뢰도가 가장 높은 기준점입니다 — 지후님이 실제로 원하는 결과물 그 자체이기 때문입니다.<br>
+    <b>2026-07 업데이트 4</b>: 판크로매틱 감도 <b>74%</b> · 톤커브 강도 <b>55%</b> · 그레인 강도 <b>19%</b> · 헤일레이션 <b>10%</b> · 노출 앵커 수동 <b>+0%</b> — <i>우에우에치리온</i> 깃발 사진 그레이딩 대조 검증.<br>
+    <b>2026-07 업데이트 5</b>: 깃발 사진 기준으로 확정한 톤이 다른 사진(묘지, 벽 그림자)에서 암부가 과하게 짓눌린다는 피드백 반영. <b>섀도우 리프트</b>를 대비 단계 이후 별도로 추가해, 하이라이트·중간톤은 그대로 두고 깊은 그림자만 독립적으로 열리도록 분리했습니다. 기본값 35%.<br>
+    <b>2026-07 업데이트 6</b>: 지금까지의 검증은 전부 이미 Capture One에서 톤·대비가 보정된 결과물 위에서 이루어졌음을 확인. 실제 Cineroll 사용 시나리오(RAW → 중립 변환 → 필름 시뮬레이션)와는 입력 조건이 다름 — 중립/최소 보정본으로 재검증 필요.<br>
+    <b>2026-07 업데이트 7</b>: 거의 보정되지 않은 플랫 원본(분수대 사진)으로 재검증. 섀도우 리프트가 무보정 상태에서도 암부 디테일을 유지하고, 완만한 숄더가 물/돌 하이라이트를 자연스럽게 압축함을 확인.<br>
+    <b>2026-07 업데이트 8</b>: 분수대 사진에서 톤커브 99% + 섀도우 리프트 0%가 더 깊이감 있게 느껴진다는 피드백. 노출 앵커와 같은 방식으로 <b>그림자 면적 비율을 자동 감지</b>해 섀도우 리프트를 사진마다 자동 조정하도록 변경.<br>
+    <b>2026-07 업데이트 9</b>: 진한 파란 하늘이 프레임 80% 가까이 차지하는 사진에서, 자동 섀도우 리프트가 "암부 79%"로 잘못 판단해 리프트를 70%까지 올리는 문제 발견. 1차 시도로 중립 휘도(Rec.709) 기준으로 그림자 비율을 재계산.<br>
+    <b>2026-07 업데이트 10</b>: 중립 휘도로 바꿔도 암부 비율이 74%로 거의 그대로였음. 채도 높은 파란색은 인간 인지 밝기 가중치가 가장 낮아 중립 휘도로도 실제로 어둡게 측정됩니다. 진짜 문제는 균일한 하늘(텍스처 없음)과 실제 그림자(텍스처 있음)를 구분 못한 것 — <b>국소 텍스처 조건</b>을 추가해 어둡고 동시에 텍스처가 있는 영역만 "그림자"로 인정하도록 변경.<br>
+    <b>2026-07 업데이트 11</b>: 텍스처 기준이 반영되어 하늘이 더 이상 잘못 리프트되지 않게 되자, 판크로매틱 74%가 만드는 진짜 반응(레드필터 같은 어두운 하늘)이 가려지지 않고 드러남을 확인. 이걸 기본으로 고정하는 대신 <b>무필터(48%)/레드필터(74%)</b> 두 프리셋 버튼으로 분리.<br>
+    <b>2026-07 업데이트 12</b>: 하늘 등 균일한 색면에서 동심원 형태의 밴딩(계조 끊김)이 보인다는 지적. 원인은 8비트 캔버스에서 강한 톤커브가 완만한 그라데이션을 몇 단계로 압축시켰기 때문 — 지후님의 보정 문제가 아니라 처리 파이프라인의 양자화 아티팩트입니다. 그레인 슬라이더와 무관하게 항상 켜져 있는 미세한 <b>디더링</b>을 추가해 계조 경계를 흩어 밴딩을 제거했습니다.
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  const W = 900, H = 600;
+  const procCanvas = document.getElementById('canvasProcessed');
+  const origCanvas = document.getElementById('canvasOriginal');
+  const pctx = procCanvas.getContext('2d');
+  const octx = origCanvas.getContext('2d');
+
+  // sprocket holes
+  ['sprocketsTop','sprocketsBottom'].forEach(id=>{
+    const el = document.getElementById(id);
+    for(let i=0;i<28;i++){ const s=document.createElement('span'); el.appendChild(s); }
+  });
+
+  // ---------- 1. Build synthetic calibration scene ----------
+  function drawScene(ctx){
+    // sky gradient
+    const sky = ctx.createLinearGradient(0,0,0,H*0.55);
+    sky.addColorStop(0, '#3a5c86');
+    sky.addColorStop(1, '#c9a26b');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0,0,W,H*0.55);
+
+    // ground
+    ctx.fillStyle = '#2e2a22';
+    ctx.fillRect(0,H*0.55,W,H*0.45);
+
+    // foliage patch (saturated green — tests panchromatic red/green split)
+    ctx.fillStyle = '#3f6b34';
+    ctx.beginPath();
+    ctx.ellipse(W*0.18,H*0.48,110,90,0,0,Math.PI*2);
+    ctx.fill();
+
+    // brick-red patch (tests red channel sensitivity)
+    ctx.fillStyle = '#8a3a2c';
+    ctx.fillRect(W*0.62,H*0.30,140,160);
+
+    // skin-tone patch
+    ctx.fillStyle = '#c9916f';
+    ctx.beginPath();
+    ctx.ellipse(W*0.46,H*0.42,70,90,0,0,Math.PI*2);
+    ctx.fill();
+
+    // bright light source (tests halation)
+    const glow = ctx.createRadialGradient(W*0.80,H*0.18,2,W*0.80,H*0.18,60);
+    glow.addColorStop(0,'#fff8ec');
+    glow.addColorStop(1,'rgba(255,248,236,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(W*0.80,H*0.18,60,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#fffdf6';
+    ctx.beginPath(); ctx.arc(W*0.80,H*0.18,16,0,Math.PI*2); ctx.fill();
+
+    // step tablet (0 / 18 / 50 / 90% gray) along bottom
+    const steps = [0,0.18,0.5,0.9,1.0];
+    const stepW = 90, stepH = 60, startX = 30, y = H-90;
+    steps.forEach((v,i)=>{
+      const g = Math.round(v*255);
+      ctx.fillStyle = `rgb(${g},${g},${g})`;
+      ctx.fillRect(startX + i*(stepW+8), y, stepW, stepH);
+    });
+  }
+
+  drawScene(octx);
+  octx.drawImage(origCanvas,0,0); // ensure original captured
+
+  // ---------- 1b. Photo upload: cover-fit into working canvas ----------
+  const fileInput = document.getElementById('fileInput');
+  const resetSceneBtn = document.getElementById('resetSceneBtn');
+  const uploadHint = document.getElementById('uploadHint');
+
+  function drawImageCover(ctx, img){
+    ctx.clearRect(0,0,W,H);
+    const imgRatio = img.width/img.height, canvasRatio = W/H;
+    let sx,sy,sw,sh;
+    if(imgRatio > canvasRatio){
+      sh = img.height; sw = sh*canvasRatio;
+      sx = (img.width-sw)/2; sy = 0;
+    } else {
+      sw = img.width; sh = sw/canvasRatio;
+      sx = 0; sy = (img.height-sh)/2;
+    }
+    ctx.drawImage(img, sx,sy,sw,sh, 0,0,W,H);
+  }
+
+  fileInput.addEventListener('change', (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = ()=>{
+      drawImageCover(octx, img);
+      uploadHint.textContent = '현재: ' + file.name;
+      URL.revokeObjectURL(url);
+      render();
+    };
+    img.src = url;
+  });
+
+  resetSceneBtn.addEventListener('click', ()=>{
+    drawScene(octx);
+    uploadHint.textContent = '현재: 합성 캘리브레이션 씬';
+    fileInput.value = '';
+    render();
+  });
+
+  // ---------- 2. Film processing pipeline ----------
+  function seededNoise(x,y,seed){
+    const n = Math.sin(x*12.9898 + y*78.233 + seed*37.719) * 43758.5453;
+    return n - Math.floor(n);
+  }
+
+  function toneCurve(v, strength, shadowLift){
+    // Asymmetric toe/shoulder curve grounded in documented HP5-class behavior:
+    // a longer toe (retains shadow separation before crushing to black) and a
+    // gradual shoulder (highlights compress smoothly rather than clipping hard).
+    const toeLen = 0.32, shoulderLen = 0.22;
+    let out;
+    if(strength<=0){ out = v; }
+    else if(v < toeLen){
+      const t = v/toeLen;
+      const lifted = Math.pow(t, 1 - 0.35*strength); // exponent<1: gentle lift, preserves shadow detail
+      out = lifted * toeLen;
+    } else if (v > 1-shoulderLen){
+      const t = (v-(1-shoulderLen))/shoulderLen;
+      const rolled = 1 - Math.pow(1-t, 1.8 + strength*0.9); // higher exponent: smoother roll-off, no hard clip
+      out = (1-shoulderLen) + rolled*shoulderLen;
+    } else {
+      out = v;
+    }
+    // straight-line portion gain (the "contrast" the strength slider actually controls)
+    out = (out-0.5)*(1+0.35*strength) + 0.5;
+    // independent shadow lift: added AFTER gain, so it directly reopens shadows the
+    // gain stage just crushed, without touching midtone/highlight contrast at all.
+    // Strongest at true black, fades to 0 by the toe boundary.
+    if(shadowLift>0 && v<toeLen){
+      const fade = Math.pow(1 - v/toeLen, 1.4);
+      out += shadowLift*0.22*fade;
+    }
+    return Math.min(1, Math.max(0, out));
+  }
+
+  function render(){
+    const redWeight = document.getElementById('redWeight').value/100;
+    const contrastAmt = document.getElementById('contrast').value/100;
+    const autoShadow = document.getElementById('autoShadow').checked;
+    const manualShadowVal = document.getElementById('shadowLift').value/100;
+    const grainAmt = document.getElementById('grain').value/100;
+    const halationAmt = document.getElementById('halation').value/100;
+
+    document.getElementById('valRed').textContent = Math.round(redWeight*100)+'%';
+    document.getElementById('valContrast').textContent = Math.round(contrastAmt*100)+'%';
+    document.getElementById('valGrain').textContent = Math.round(grainAmt*100)+'%';
+    document.getElementById('valHalation').textContent = Math.round(halationAmt*100)+'%';
+
+    // read original
+    const src = octx.getImageData(0,0,W,H);
+    const out = pctx.createImageData(W,H);
+    const sd = src.data, od = out.data;
+
+    // panchromatic weighting: normalize so weights sum to 1
+    const gW = (1-redWeight)*0.7;
+    const bW = (1-redWeight)*0.3;
+    const rW = redWeight;
+    const sum = rW+gW+bW;
+
+    // pass 1: grayscale (unshifted), sampled to find this photo's own midtone anchor —
+    // real film response is centered on the metered exposure, not an absolute brightness,
+    // so a fixed curve looks right on some photos and wrong on others (as observed).
+    const rawLum = new Float32Array(W*H);
+    const sample = [];
+    const neutralSample = []; // Rec.709 luminance, independent of panchromatic weighting —
+    // used only for shadow-coverage detection so saturated colors (e.g. deep blue sky,
+    // which reads dark once red-weighted) aren't mistaken for physical shadow.
+    const textureSample = []; // local variance at each sample point — distinguishes a
+    // textured dark region (real shadow with detail worth revealing) from a flat,
+    // uniform dark color field like open sky (lifting it would just wash out the color).
+    for(let i=0;i<sd.length;i+=4){
+      const r=sd[i],g=sd[i+1],b=sd[i+2];
+      const v = (r*rW + g*gW + b*bW)/(sum*255);
+      const px = i/4;
+      rawLum[px] = v;
+      if(px % 7 === 0){
+        sample.push(v);
+        const neutralV = (r*0.2126 + g*0.7152 + b*0.0722)/255;
+        neutralSample.push(neutralV);
+        const x = px % W, y = (px/W)|0;
+        const nx = Math.min(W-1, x+15);
+        const ni = (y*W+nx)*4;
+        const neighborV = (sd[ni]*0.2126 + sd[ni+1]*0.7152 + sd[ni+2]*0.0722)/255;
+        textureSample.push(Math.abs(neutralV-neighborV));
+      }
+    }
+    sample.sort((a,b)=>a-b);
+    const median = sample.length ? sample[Math.floor(sample.length*0.5)] : 0.5;
+
+    // deep-shadow coverage: what fraction of the frame is dark AND textured — a flat
+    // dark color field (like open sky) is excluded even if its luminance is low,
+    // since lifting it reveals no detail and just washes out the color.
+    // A photo dominated by a large dark mass (e.g. a wall filling half the frame)
+    // needs much more shadow lift than one with only a small shadow pocket —
+    // using a fixed lift value looks right on one and wrong on the other, as observed.
+    const TOE_LEN = 0.32;
+    const TEXTURE_THRESHOLD = 0.025;
+    let deepCount = 0;
+    for(let i=0;i<neutralSample.length;i++){
+      if(neutralSample[i] < TOE_LEN && textureSample[i] > TEXTURE_THRESHOLD) deepCount++;
+    }
+    const shadowCoverage = neutralSample.length ? deepCount/neutralSample.length : 0;
+    const autoShadowLiftVal = Math.min(0.70, shadowCoverage*1.4);
+    const shadowLiftAmt = autoShadow ? autoShadowLiftVal : manualShadowVal;
+    document.getElementById('valShadowLift').textContent = autoShadow
+      ? ('자동 · 암부 '+Math.round(shadowCoverage*100)+'% → 리프트 '+Math.round(autoShadowLiftVal*100)+'%')
+      : ('수동 '+Math.round(manualShadowVal*100)+'%');
+
+    const autoAnchor = document.getElementById('autoAnchor').checked;
+    const manualAnchorVal = document.getElementById('manualAnchor').value/100;
+    // partial correction (0.55), not full renormalization — keeps the photographer's
+    // own exposure choice visible while still anchoring the curve sensibly per photo
+    const exposureShift = autoAnchor ? (0.5-median)*0.55 : manualAnchorVal;
+    document.getElementById('valAnchor').textContent = autoAnchor
+      ? ('자동 · 중간톤 '+Math.round(median*100)+'%')
+      : ('수동 '+(manualAnchorVal>=0?'+':'')+Math.round(manualAnchorVal*100)+'%');
+
+    // pass 1b: apply exposure anchor + tone curve
+    const lumMap = new Float32Array(W*H);
+    for(let px=0; px<W*H; px++){
+      let v = Math.min(1, Math.max(0, rawLum[px] + exposureShift));
+      v = toneCurve(v, contrastAmt, shadowLiftAmt);
+      lumMap[px] = v;
+      const i = px*4;
+      // subtle always-on dither: breaks up 8-bit quantization banding (visible as
+      // faint concentric rings on smooth gradients like sky) — independent of the
+      // grain slider, this is a fixed-amplitude noise below visible grain texture.
+      const x = px % W, y = (px/W)|0;
+      const dither = (seededNoise(x, y, 213) - 0.5) * 2.2;
+      const gray = Math.min(255, Math.max(0, v*255 + dither));
+      od[i]=gray; od[i+1]=gray; od[i+2]=gray; od[i+3]=255;
+    }
+
+    // pass 2: grain — luminance-dependent noise, peaks in mid/highlight
+    if(grainAmt>0){
+      for(let i=0;i<sd.length;i+=4){
+        const px=i/4;
+        const v = lumMap[px];
+        const x = px % W, y = (px/W)|0;
+        const n = (seededNoise(x,y,1) - 0.5) * 2; // -1..1
+        // grain visibility curve: low in deep shadow, peak in mid-high, tapers at extreme highlight
+        const visibility = Math.sin(Math.min(1,v*1.15) * Math.PI) ;
+        const amount = n * grainAmt * 26 * visibility;
+        od[i]   = Math.min(255,Math.max(0, od[i]+amount));
+        od[i+1] = Math.min(255,Math.max(0, od[i+1]+amount));
+        od[i+2] = Math.min(255,Math.max(0, od[i+2]+amount));
+      }
+    }
+
+    // pass 3: halation — bloom from bright regions, warm tint, additive
+    if(halationAmt>0){
+      const threshold = 0.86;
+      const glowSrc = new Float32Array(W*H);
+      for(let px=0;px<W*H;px++){
+        const v = lumMap[px];
+        glowSrc[px] = v>threshold ? (v-threshold)/(1-threshold) : 0;
+      }
+      // simple box blur, 2 passes, radius scaling with amount
+      const radius = 6 + Math.round(halationAmt*10);
+      const blurred = boxBlur(glowSrc, W, H, radius);
+      const blurred2 = boxBlur(blurred, W, H, radius);
+
+      for(let i=0;i<od.length;i+=4){
+        const px = i/4;
+        const g = blurred2[px] * halationAmt * 1.4;
+        // warm amber-red tint
+        od[i]   = Math.min(255, od[i]   + g*180);
+        od[i+1] = Math.min(255, od[i+1] + g*95);
+        od[i+2] = Math.min(255, od[i+2] + g*40);
+      }
+    }
+
+    pctx.putImageData(out,0,0);
+  }
+
+  function boxBlur(src, w, h, radius){
+    const tmp = new Float32Array(w*h);
+    const out = new Float32Array(w*h);
+    const r = radius;
+    // horizontal
+    for(let y=0;y<h;y++){
+      let acc=0;
+      for(let x=-r;x<=r;x++){ acc += src[y*w + Math.min(w-1,Math.max(0,x))]; }
+      for(let x=0;x<w;x++){
+        tmp[y*w+x] = acc/(2*r+1);
+        const addX = Math.min(w-1,x+r+1), remX = Math.max(0,x-r);
+        acc += src[y*w+addX] - src[y*w+remX];
+      }
+    }
+    // vertical
+    for(let x=0;x<w;x++){
+      let acc=0;
+      for(let y=-r;y<=r;y++){ acc += tmp[Math.min(h-1,Math.max(0,y))*w + x]; }
+      for(let y=0;y<h;y++){
+        out[y*w+x] = acc/(2*r+1);
+        const addY = Math.min(h-1,y+r+1), remY = Math.max(0,y-r);
+        acc += tmp[addY*w+x] - tmp[remY*w+x];
+      }
+    }
+    return out;
+  }
+
+  // ---------- 3. wire up UI ----------
+  const autoShadowBox = document.getElementById('autoShadow');
+  const shadowLiftSlider = document.getElementById('shadowLift');
+  autoShadowBox.addEventListener('change', ()=>{
+    shadowLiftSlider.disabled = autoShadowBox.checked;
+    render();
+  });
+
+  const redWeightSlider = document.getElementById('redWeight');
+  const presetNoFilterBtn = document.getElementById('presetNoFilter');
+  const presetRedFilterBtn = document.getElementById('presetRedFilter');
+  function updatePresetActiveState(){
+    const v = +redWeightSlider.value;
+    presetNoFilterBtn.classList.toggle('active', v===48);
+    presetRedFilterBtn.classList.toggle('active', v===74);
+  }
+  presetNoFilterBtn.addEventListener('click', ()=>{ redWeightSlider.value=48; updatePresetActiveState(); render(); });
+  presetRedFilterBtn.addEventListener('click', ()=>{ redWeightSlider.value=74; updatePresetActiveState(); render(); });
+  redWeightSlider.addEventListener('input', updatePresetActiveState);
+
+  ['redWeight','contrast','shadowLift','grain','halation','manualAnchor'].forEach(id=>{
+    document.getElementById(id).addEventListener('input', render);
+  });
+  const autoAnchorBox = document.getElementById('autoAnchor');
+  const manualAnchorSlider = document.getElementById('manualAnchor');
+  autoAnchorBox.addEventListener('change', ()=>{
+    manualAnchorSlider.disabled = autoAnchorBox.checked;
+    render();
+  });
+
+  const compareSlider = document.getElementById('compareSlider');
+  const dividerLine = document.getElementById('dividerLine');
+  function updateCompare(){
+    const pct = compareSlider.value;
+    origCanvas.style.clipPath = `inset(0 ${pct}% 0 0)`;
+    dividerLine.style.left = (100-pct)+'%';
+  }
+  compareSlider.addEventListener('input', updateCompare);
+
+  render();
+  updateCompare();
+  updatePresetActiveState();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vivid Slide 50 — 톤 실험실</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #12130f;
+    --bg-elevated: #1a1c15;
+    --ink: #ede8df;
+    --muted: #948c7e;
+    --muted-2: #6b6559;
+    --accent: #4a8f5c;
+    --amber: #d9a441;
+    --line: #33352a;
+  }
+  *{ box-sizing: border-box; }
+  body{
+    margin:0; background: var(--bg); color: var(--ink);
+    font-family: 'IBM Plex Mono', monospace;
+    padding: 32px 24px 60px; min-height: 100vh;
+  }
+  .wrap{ max-width: 1400px; margin: 0 auto; }
+  .layout{ display:flex; gap:20px; align-items:flex-start; }
+  .main-col{ flex:1; min-width:0; }
+  .sidebar{
+    width: 300px; flex-shrink:0;
+    position: sticky; top: 20px;
+    max-height: calc(100vh - 40px); overflow-y: auto;
+  }
+  @media (max-width: 980px){
+    .layout{ flex-direction:column; }
+    .sidebar{ width:100%; position:static; max-height:none; }
+  }
+  header{
+    display:flex; justify-content: space-between; align-items: flex-end;
+    border-bottom: 1px solid var(--line); padding-bottom: 18px; margin-bottom: 28px;
+    gap: 20px; flex-wrap: wrap;
+  }
+  .title-block h1{
+    font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 42px;
+    letter-spacing: 0.5px; margin: 0 0 4px; text-transform: uppercase;
+  }
+  .title-block .sub{ color: var(--muted); font-size: 13px; letter-spacing: 0.3px; }
+  .spec-tag{ text-align: right; font-size: 11px; color: var(--muted-2); line-height: 1.7; }
+  .spec-tag b{ color: var(--amber); font-weight: 600; }
+  .upload-row{ display:flex; align-items:center; gap:14px; flex-wrap: wrap; margin-bottom: 16px; }
+  .upload-btn{
+    font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 600;
+    letter-spacing: 0.5px; text-transform: uppercase; background: var(--amber); color: var(--bg);
+    padding: 9px 16px; cursor: pointer; border: 1px solid var(--amber); transition: opacity 0.15s;
+  }
+  .upload-btn:hover{ opacity: 0.85; }
+  .reset-btn{
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.3px;
+    background: transparent; color: var(--muted); border: 1px solid var(--line);
+    padding: 9px 14px; cursor: pointer;
+  }
+  .reset-btn:hover{ color: var(--ink); border-color: var(--muted); }
+  .upload-hint{ font-size: 11px; color: var(--muted-2); margin-left: auto; }
+  .filmstrip{ background: var(--bg-elevated); border: 1px solid var(--line); padding: 14px 14px 18px; position: relative; }
+  .sprockets{ display:flex; justify-content: space-between; padding: 0 4px 10px; }
+  .sprockets span{ width: 10px; height: 7px; background: var(--bg); border: 1px solid var(--line); border-radius: 1px; }
+  .viewer{ position: relative; width: 100%; aspect-ratio: 3 / 2; background:#000; overflow:hidden; }
+  .viewer canvas{ position:absolute; top:0; left:0; width:100%; height:100%; display:block; }
+  #canvasOriginal{ clip-path: inset(0 0 0 0); }
+  .divider-line{ position:absolute; top:0; bottom:0; width:1px; background: var(--amber); box-shadow: 0 0 6px rgba(217,164,65,0.6); pointer-events:none; }
+  .compare-label{ position:absolute; top:10px; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; padding: 3px 7px; background: rgba(18,19,15,0.75); border: 1px solid var(--line); pointer-events:none; }
+  .lbl-before{ left:10px; color: var(--muted); }
+  .lbl-after{ right:10px; color: var(--amber); }
+  .compare-slider-row{ display:flex; align-items:center; gap:12px; margin-top: 14px; padding: 0 4px; }
+  .compare-slider-row .cap{ font-size: 10px; letter-spacing: 1px; color: var(--muted-2); text-transform: uppercase; }
+  input[type="range"]{ -webkit-appearance:none; appearance:none; flex:1; height: 2px; background: var(--line); outline:none; }
+  input[type="range"]::-webkit-slider-thumb{ -webkit-appearance:none; width: 12px; height: 12px; background: var(--amber); border-radius: 50%; cursor: pointer; border: 2px solid var(--bg-elevated); }
+  input[type="range"]::-moz-range-thumb{ width: 10px; height: 10px; background: var(--amber); border-radius: 50%; cursor: pointer; border: 2px solid var(--bg-elevated); }
+  .deck{ display:flex; flex-direction:column; gap:1px; background: var(--line); border: 1px solid var(--line); }
+  .ctrl{ background: var(--bg-elevated); padding: 12px 14px; position:relative; }
+  .ctrl-top{ display:flex; justify-content: space-between; align-items:baseline; margin-bottom: 8px; }
+  .ctrl-name{ font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 600; letter-spacing: 0.4px; text-transform: uppercase; color: var(--ink); }
+  .ctrl-val{ font-size: 11px; color: var(--amber); min-width: 42px; text-align:right; }
+  .ctrl-desc{
+    position:absolute; top:0; right: calc(100% + 12px); width: 280px;
+    background: var(--bg-elevated); border: 1px solid var(--amber);
+    padding: 12px 14px; font-size: 11px; color: var(--muted-2); line-height: 1.6;
+    opacity:0; visibility:hidden; pointer-events:none;
+    transition: opacity 0.15s ease; z-index: 40;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  }
+  .ctrl:hover .ctrl-desc{ opacity:1; visibility:visible; }
+  @media (max-width: 980px){
+    .ctrl-desc{ position:static; width:auto; opacity:1; visibility:visible; border:none; box-shadow:none; padding:8px 0 0; margin-top:8px; }
+  }
+  .compare-note{ margin-top: 22px; background: var(--bg-elevated); border: 1px solid var(--line); padding: 16px 18px; font-size: 12px; color: var(--muted); line-height: 1.7; }
+  .compare-note b{ color: var(--amber); }
+  footer{ margin-top: 34px; border-top: 1px solid var(--line); padding-top: 16px; font-size: 11px; color: var(--muted-2); line-height: 1.7; }
+  footer b{ color: var(--muted); }
+  @media (max-width: 640px){ .title-block h1{ font-size: 32px; } header{ flex-direction:column; align-items:flex-start; } .spec-tag{ text-align:left; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="title-block">
+      <h1>Vivid Slide 50</h1>
+      <div class="sub">컬러 필름 시뮬레이션 · 실제 톤커브 데이터 기반 (벨비아 50 / 프로비아 100F) · 필름별 채도·따뜻한 색 우선 기본값 분리 버전</div>
+    </div>
+    <div class="spec-tag">
+      TYPE: <b>COLOR REVERSAL, ISO 50</b><br>
+      CALIBRATION: <b>실제 톤커브 데이터 적용 (t3mujinpack)</b><br>
+      STAGE: <b>1 / 1 — 핵심 재정의: 비비드함 중심 (재검증 필요)</b>
+    </div>
+  </header>
+
+  <div class="layout">
+  <div class="main-col">
+
+  <div class="upload-row">
+    <label class="upload-btn" for="fileInput">＋ 내 사진 불러오기</label>
+    <input type="file" id="fileInput" accept="image/*" hidden>
+    <button class="reset-btn" id="resetSceneBtn" type="button">합성 캘리브레이션 씬으로 되돌리기</button>
+    <span class="upload-hint" id="uploadHint">현재: 합성 캘리브레이션 씬</span>
+  </div>
+
+  <div class="filmstrip">
+    <div class="sprockets" id="sprocketsTop"></div>
+    <div class="viewer">
+      <canvas id="canvasProcessed" width="900" height="600"></canvas>
+      <canvas id="canvasOriginal" width="900" height="600"></canvas>
+      <div class="divider-line" id="dividerLine" style="left:50%"></div>
+      <div class="compare-label lbl-before">ORIGINAL</div>
+      <div class="compare-label lbl-after" id="lblAfter">VIVID SLIDE 50 — VELVIA 50</div>
+    </div>
+    <div class="sprockets" id="sprocketsBottom"></div>
+    <div class="compare-slider-row">
+      <span class="cap">Before</span>
+      <input type="range" id="compareSlider" min="0" max="100" value="50">
+      <span class="cap">After</span>
+    </div>
+  </div>
+
+  <div class="compare-note">
+    <b>2026-07 대전환 — 실제 데이터 확보</b>: t3mujinpack(다크테이블 오픈소스 필름 프리셋) 파일을 직접 다운로드해 gzip+base64 압축을 풀어 <b>실제 톤커브 노드 좌표</b>를 추출했습니다(추정치 아님). 벨비아 50과 프로비아 100F 둘 다 확보. 핵심 발견: 두 필름의 채도(a/b축) 커브 편차는 생각보다 비슷하고, <b>진짜 차이는 밝기(L) 커브의 대비 강도</b>였습니다 — 벨비아는 그림자를 깊게 누르고 하이라이트를 강하게 들어올리는 반면(강한 S커브), 프로비아는 훨씬 완만합니다. 대비가 채도를 "체감상" 밀어올린다는 사진 이론과 일치하는 결과입니다. RGB 채널별 추정 커브 방식을 폐기하고, 실제 Lab 색공간에서 이 좌표를 직접 적용하는 방식으로 전면 재작성했습니다.<br>
+    <b>2026-07 수정 이력</b>: 파랑 채널 억제 수정, Newsprint 400의 미세 대비(인접 효과) 이식, 흐린 날 장면 대응해 기본값 상향 — 이 조정들은 새 Lab 기반 파이프라인에도 유효합니다.<br>
+    <b>2026-07 레이아웃 개편</b>: 컨트롤 패널을 하단에서 우측 고정 사이드바로 옮기고, 설명 텍스트는 마우스오버 시에만 나타나는 툴팁으로 전환 — 스크롤 없이 이미지를 보면서 실시간으로 조정 가능하도록. 세로 슬라이더는 제거하고, 가로 슬라이더 폭을 사진의 실제 표시 너비에 맞춤.<br>
+    <b>2026-07 데이터 재점검</b>: 그레인(RMS 9 vs 8)은 거의 차이 없음을 재확인 — 그레인은 구분 요소가 아니었음(기본값 하향). 대신 두 필름 공통의 "extremely high sharpness"(프로비아 데이터시트 원문)를 미세 대비로 강화(기본값 상향). <b>설계 철학</b>: LUT/필터가 아니라 톤커브+채도 곡선+해상력(미세 대비)+그레인을 독립적으로 쌓아 "필름 베이스"를 재현하는 방식.<br>
+    <b>2026-07 대비 하향 조정</b>: 여러 배경/톤의 실사진에서 대비가 너무 강해 디테일이 무너지고 컬러 밸런스가 깨진다는 지적. 원인은 t3mujinpack이 "카메라 베이스커브가 이미 적용된 RAW"를 전제로 설계된 프리셋인데, 이미 완성된 JPEG(아이폰 사진 등)에 그대로 얹으면서 대비가 이중으로 쌓였기 때문. 톤커브 강도 기본값을 78%→58%로 낮춤.<br>
+    <b>2026-07 핵심 재정의 (지후님 통찰)</b>: 하루 자고 나서 찾은 결정적 포인트 — 벨비아의 본질은 강한 대비가 아니라 <b>비비드한 색감 + 감도 50의 곱고 섬세한 저입자</b>였음. 이 둘이 대비 중심 설계와 상충되면서 계속된 "이질감"의 근본 원인이었을 가능성이 높음. 톤커브 32%로 대폭 하향(보조 요소로 격하), 채도 72%로 대폭 상향(캐릭터의 중심으로 승격), 헤일레이션은 0% 유지(부드러운 빛보다 선명함 우선), 그레인은 이미 낮은 9% 유지. "대비 중심"에서 "비비드+섬세함 중심"으로 설계 철학 전환.
+  </div>
+
+  <footer>
+    <b>합성 캘리브레이션 씬</b>: 실제 촬영 이미지가 아닌, 색 반응 검증을 위해 하늘·식물·피부톤·고채도 색 패치를 코드로 생성한 테스트 차트입니다.<br>
+    이름 <b>Vivid Slide 50</b>은 특정 상표를 지칭하지 않는 독자적 명칭이며, 재현 대상은 브랜드가 아니라 고채도 리버설 필름 일반의 공개된 색채 특성입니다.<br>
+    <b>참고 자료</b>: Fujifilm Velvia 50 공식 데이터시트 (RMS 9, 노출 관용도 서술) / 라벨링된 벨비아·프로비아 실사용 샘플 이미지 참고 (실제 이미지 재사용 없이 색 경향만 참고).<br>
+    <b>참고 (2차)</b>: t3mujinpack 톤커브는 후지필름 공식 실측이 아니라, 개발자 João Almeida가 여러 카메라로 튜닝한 커뮤니티 프리셋(G'MIC 참고) — 다수 검증을 거쳤지만 "제조사 팩트시트"는 아닙니다.
+  </footer>
+
+  </div>
+
+  <aside class="sidebar">
+  <div class="deck">
+    <div class="ctrl">
+      <div class="ctrl-top">
+        <span class="ctrl-name">노출 앵커</span>
+        <span class="ctrl-val" id="valAnchor" style="min-width:110px;">수동</span>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);margin-bottom:10px;">
+        <input type="checkbox" id="autoAnchor"> 사진마다 중간톤 자동 감지
+      </label>
+      <input type="range" id="manualAnchor" min="-40" max="40" value="0">
+      <div class="ctrl-desc">기본 수동 +0%. 벨비아 공식 자료: ±½~1스탑 노출 변화에도 색 밸런스 변화가 "최소"라고 명시 — 흑백보다 노출 관용도가 높은 편이라 보정을 약하게 둡니다.</div>
+    </div>
+    <div class="ctrl">
+      <div class="ctrl-top">
+        <span class="ctrl-name">톤커브 강도</span>
+        <span class="ctrl-val" id="valContrast" style="min-width:170px;">62%</span>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);margin-bottom:8px;">
+        <input type="checkbox" id="autoContrast" checked> 원본 대비에 따라 자동 조절
+      </label>
+      <input type="range" id="contrast" min="0" max="100" value="62">
+      <div class="ctrl-desc"><b>2026-07 재정정</b>: 실제 필름을 직접 스캔하는 컬러리스트(Seim Effects)의 글 — "사람들은 벨비아가 매우 채도 높다고 생각하지만 사실 그 정도는 아니다. 오히려 대비(팝핑되는 블랙/화이트)가 핵심이다. 시중 '벨비아 프리셋' 대부분이 실제 필름과 다르게 채도를 과하게 준다." 이전엔 켄 락웰의 극적인 대표작들 때문에 "비비드함=채도"로 방향을 잘못 잡았음(32%까지 낮춤) — 진짜 정체성은 대비 쪽. 이제 베이스/디테일 분리로 대비를 세게 줘도 질감이 안 뭉개지니, 32→62%로 재상향.<br>
+      <b>적응형 대비</b>: 켄 락웰 원문 — "밋밋한 장면은 살려주지만, 이미 대비가 강한 장면엔 오히려 위험하다." 사진 자체의 명암 분포를 감지해 원본이 밋밋하면 더 세게, 이미 콘트라스티하면 약하게 자동 조절.</div>
+    </div>
+    <div class="ctrl">
+      <div class="ctrl-top">
+        <span class="ctrl-name">채도 부스트</span>
+        <span class="ctrl-val" id="valSaturation">75%</span>
+      </div>
+      <input type="range" id="saturation" min="0" max="100" value="75">
+      <div class="ctrl-desc"><b>2026-07 재정정</b>: 켄 락웰의 극적인 대표작들(네온, 일몰)에 이끌려 채도를 2.0배까지 밀어붙였는데, 실제 필름을 직접 스캔하는 컬러리스트(Seim Effects)는 "벨비아가 그렇게까지 채도가 높지 않다, 시중 '벨비아 프리셋' 대부분이 실제 필름보다 과채도"라고 명확히 지적함. 확장 배율을 2.0배→1.1배로 되돌리고, 대신 대비(위)를 정직하게 올려 균형을 재조정 — 비비드함은 채도가 아니라 대비+따뜻한 색조 조합에서 나온다는 쪽으로 방향 수정.</div>
+    </div>
+    <div class="ctrl">
+      <div class="ctrl-top">
+        <span class="ctrl-name">따뜻한 색 우선</span>
+        <span class="ctrl-val" id="valWarmPriority">55%</span>
+      </div>
+      <input type="range" id="warmPriority" min="0" max="100" value="55">
+      <div class="ctrl-desc"><b>2026-07 신규 — 색상 선택적 강조</b>: 켄 락웰 원문 그대로 구현 — "벨비아는 따뜻한 색(빨강/주황/노랑)에 빨간기를 더한다... 바로 이게 벨비아 특유의 멋진 룩을 만드는 요인이다." 위 채도 부스트가 a/b축 전체에 균일하게 적용되는 것과 별개로, 이 슬라이더는 <b>색상각이 따뜻한(빨강~주황~노랑) 범위인 픽셀만 추가로 채도를 더 밀어붙임</b> — 파랑/초록 계열은 그대로 두고 따뜻한 색만 선택적으로 강조. 실제 필름의 "붉은기가 도는 따뜻한 색조"를 재현하는 핵심 레이어.</div>
+    </div>
+    <div class="ctrl">
+      <div class="ctrl-top">
+        <span class="ctrl-name">그레인 강도</span>
+        <span class="ctrl-val" id="valGrain">9%</span>
+      </div>
+      <input type="range" id="grain" min="0" max="100" value="9">
+      <div class="ctrl-desc"><b>2026-07 재확인</b>: 벨비아 50=RMS 9, 프로비아 100F=RMS 8 — 실측 결과 둘의 그레인은 거의 차이가 없습니다(오히려 ISO 낮은 벨비아가 근소하게 더 거칢). 그레인은 두 필름을 구분할 요소가 아니라는 뜻이라 기본값을 더 낮춰(14→9%) "초미세 그레인"이라는 두 필름 공통 특징에 맞췄습니다. R/G/B 채널별 독립 노이즈로 미세한 유채색 그레인만 표현.</div>
+    </div>
+    <div class="ctrl">
+      <div class="ctrl-top">
+        <span class="ctrl-name">디테일 보존/강조</span>
+        <span class="ctrl-val" id="valLocalContrast">52%</span>
+      </div>
+      <input type="range" id="localContrast" min="0" max="100" value="52">
+      <div class="ctrl-desc"><b>2026-07 근본 재설계</b>: "대비는 강한데 디테일이 뭉개진다"는 지적의 원인을 찾음 — 기존엔 톤커브를 전체 이미지에 먼저 적용해 그림자 영역의 미세한 밝기 차이를 이미 압축시킨 뒤, 그 압축된 데이터 위에서 선명하게 만들려 했음(이미 사라진 정보는 복구 불가). <b>지금은 순서를 바꿈</b>: 원본에서 거친 톤(베이스)과 미세 디테일을 먼저 분리 → 벨비아 대비 커브는 베이스에만 적용 → 원본 디테일을 그 위에 그대로(또는 더 강하게) 재합성. 이러면 대비를 세게 줘도 피사체의 질감·선예도는 원본 그대로 유지됩니다. 100% = 원본 디테일 그대로, 100% 초과 = 벨비아의 실측 MTF 120%에 해당하는 강조.</div>
+    </div>
+    <div class="ctrl">
+      <div class="ctrl-top">
+        <span class="ctrl-name">헤일레이션</span>
+        <span class="ctrl-val" id="valHalation">16%</span>
+      </div>
+      <input type="range" id="halation" min="0" max="100" value="16">
+      <div class="ctrl-desc"><b>2026-07 재조정</b>: 지후님이 첨부한 실제 벨비아 인물 사진 3장에서 역광 머리카락 테두리에 은은한 빛 번짐이 있고, 그 외 피부·눈·주근깨는 오히려 선명하다는 걸 확인 — "부드러움과 선명함의 공존"이 리치함의 정체. 임계값(95%)이 순수 광원/역광 경계만 잡으므로, 이 조건에서만 은은한 글로우를 살리도록 기본값을 0→16%로 복원. 얼굴 전체가 아니라 진짜 하이라이트 경계에만 걸림.</div>
+    </div>
+    <div class="ctrl">
+      <div class="ctrl-top">
+        <span class="ctrl-name">색온도</span>
+        <span class="ctrl-val" id="valWarmth">0</span>
+      </div>
+      <input type="range" id="warmth" min="-30" max="30" value="0">
+      <div class="ctrl-desc">데이라이트 밸런스 필름 기준. 텅스텐 조명 등에서 촬영 시 필름 특유의 색 편차를 수동으로 흉내내고 싶을 때 사용.</div>
+    </div>
+    <div class="ctrl">
+      <div class="ctrl-top">
+        <span class="ctrl-name">필름 선택</span>
+        <span class="ctrl-val" id="valFilm" style="min-width:100px;">벨비아 50</span>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button type="button" class="filter-preset-btn active" id="filmVelvia">벨비아 50</button>
+        <button type="button" class="filter-preset-btn" id="filmProvia">프로비아 100F</button>
+      </div>
+      <div class="ctrl-desc"><b>2026-07 신규 — 필름별 기본값 분리</b>: 이전엔 채도/따뜻한 색 우선이 필름과 무관하게 공유돼 프로비아가 "벨비아의 순한 맛"처럼 느껴진다는 문제가 있었음. 이제 필름을 전환하면 채도·따뜻한 색 우선이 그 필름의 기본값으로 자동 전환됩니다(벨비아 75%/55%, 프로비아 58%/18%) — 프로비아는 벨비아 특유의 붉은기(따뜻한 색 우선)를 거의 빼서 인물에도 안정적인 "무난한 프로용 필름" 캐릭터를 살렸습니다. t3mujinpack 실측 톤커브도 같이 전환: 벨비아가 그림자를 훨씬 깊게(최대 -53% 편차), 프로비아는 훨씬 완만하게(-13% 정도) 누릅니다.</div>
+    </div>
+  </div>
+  </aside>
+
+  </div>
+
+</div>
+
+<script>
+(function(){
+  let W = 900, H = 600;
+  const procCanvas = document.getElementById('canvasProcessed');
+  const origCanvas = document.getElementById('canvasOriginal');
+  const pctx = procCanvas.getContext('2d');
+  const octx = origCanvas.getContext('2d');
+
+  ['sprocketsTop','sprocketsBottom'].forEach(id=>{
+    const el = document.getElementById(id);
+    for(let i=0;i<28;i++){ const s=document.createElement('span'); el.appendChild(s); }
+  });
+
+  // ---------- synthetic calibration scene: sky, foliage, skin patch, saturated color swatches ----------
+  function drawScene(ctx){
+    const sky = ctx.createLinearGradient(0,0,0,H*0.5);
+    sky.addColorStop(0, '#2f6fae');
+    sky.addColorStop(1, '#bcd8ec');
+    ctx.fillStyle = sky; ctx.fillRect(0,0,W,H*0.5);
+
+    ctx.fillStyle = '#5a4632'; ctx.fillRect(0,H*0.5,W,H*0.5);
+
+    // foliage (saturated green)
+    ctx.fillStyle = '#3d7a34';
+    ctx.beginPath(); ctx.ellipse(W*0.16,H*0.44,110,95,0,0,Math.PI*2); ctx.fill();
+
+    // skin patch
+    ctx.fillStyle = '#caa07a';
+    ctx.beginPath(); ctx.ellipse(W*0.42,H*0.40,65,85,0,0,Math.PI*2); ctx.fill();
+
+    // saturated color swatches (red, orange, magenta, blue) to test crosstalk/saturation response
+    const swatches = ['#c23b2e','#e0812f','#b5326b','#2e5fae'];
+    swatches.forEach((c,i)=>{
+      ctx.fillStyle = c;
+      ctx.fillRect(W*0.60 + i*70, H*0.30, 60, 60);
+    });
+
+    // bright highlight
+    const glow = ctx.createRadialGradient(W*0.82,H*0.15,2,W*0.82,H*0.15,55);
+    glow.addColorStop(0,'#fff7e6'); glow.addColorStop(1,'rgba(255,247,230,0)');
+    ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(W*0.82,H*0.15,55,0,Math.PI*2); ctx.fill();
+
+    // gray step tablet for neutral gray reproduction check
+    const steps=[0,0.18,0.5,0.9,1.0]; const stepW=80, stepH=55, startX=30, y=H-80;
+    steps.forEach((v,i)=>{ const g=Math.round(v*255); ctx.fillStyle=`rgb(${g},${g},${g})`; ctx.fillRect(startX+i*(stepW+8), y, stepW, stepH); });
+  }
+
+  const viewerEl = document.querySelector('.viewer');
+  const sliderRowEl = document.querySelector('.compare-slider-row');
+  function fitViewerToViewport(){
+    // Cap the DISPLAY size to the viewport height so tall portrait photos (phone
+    // shots) don't force long scrolling to see before/after — the canvas still
+    // renders at full W×H internally, only the on-screen box is scaled down.
+    const maxH = window.innerHeight * 0.72;
+    const containerW = viewerEl.parentElement.clientWidth;
+    const ratio = W/H;
+    let dispW = containerW, dispH = dispW/ratio;
+    if(dispH > maxH){ dispH = maxH; dispW = dispH*ratio; }
+    viewerEl.style.width = dispW+'px';
+    viewerEl.style.height = dispH+'px';
+    viewerEl.style.margin = '0 auto';
+    viewerEl.style.aspectRatio = 'auto';
+    // match the slider row's width to the photo's actual displayed width — dragging
+    // a full-container-width slider felt disconnected on narrow portrait photos.
+    sliderRowEl.style.maxWidth = dispW+'px';
+    sliderRowEl.style.margin = '14px auto 0';
+  }
+  window.addEventListener('resize', fitViewerToViewport);
+
+  function resizeCanvasesTo(w,h){
+    W=w; H=h;
+    [procCanvas, origCanvas].forEach(c=>{ c.width=W; c.height=H; });
+    fitViewerToViewport();
+  }
+
+  fitViewerToViewport();
+  drawScene(octx);
+
+  const fileInput = document.getElementById('fileInput');
+  const resetSceneBtn = document.getElementById('resetSceneBtn');
+  const uploadHint = document.getElementById('uploadHint');
+
+  function drawImageFit(ctx,img){
+    ctx.clearRect(0,0,W,H);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(img,0,0,W,H);
+  }
+
+  fileInput.addEventListener('change',(e)=>{
+    const file=e.target.files[0]; if(!file) return;
+    const url=URL.createObjectURL(file); const img=new Image();
+    img.onload=()=>{
+      // Internal canvas resolution must comfortably exceed the actual on-screen
+      // display size, or the browser upscales the canvas to fill the layout —
+      // which blurs it. 1100px was too low once the sidebar layout let the image
+      // display wider than that; raised to 2200px (and account for devicePixelRatio
+      // so retina screens don't upscale either) while still bounding processing cost.
+      const dpr = window.devicePixelRatio || 1;
+      const maxDim = Math.min(2600, 2200*dpr);
+      const scale=Math.min(1, maxDim/Math.max(img.width,img.height));
+      resizeCanvasesTo(Math.round(img.width*scale), Math.round(img.height*scale));
+      drawImageFit(octx,img);
+      uploadHint.textContent='현재: '+file.name;
+      URL.revokeObjectURL(url); render();
+    };
+    img.src=url;
+  });
+
+  resetSceneBtn.addEventListener('click',()=>{
+    resizeCanvasesTo(900,600); drawScene(octx);
+    uploadHint.textContent='현재: 합성 캘리브레이션 씬';
+    fileInput.value=''; render();
+  });
+
+  function seededNoise(x,y,seed){
+    const n=Math.sin(x*12.9898+y*78.233+seed*37.719)*43758.5453;
+    return n-Math.floor(n);
+  }
+
+  // REAL digitized tone curve node data — decoded from the actual t3mujinpack
+  // Darktable preset files (.dtstyle), which store curve nodes as gzip+base64
+  // compressed float32 arrays. Downloaded via bash_tool from the public GitHub
+  // repo and decompressed/parsed programmatically — these are genuine widely-used
+  // community values, not estimates. L=lightness, a=green–red axis, b=blue–yellow
+  // axis (CIELAB). Node (x,y): x=input, y=output, both normalized 0–1
+  // (L as L/100, a/b as (val+128)/256).
+  const FILM_CURVES = {
+    velvia50: {
+      name: '벨비아 50',
+      L: [[0,0],[0.0589,0.0275],[0.178,0.1052],[0.2917,0.233],[0.4852,0.4718],[0.8375,0.8868],[1,0.9835]],
+      a: [[0,0],[0.2297,0.1664],[0.3402,0.2981],[0.3714,0.3337],[0.435,0.4133],[0.4768,0.4693],[0.4989,0.4979],[0.5338,0.5512],[0.5596,0.5851],[0.7544,0.8007],[1,1]],
+      b: [[0,0],[0.431,0.4144],[0.4984,0.5026],[0.5243,0.5305],[0.5676,0.5672],[0.6004,0.5972],[0.6504,0.6505],[0.7524,0.7641],[1,1]]
+    },
+    provia100f: {
+      name: '프로비아 100F',
+      L: [[0,0.01],[0.0366,0.0318],[0.1312,0.1077],[0.2748,0.2577],[0.4827,0.5122],[0.61,0.6607],[0.6956,0.7598],[0.792,0.8667],[0.9113,0.9551],[0.997,0.995],[1,1]],
+      a: [[0,0],[0.3082,0.2678],[0.4255,0.3826],[0.5034,0.502],[0.5291,0.543],[0.7061,0.7543],[0.8685,0.9067],[1,1]],
+      b: [[0,0],[0.2283,0.1963],[0.3357,0.315],[0.3985,0.4026],[0.485,0.4867],[0.5016,0.5016],[0.5245,0.5232],[0.5451,0.5515],[0.5874,0.6099],[0.6362,0.6538],[0.7106,0.7293],[0.8552,0.8696],[0.9981,0.9774],[1,1]]
+    }
+  };
+  let currentFilm = 'velvia50';
+
+  // Per-film defaults for saturation / warm-priority — these two sliders used to be
+  // shared across both films (only the L/a/b tone curve differed), which made Provia
+  // feel like "a softer Velvia" instead of its own character. Real film reputation:
+  // Provia 100F is the neutral, reliable, portrait-safe professional film — its warm-red
+  // push (Velvia's signature "adds red to warm colors" trait) should be mostly absent.
+  const FILM_DEFAULTS = {
+    velvia50:   { saturation: 75, warmPriority: 55 },
+    provia100f: { saturation: 58, warmPriority: 18 }
+  };
+
+  function curveShape(pts,v){
+    const first=pts[0], last=pts[pts.length-1];
+    if(v<=first[0]){ const slope=(pts[1][1]-first[1])/((pts[1][0]-first[0])||1e-6); return first[1]+(v-first[0])*slope; }
+    if(v>=last[0]){ const prev=pts[pts.length-2]; const slope=(last[1]-prev[1])/((last[0]-prev[0])||1e-6); return last[1]+(v-last[0])*slope; }
+    for(let i=0;i<pts.length-1;i++){
+      const a=pts[i], b=pts[i+1];
+      if(v>=a[0] && v<=b[0]){ const t=(b[0]-a[0])>0?(v-a[0])/(b[0]-a[0]):0; return a[1]+t*(b[1]-a[1]); }
+    }
+    return v;
+  }
+
+  // sRGB (D65) <-> CIELAB, standard formulas
+  function rgbToLab(r,g,b){
+    r/=255; g/=255; b/=255;
+    const lin=(c)=> c>0.04045 ? Math.pow((c+0.055)/1.055,2.4) : c/12.92;
+    r=lin(r)*100; g=lin(g)*100; b=lin(b)*100;
+    let x=(r*0.4124+g*0.3576+b*0.1805)/95.047;
+    let y=(r*0.2126+g*0.7152+b*0.0722)/100.0;
+    let z=(r*0.0193+g*0.1192+b*0.9505)/108.883;
+    const f=(t)=> t>0.008856 ? Math.cbrt(t) : (7.787*t)+16/116;
+    x=f(x); y=f(y); z=f(z);
+    return [(116*y)-16, 500*(x-y), 200*(y-z)];
+  }
+  function labToRgb(L,A,B){
+    let y=(L+16)/116, x=A/500+y, z=y-B/200;
+    const fi=(t)=> (t*t*t)>0.008856 ? t*t*t : (t-16/116)/7.787;
+    x=fi(x)*95.047/100; y=fi(y); z=fi(z)*108.883/100;
+    let r=x*3.2406+y*-1.5372+z*-0.4986;
+    let g=x*-0.9689+y*1.8758+z*0.0415;
+    let b=x*0.0557+y*-0.2040+z*1.0570;
+    const gam=(c)=> c>0.0031308 ? 1.055*Math.pow(c,1/2.4)-0.055 : 12.92*c;
+    return [gam(r)*255, gam(g)*255, gam(b)*255];
+  }
+
+  function boxBlur(src,w,h,radius){
+    const tmp=new Float32Array(w*h), out=new Float32Array(w*h); const r=radius;
+    for(let y=0;y<h;y++){
+      let acc=0;
+      for(let x=-r;x<=r;x++){ acc+=src[y*w+Math.min(w-1,Math.max(0,x))]; }
+      for(let x=0;x<w;x++){
+        tmp[y*w+x]=acc/(2*r+1);
+        const addX=Math.min(w-1,x+r+1), remX=Math.max(0,x-r);
+        acc+=src[y*w+addX]-src[y*w+remX];
+      }
+    }
+    for(let x=0;x<w;x++){
+      let acc=0;
+      for(let y=-r;y<=r;y++){ acc+=tmp[Math.min(h-1,Math.max(0,y))*w+x]; }
+      for(let y=0;y<h;y++){
+        out[y*w+x]=acc/(2*r+1);
+        const addY=Math.min(h-1,y+r+1), remY=Math.max(0,y-r);
+        acc+=tmp[addY*w+x]-tmp[remY*w+x];
+      }
+    }
+    return out;
+  }
+
+  function render(){
+    const contrastAmt = document.getElementById('contrast').value/100;
+    const saturationAmt = document.getElementById('saturation').value/100;
+    const warmPriorityAmt = document.getElementById('warmPriority').value/100;
+    const grainAmt = document.getElementById('grain').value/100;
+    const halationAmt = document.getElementById('halation').value/100;
+    const localContrastAmt = document.getElementById('localContrast').value/100;
+    const warmth = document.getElementById('warmth').value/100;
+    document.getElementById('valLocalContrast').textContent = Math.round(localContrastAmt*100)+'%';
+    const autoAnchor = document.getElementById('autoAnchor').checked;
+    const manualAnchorVal = document.getElementById('manualAnchor').value/100;
+    const autoContrast = document.getElementById('autoContrast').checked;
+
+    document.getElementById('valSaturation').textContent = Math.round(saturationAmt*100)+'%';
+    document.getElementById('valWarmPriority').textContent = Math.round(warmPriorityAmt*100)+'%';
+    document.getElementById('valGrain').textContent = Math.round(grainAmt*100)+'%';
+    document.getElementById('valHalation').textContent = Math.round(halationAmt*100)+'%';
+    document.getElementById('valWarmth').textContent = (warmth>=0?'+':'')+Math.round(warmth*100);
+
+    const src = octx.getImageData(0,0,W,H);
+    const out = pctx.createImageData(W,H);
+    const sd = src.data, od = out.data;
+
+    // exposure anchor (based on neutral luminance, applied uniformly pre-curve)
+    const sample=[];
+    for(let i=0;i<sd.length;i+=4){
+      if((i/4)%9===0){
+        const l=(sd[i]*0.2126+sd[i+1]*0.7152+sd[i+2]*0.0722)/255;
+        sample.push(l);
+      }
+    }
+    sample.sort((a,b)=>a-b);
+    const median = sample.length ? sample[Math.floor(sample.length*0.5)] : 0.5;
+    const exposureShift = autoAnchor ? (0.5-median)*0.4 : manualAnchorVal;
+    document.getElementById('valAnchor').textContent = autoAnchor
+      ? ('자동 · 중간톤 '+Math.round(median*100)+'%')
+      : ('수동 '+(manualAnchorVal>=0?'+':'')+Math.round(manualAnchorVal*100)+'%');
+
+    // adaptive contrast — "it pumps up what's dull, but if the image is already
+    // contrasty, you can be asking for trouble" (Ken Rockwell). Measure the photo's
+    // own existing dynamic range (5th-95th percentile spread of luminance) and scale
+    // how much of the tone curve to apply: a flat/hazy/dull scene gets closer to full
+    // strength, an already-contrasty scene (e.g. a phone JPEG with its own tone
+    // mapping already applied) gets scaled down to avoid double-stacking contrast.
+    const p05 = sample.length ? sample[Math.floor(sample.length*0.05)] : 0.05;
+    const p95 = sample.length ? sample[Math.floor(sample.length*0.95)] : 0.95;
+    const existingSpread = Math.max(0.05, p95 - p05); // 0..1, low = flat/dull, high = already contrasty
+    // spread 0.3 (flat) -> scale ~1.15 (boost toward full curve)
+    // spread 0.6 (typical) -> scale ~1.0 (use slider as-is)
+    // spread 0.9 (already contrasty) -> scale ~0.55 (pull back hard)
+    const autoContrastScale = Math.min(1.25, Math.max(0.5, 1.55 - existingSpread*1.1));
+    const effectiveContrastAmt = autoContrast ? Math.min(1, contrastAmt*autoContrastScale) : contrastAmt;
+    document.getElementById('valContrast').textContent = autoContrast
+      ? ('자동 · 원본대비 '+Math.round(existingSpread*100)+'% → x'+autoContrastScale.toFixed(2)+' → '+Math.round(effectiveContrastAmt*100)+'%')
+      : (Math.round(contrastAmt*100)+'%');
+
+    const lumForContrast = new Float32Array(W*H);
+
+    const film = FILM_CURVES[currentFilm];
+
+    // ---- Pass 1: compute RAW (pre-curve) L/a/b for every pixel ----
+    // Detail must be extracted from the ORIGINAL tone, before any contrast curve
+    // touches it — extracting detail from the already-curved image (the old
+    // approach) can't recover separation the curve already crushed in shadows.
+    const rawL = new Float32Array(W*H);
+    const rawA = new Float32Array(W*H);
+    const rawBc = new Float32Array(W*H);
+    for(let i=0;i<sd.length;i+=4){
+      let r = Math.min(255,Math.max(0, sd[i]   + exposureShift*255 + warmth*38));
+      let g = Math.min(255,Math.max(0, sd[i+1] + exposureShift*255));
+      let b = Math.min(255,Math.max(0, sd[i+2] + exposureShift*255 - warmth*38));
+      let [L,A,B] = rgbToLab(r,g,b);
+      const px = i/4;
+      rawL[px] = L/100;
+      rawA[px] = (A+128)/256;
+      rawBc[px] = (B+128)/256;
+    }
+
+    // ---- Pass 2: separate base (smoothed) / detail (fine texture) on L only ----
+    // detailRadius controls the size of "texture" preserved untouched by the tone
+    // curve — small enough to catch skin/hair/fabric texture, large enough to not
+    // just be re-describing grain.
+    const detailRadius = 7;
+    const baseL = boxBlur(rawL, W, H, detailRadius);
+    const detailAmt = 1.0 + localContrastAmt*1.1; // "미세 대비" now controls how much of
+    // the original detail is reinjected — 100% = faithful original sharpness kept
+    // through any amount of contrast; >100% = enhanced acutance (Velvia's real
+    // documented 120% MTF peak).
+
+    for(let i=0;i<sd.length;i+=4){
+      const px = i/4;
+      const detail = rawL[px] - baseL[px];
+
+      const shapedBase = curveShape(film.L, Math.min(1,Math.max(0,baseL[px])));
+      let vL = baseL[px] + (shapedBase - baseL[px])*effectiveContrastAmt;
+      vL = vL + detail*detailAmt; // reinject original fine detail, untouched by the contrast curve
+
+      const shapedA = curveShape(film.a, Math.min(1,Math.max(0,rawA[px])));
+      const shapedBv = curveShape(film.b, Math.min(1,Math.max(0,rawBc[px])));
+      let vA = rawA[px] + (shapedA - rawA[px])*saturationAmt*1.1;
+      let vB = rawBc[px] + (shapedBv - rawBc[px])*saturationAmt*1.1;
+
+      // Warm-color-priority boost — Ken Rockwell, verbatim on real Velvia: "adds red
+      // to warm colors. Yellows become slightly redder, oranges turn toward red...
+      // this defect is what gives Velvia its extraordinarily great look." This is a
+      // SEPARATE, explicit layer (not just scaling the base a/b curve uniformly) —
+      // push chroma further specifically for pixels whose hue falls in the warm
+      // (red-orange-yellow) range, leaving cool hues (blue/green/cyan) at the base
+      // curve's own response.
+      if(warmPriorityAmt>0){
+        const dA = vA-0.5, dB = vB-0.5;
+        const hueDeg = Math.atan2(dB,dA)*180/Math.PI; // Lab hue angle
+        // warm range: roughly -50°..100° covers red through orange into yellow
+        if(hueDeg>-50 && hueDeg<100){
+          const warmness = 1 - Math.abs(hueDeg-25)/75; // peaks at 25° (orange), 0 at the range edges
+          const boost = 1 + warmPriorityAmt*Math.max(0,warmness)*0.9;
+          vA = 0.5 + dA*boost;
+          vB = 0.5 + dB*boost;
+        }
+      }
+
+      vL = Math.min(1, Math.max(0, vL));
+      const newL = vL*100, newA = vA*256-128, newB = vB*256-128;
+      let [nr,ng,nb] = labToRgb(newL,newA,newB);
+
+      lumForContrast[px] = (nr*0.2126+ng*0.7152+nb*0.0722)/255;
+
+      const x = px%W, y=(px/W)|0;
+      const dither = (seededNoise(x,y,213)-0.5)*2.2;
+      od[i]   = Math.min(255,Math.max(0, nr+dither));
+      od[i+1] = Math.min(255,Math.max(0, ng+dither));
+      od[i+2] = Math.min(255,Math.max(0, nb+dither));
+      od[i+3] = 255;
+    }
+
+    // channel-independent grain — different seed per channel for a faint chromatic grain
+    if(grainAmt>0){
+      for(let i=0;i<sd.length;i+=4){
+        const px=i/4, x=px%W, y=(px/W)|0;
+        const v = lumForContrast[px];
+        const visibility = Math.sin(Math.min(1,v*1.15)*Math.PI);
+        const nr=(seededNoise(x,y,1)-0.5)*2, ng=(seededNoise(x,y,2)-0.5)*2, nb=(seededNoise(x,y,3)-0.5)*2;
+        od[i]   = Math.min(255,Math.max(0, od[i]  + nr*grainAmt*20*visibility));
+        od[i+1] = Math.min(255,Math.max(0, od[i+1]+ ng*grainAmt*20*visibility));
+        od[i+2] = Math.min(255,Math.max(0, od[i+2]+ nb*grainAmt*20*visibility));
+      }
+    }
+
+    // halation — warm glow from bright areas
+    if(halationAmt>0){
+      const threshold=0.95; // raised from 0.86 for diagnostic isolation — see halation ctrl-desc
+      const glowSrc=new Float32Array(W*H);
+      for(let px=0;px<W*H;px++){ const v=lumForContrast[px]; glowSrc[px]= v>threshold ? (v-threshold)/(1-threshold) : 0; }
+      const radius=6+Math.round(halationAmt*10);
+      const blurred=boxBlur(glowSrc,W,H,radius);
+      const blurred2=boxBlur(blurred,W,H,radius);
+      for(let i=0;i<od.length;i+=4){
+        const px=i/4; const gl=blurred2[px]*halationAmt*1.3;
+        od[i]  =Math.min(255, od[i]  + gl*190);
+        od[i+1]=Math.min(255, od[i+1]+ gl*90);
+        od[i+2]=Math.min(255, od[i+2]+ gl*30);
+      }
+    }
+
+    pctx.putImageData(out,0,0);
+  }
+
+  const compareSlider=document.getElementById('compareSlider');
+  const dividerLine=document.getElementById('dividerLine');
+  function updateCompare(pct){
+    origCanvas.style.clipPath=`inset(0 ${pct}% 0 0)`;
+    dividerLine.style.left=(100-pct)+'%';
+    compareSlider.value=pct;
+  }
+  compareSlider.addEventListener('input', ()=>updateCompare(compareSlider.value));
+
+  const autoAnchorBox=document.getElementById('autoAnchor');
+  const manualAnchorSlider=document.getElementById('manualAnchor');
+  autoAnchorBox.addEventListener('change',()=>{ manualAnchorSlider.disabled=autoAnchorBox.checked; render(); });
+  const autoContrastBox=document.getElementById('autoContrast');
+  autoContrastBox.addEventListener('change', render);
+
+  const filmVelviaBtn=document.getElementById('filmVelvia');
+  const filmProviaBtn=document.getElementById('filmProvia');
+  function applyFilmDefaults(filmKey){
+    const d = FILM_DEFAULTS[filmKey];
+    document.getElementById('saturation').value = d.saturation;
+    document.getElementById('warmPriority').value = d.warmPriority;
+  }
+  filmVelviaBtn.addEventListener('click',()=>{
+    currentFilm='velvia50';
+    filmVelviaBtn.classList.add('active'); filmProviaBtn.classList.remove('active');
+    document.getElementById('valFilm').textContent=FILM_CURVES.velvia50.name;
+    document.getElementById('lblAfter').textContent='VIVID SLIDE 50 — VELVIA 50';
+    applyFilmDefaults('velvia50');
+    render();
+  });
+  filmProviaBtn.addEventListener('click',()=>{
+    currentFilm='provia100f';
+    filmProviaBtn.classList.add('active'); filmVelviaBtn.classList.remove('active');
+    document.getElementById('valFilm').textContent=FILM_CURVES.provia100f.name;
+    document.getElementById('lblAfter').textContent='VIVID SLIDE 50 — PROVIA 100F';
+    applyFilmDefaults('provia100f');
+    render();
+  });
+
+  ['contrast','saturation','warmPriority','grain','halation','warmth','manualAnchor','localContrast'].forEach(id=>{
+    document.getElementById(id).addEventListener('input', render);
+  });
+
+  render(); updateCompare(50);
+})();
+</script>
+</body>
+</html>
