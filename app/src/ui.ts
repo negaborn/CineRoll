@@ -13,6 +13,7 @@ import { applyFilm, analyzeFilm, mixFilmInPlace, FILM_IDS, FILM_SPECS, classicTo
 import { createGrainTile, Engine3D, colorAdjustFromTone, isNeutralColor } from './compose';
 import { renderSlideBase, computeFontSizePx, computeGlowPx, drawWatermarkText, drawLogo, drawAppWatermark } from './render';
 import { decodeRaw, decodeRaw16, RAW_EXT, RawDecodeError } from './raw';
+import { saveDraftFile, saveDraftState, loadDraft, clearDraft } from './draft';
 import { runExport, packageAndDeliver, type ExportRequest, type ExportQuality, type ExportResult } from './export';
 
 function el<T extends HTMLElement = HTMLElement>(id: string): T {
@@ -713,7 +714,8 @@ function hideOrientationWarning() {
   document.getElementById('orientation-warning')?.classList.add('hidden');
 }
 
-async function handleFile(file: File) {
+/** Opens a photo. `restore` = a saved draft's settings instead of a fresh start. */
+async function handleFile(file: File, restore?: EditState) {
   if (!file) return;
   const validExts = /\.(jpe?g|png|tiff?|webp|gif|rw2|cr2|cr3|nef|arw|dng)$/i;
   if (!file.type.startsWith('image/') && !file.name.match(validExts)) { alert('지원하지 않는 이미지 형식입니다.'); return; }
@@ -743,8 +745,52 @@ async function handleFile(file: File) {
   releaseApplied(); lastAppliedKey = null;
   DOM.previewInner.innerHTML = '';
   DOM.upZone.classList.add('hidden');
-  editState.update((s) => ({ ...s, rotation: { base: 0, fine: 0 }, crop: FRESH_CROP }));
-  await switchTab('format'); // mounts the Cropper for the new photo
+  if (restore) editState.update(() => ({ ...restore, tone: { ...restore.tone, customLutRev: S().tone.customLutRev } }));
+  else editState.update((s) => ({ ...s, rotation: { base: 0, fine: 0 }, crop: FRESH_CROP }));
+  // Keep the photo for the draft without holding up the editor (a RAW is 30+ MB).
+  draftFileId = null;
+  void saveDraftFile(file).then((id) => { if (originalImg === img) { draftFileId = id; scheduleDraftSave(); } });
+  await switchTab('format'); // mounts the Cropper for the new photo (restoring the crop from state)
+}
+
+// ============================================================================
+// Draft autosave (IndexedDB): the photo once per photo, settings 1 s after a change
+// ============================================================================
+
+let draftFileId: string | null = null;
+let draftTimer: ReturnType<typeof setTimeout> | undefined;
+function scheduleDraftSave() {
+  if (!draftFileId) return;
+  clearTimeout(draftTimer);
+  draftTimer = setTimeout(() => {
+    if (!draftFileId) return;
+    const s = S();
+    // A custom .cube LUT lives only in memory: a restored draft falls back to no LUT.
+    const state = s.tone.lut === 'custom' ? { ...s, tone: { ...s.tone, lut: 'none' as const } } : s;
+    void saveDraftState(draftFileId, state, logoUrl);
+  }, 1000);
+}
+editState.subscribe(() => scheduleDraftSave());
+
+async function offerDraft() {
+  const d = await loadDraft();
+  if (!d || originalImg) return;
+  const mins = Math.max(1, Math.round((Date.now() - d.timestamp) / 60000));
+  el('draft-info').textContent = `${d.file.name} · ${mins < 60 ? `${mins}분` : `${Math.round(mins / 60)}시간`} 전`;
+  el('draft-banner').classList.remove('hidden');
+  el('btn-draft-restore').onclick = async () => {
+    el('draft-banner').classList.add('hidden');
+    if (d.logoUrl) {
+      const img = new Image();
+      await new Promise((res) => { img.onload = res; img.onerror = res; img.src = d.logoUrl!; });
+      if (img.naturalWidth) { logoUrl = d.logoUrl; logoObj = img; DOM.logoStatus.classList.remove('hidden'); }
+    }
+    await handleFile(d.file, d.state);
+  };
+  el('btn-draft-discard').onclick = async () => {
+    await clearDraft(); // gone before the banner goes (a reload right after can't bring it back)
+    el('draft-banner').classList.add('hidden');
+  };
 }
 
 // ============================================================================
@@ -1100,7 +1146,7 @@ el('btn-close-export').addEventListener('click', closeExportModal);
 el('btn-return-workspace').addEventListener('click', closeExportModal);
 el('btn-exit-zen').addEventListener('click', toggleZenMode);
 el('btn-reload-logo').addEventListener('click', () => location.reload());
-el('btn-new-photo').addEventListener('click', () => location.reload());
+el('btn-new-photo').addEventListener('click', async () => { draftFileId = null; await clearDraft(); location.reload(); });
 DOM.btnZen.addEventListener('click', toggleZenMode);
 DOM.btnBA.addEventListener('click', toggleSplitView);
 el('btn-zoom-fit').addEventListener('click', () => setZoom('fit'));
@@ -1113,3 +1159,4 @@ savedCustomPresets = loadPresets();
 renderPresetChips();
 initGlobalDrag();
 syncControls(S());
+void offerDraft();

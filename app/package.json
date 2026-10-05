@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "cropperjs": "^1.6.2",
+    "idb-keyval": "^6.3.0",
     "jszip": "^3.10.2",
     "libraw-wasm": "^1.6.0",
     "utif": "^3.1.0"
