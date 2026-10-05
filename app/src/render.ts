@@ -25,7 +25,30 @@ export interface SlideBaseParams {
   source: SlideSource;
   frame: FrameGeometry;
   grain: { tile: HTMLCanvasElement | null; amountPct: number };
+  /** Draws the photo itself (Lossless resamples it pixel-exactly); replaces the built-in drawImage. */
+  drawPhoto?: (ctx: CanvasRenderingContext2D, rect: DrawRect) => void;
 }
+
+/** Where the photo sits inside a slide (margin / instant-print layouts). */
+export function slideImageRect(width: number, height: number, frame: FrameGeometry): DrawRect {
+  if (!frame.isMargin) return { x: 0, y: 0, width, height };
+  if (frame.border === 'instant') {
+    const pS = frame.marginScale * 0.88;
+    const w = width * pS;
+    return { x: (width - w) / 2, y: height * 0.06, width: w, height: height * pS };
+  }
+  const w = width * frame.marginScale;
+  const h = height * frame.marginScale;
+  return { x: (width - w) / 2, y: (height - h) / 2, width: w, height: h };
+}
+
+/** slideImageRect snapped to whole pixels (Lossless draws the photo pixel-exactly). */
+export function slideImageRectPx(width: number, height: number, frame: FrameGeometry): DrawRect {
+  const r = slideImageRect(width, height, frame);
+  const x = Math.round(r.x); const y = Math.round(r.y);
+  return { x, y, width: Math.round(r.x + r.width) - x, height: Math.round(r.y + r.height) - y };
+}
+
 
 export interface DrawRect {
   x: number;
@@ -41,31 +64,17 @@ export function renderSlideBase(p: SlideBaseParams): DrawRect {
   ctx.fillStyle = frame.isMargin ? frame.bgColor : '#000000';
   ctx.fillRect(0, 0, width, height);
 
-  let dx = 0;
-  let dy = 0;
-  let dw = width;
-  let dh = height;
-  if (frame.isMargin) {
-    if (frame.border === 'instant') {
-      const pS = frame.marginScale * 0.88;
-      dw = width * pS;
-      dh = height * pS;
-      dx = (width - dw) / 2;
-      dy = height * 0.06;
-    } else {
-      dw = width * frame.marginScale;
-      dh = height * frame.marginScale;
-      dx = (width - dw) / 2;
-      dy = (height - dh) / 2;
-    }
-  }
+  const rect = p.drawPhoto ? slideImageRectPx(width, height, frame) : slideImageRect(width, height, frame);
+  const { x: dx, y: dy, width: dw, height: dh } = rect;
 
   ctx.save();
-  const sliceW = p.source.naturalWidth / p.slidesCount;
-  if (p.isPanned) {
-    ctx.drawImage(p.source.image, p.slideIndex * sliceW, 0, sliceW, p.source.naturalHeight, dx, dy, dw, dh);
+  if (p.drawPhoto) {
+    p.drawPhoto(ctx, rect);
   } else {
-    ctx.drawImage(p.source.image, 0, 0, p.source.naturalWidth, p.source.naturalHeight, dx, dy, dw, dh);
+    const sliceW = p.source.naturalWidth / p.slidesCount;
+    const sx = p.isPanned ? p.slideIndex * sliceW : 0;
+    const sw = p.isPanned ? sliceW : p.source.naturalWidth;
+    ctx.drawImage(p.source.image, sx, 0, sw, p.source.naturalHeight, dx, dy, dw, dh);
   }
   ctx.restore();
 

@@ -1,3 +1,4 @@
+import { exportedDims } from './fixtures/pixels';
 import { test, expect } from '@playwright/test';
 import { createTestImageBuffer } from './fixtures/generate-test-image';
 
@@ -33,13 +34,13 @@ test('export of a small crop from a 6000x4000 @ 2.0x photo stays under the iOS c
   await page.evaluate(() => window.__CINEROLL_DEBUG__!.setCropForTest({ x: 0.4, y: 0.4, width: 0.25, height: 0.25 }));
   await page.click('#btn-apply-crop');
   await page.waitForSelector('#tab-frame:not(.hidden)');
-  await page.selectOption('#exportQuality', 'png');
+  await page.selectOption('#exportQuality', 'tiff');
 
   await page.evaluate(() => { (window as unknown as { __maxCanvasArea: number }).__maxCanvasArea = 0; });
   await page.click('#btn-export');
   await page.waitForSelector('#export-modal.show', { timeout: 60000 });
   const peak = await page.evaluate(() => (window as unknown as { __maxCanvasArea: number }).__maxCanvasArea);
-  const out = await page.locator('.export-img-item').first().evaluate((img: HTMLImageElement) => [img.naturalWidth, img.naturalHeight]);
+  const out = (await exportedDims(page))[0];
 
   // 25% of a 12000x4000 desqueezed frame = 3000x1000 native pixels.
   expect(out[0]).toBe(3000);

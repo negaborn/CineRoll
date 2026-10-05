@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { exportedDims } from './fixtures/pixels';
 
 // Technical plan v2, P0-3: IG/Web exports used fixed canvas sizes, so a small
 // crop was blown up (a 1502px crop -> 6000px Web, 4x) -- inventing pixels.
@@ -21,14 +22,11 @@ async function load(page: Page) {
   await page.waitForTimeout(400);
 }
 
-async function exportDims(page: Page, quality: 'ig' | 'web' | 'png') {
+async function exportDims(page: Page, quality: 'ig' | 'web' | 'tiff') {
   await page.selectOption('#exportQuality', quality);
   await page.click('#btn-export');
   await page.waitForSelector('#export-modal.show', { timeout: 120_000 });
-  const dims = await page.$$eval('.export-img-item', (is) => Promise.all(is.map(async (i) => {
-    const b = await createImageBitmap(await (await fetch((i as HTMLImageElement).src)).blob());
-    return [b.width, b.height];
-  })));
+  const dims = await exportedDims(page);
   const note = await page.evaluate(() => { const n = document.getElementById('export-note'); return n && !n.classList.contains('hidden') ? n.textContent : null; });
   await page.click('#btn-close-export');
   await page.waitForTimeout(400);
@@ -68,7 +66,7 @@ test('Lossless is exactly the crop\'s pixels (no 1px loss)', async ({ page }) =>
   await page.evaluate(() => window.__CINEROLL_DEBUG__!.setCropForTest({ x: 0, y: 0, width: 1, height: 1 }));
   await page.click('#btn-apply-crop');
   await page.waitForSelector('.preview-slide-canvas');
-  const r = await exportDims(page, 'png');
+  const r = await exportDims(page, 'tiff');
   expect(r.dims).toEqual([[SRC_W, SRC_H]]);
   expect(r.note).toBeNull();
 });
@@ -78,7 +76,7 @@ test('Seamless: each slide is capped by its share of the crop (no upscale per sl
   await load(page); // default Seamless, 3 x 4:5
   await page.click('#btn-apply-crop');
   await page.waitForSelector('.preview-slide-canvas');
-  const lossless = await exportDims(page, 'png');
+  const lossless = await exportDims(page, 'tiff');
   const ig = await exportDims(page, 'ig');
   const web = await exportDims(page, 'web');
   expect(lossless.dims.length).toBe(3);

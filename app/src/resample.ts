@@ -120,3 +120,49 @@ export function halvingDownscale(src: HTMLCanvasElement, outW: number, outH: num
   if (cur !== src) { cur.width = 0; cur.height = 0; }
   return fin;
 }
+
+/**
+ * Area-average (box filter, alpha-weighted) of a band of a larger image, with ONE
+ * global mapping so separately produced bands join seamlessly on every engine.
+ * Output row o covers source rows [o*yScale, (o+1)*yScale); output column c covers
+ * source columns [x0 + c*(x1-x0)/outW, ...). `src` holds source rows starting at
+ * global row `srcTop`. Returns output rows [outA, outB) as ImageData.
+ */
+export function areaResampleBand(
+  src: Uint8ClampedArray, srcW: number, srcTop: number, srcRows: number,
+  x0: number, x1: number, outW: number, yScale: number, outA: number, outB: number,
+): ImageData {
+  const out = new ImageData(outW, Math.max(1, outB - outA));
+  const xs = (x1 - x0) / outW;
+  // Horizontal weights (fractional start).
+  const cStart = new Int32Array(outW); const cCount = new Int32Array(outW);
+  const stride = Math.ceil(xs) + 2; const cw = new Float32Array(outW * stride);
+  for (let c = 0; c < outW; c++) {
+    const a = x0 + c * xs; const b = Math.min(srcW, a + xs); const s0 = Math.floor(a);
+    cStart[c] = s0; let n = 0;
+    for (let s = s0; s < b && n < stride; s++, n++) cw[c * stride + n] = Math.min(b, s + 1) - Math.max(a, s);
+    cCount[c] = n;
+  }
+  const d = out.data;
+  for (let o = outA; o < outB; o++) {
+    const a = o * yScale; const b = a + yScale;
+    const r0 = Math.floor(a); const r1 = Math.ceil(b);
+    for (let c = 0; c < outW; c++) {
+      let R = 0; let G = 0; let B = 0; let A = 0; let W = 0;
+      for (let r = r0; r < r1; r++) {
+        const ly = r - srcTop;
+        if (ly < 0 || ly >= srcRows) continue;
+        const wy = Math.min(b, r + 1) - Math.max(a, r);
+        const row = ly * srcW * 4;
+        for (let n = 0; n < cCount[c]; n++) {
+          const sx = cStart[c] + n; if (sx < 0 || sx >= srcW) continue;
+          const w = wy * cw[c * stride + n]; const i = row + sx * 4; const al = src[i + 3] * w;
+          R += src[i] * al; G += src[i + 1] * al; B += src[i + 2] * al; A += al; W += w;
+        }
+      }
+      const j = ((o - outA) * outW + c) * 4;
+      if (A > 0) { d[j] = R / A; d[j + 1] = G / A; d[j + 2] = B / A; d[j + 3] = A / W; }
+    }
+  }
+  return out;
+}

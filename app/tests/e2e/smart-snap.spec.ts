@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { makePositionImage } from './fixtures/position-image';
+import { exportedDims } from './fixtures/pixels';
 
 // Smart snap (restored from v35-v40, extended): in Free ratio mode, a crop box
 // within ±2% of a known ratio turns the frame green while dragging and snaps
@@ -92,10 +93,10 @@ test('dragging near 16:9 turns green mid-drag and snaps exactly on release (cent
 
   await page.click('#btn-apply-crop');
   await page.waitForSelector('#tab-frame:not(.hidden)');
-  await page.selectOption('#exportQuality', 'png');
+  await page.selectOption('#exportQuality', 'tiff');
   await page.click('#btn-export');
   await page.waitForSelector('#export-modal.show', { timeout: 30000 });
-  const [w, h] = await page.locator('.export-img-item').first().evaluate((img: HTMLImageElement) => [img.naturalWidth, img.naturalHeight]);
+  const [w, h] = (await exportedDims(page))[0];
   expect(Math.abs(w / h - 16 / 9) / (16 / 9), `export ${w}x${h} is 16:9`).toBeLessThan(0.003);
 });
 

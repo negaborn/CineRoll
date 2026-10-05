@@ -95,13 +95,9 @@ const GRID = [0.1, 0.3, 0.5, 0.7, 0.9];
 /** Samples the first exported image (the gallery <img>) on a normalized grid. */
 export async function sampleExport(page: Page): Promise<SampledImage> {
   return page.evaluate(async (grid) => {
-    const img = document.querySelector('.export-img-item') as HTMLImageElement;
-    await img.decode();
-    const c = document.createElement('canvas');
-    c.width = img.naturalWidth;
-    c.height = img.naturalHeight;
+    // The exported file itself (the gallery shows a preview for TIFF).
+    const c = await (window.__CINEROLL_DEBUG__ as unknown as { decodeExport(i: number): Promise<HTMLCanvasElement> }).decodeExport(0);
     const ctx = c.getContext('2d')!;
-    ctx.drawImage(img, 0, 0);
     const samples = [];
     for (const a of grid) for (const b of grid) {
       const d = ctx.getImageData(Math.floor(a * (c.width - 1)), Math.floor(b * (c.height - 1)), 1, 1).data;

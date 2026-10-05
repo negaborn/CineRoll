@@ -42,11 +42,9 @@ export async function previewStats(page: Page, index = 0, region: Region = [0, 0
 
 export async function exportStats(page: Page, index = 0, region: Region = [0, 0, 1, 1]): Promise<Stats> {
   return page.evaluate(`(async () => {
-    // Decode the exported file itself: WebKit draws a large PNG <img> as black.
-    const img = document.querySelectorAll('.export-img-item')[${index}];
-    const bmp = await createImageBitmap(await (await fetch(img.src)).blob());
-    const c = document.createElement('canvas'); c.width = bmp.width; c.height = bmp.height;
-    const x = c.getContext('2d'); x.drawImage(bmp, 0, 0);
+    // Decode the exported file itself (the gallery shows a preview for TIFF).
+    const c = await window.__CINEROLL_DEBUG__.decodeExport(${index});
+    const x = c.getContext('2d');
     return (${STATS})(x.getImageData(0, 0, c.width, c.height).data, c.width, c.height, ${region.join(',')});
   })()`) as Promise<Stats>;
 }
@@ -54,7 +52,7 @@ export async function exportStats(page: Page, index = 0, region: Region = [0, 0,
 export const previewCount = (page: Page) => page.locator('.preview-slide-canvas').count();
 
 /** Runs an export and leaves the modal open so export stats can be read; call closeExport() afterwards. */
-export async function runExport(page: Page, quality: 'png' | 'ig' = 'png') {
+export async function runExport(page: Page, quality: 'tiff' | 'ig' = 'tiff') {
   await page.selectOption('#exportQuality', quality);
   await page.click('#btn-export');
   await page.waitForSelector('#export-modal.show', { timeout: 60000 });
@@ -75,4 +73,14 @@ export async function setControl(page: Page, selector: string, value: string, ev
     el.value = value;
     for (const ev of events) el.dispatchEvent(new Event(ev, { bubbles: true }));
   }, { selector, value, events });
+}
+
+/** Pixel size of every exported file (decoded -- the gallery may only hold a preview). */
+export async function exportedDims(page: Page): Promise<[number, number][]> {
+  return page.evaluate(async () => {
+    const d = window.__CINEROLL_DEBUG__ as unknown as { exportFiles(): unknown[]; decodeExport(i: number): Promise<HTMLCanvasElement> };
+    const out: [number, number][] = [];
+    for (let i = 0; i < d.exportFiles().length; i++) { const c = await d.decodeExport(i); out.push([c.width, c.height]); c.width = 0; }
+    return out;
+  });
 }

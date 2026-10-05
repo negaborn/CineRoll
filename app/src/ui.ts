@@ -12,7 +12,7 @@ import { CropController, getCropFrameSize, renderCroppedRegionFromOriginal } fro
 import { applyFilm, analyzeFilm, mixFilmInPlace, FILM_IDS, FILM_SPECS, classicToneCurve, newsprintToneCurve, NEWSPRINT_CURVE_POINTS, type FilmId } from './film';
 import { createGrainTile, Engine3D, colorAdjustFromTone, isNeutralColor } from './compose';
 import { renderSlideBase, computeFontSizePx, computeGlowPx, drawWatermarkText, drawLogo, drawAppWatermark } from './render';
-import { runExport, packageAndDeliver, type ExportRequest, type ExportQuality } from './export';
+import { runExport, packageAndDeliver, type ExportRequest, type ExportQuality, type ExportResult } from './export';
 
 function el<T extends HTMLElement = HTMLElement>(id: string): T {
   const e = document.getElementById(id);
@@ -69,6 +69,8 @@ let splitPos = 50;
 let savedCustomPresets: TextPresetRecord[] = [];
 
 const S = () => editState.get();
+let lastExport: ExportResult | null = null; // for the test probes
+let debugBandRows: number | undefined;
 const isFilm = (lut: string): lut is FilmId => (FILM_IDS as string[]).includes(lut);
 const FRESH_CROP = { x: 0, y: 0, width: 0, height: 0 };
 const isFreshCrop = (c: EditState['crop']) => c.width <= 0 || c.height <= 0;
@@ -93,6 +95,27 @@ const cropCtrl = new CropController(DOM.main, {
 
 installDebugHook((rect) => cropCtrl.setCropForTest(rect), {
   film: { apply: applyFilm, analyze: analyzeFilm, specs: FILM_SPECS, classicToneCurve, newsprintToneCurve, newsprintCurvePoints: NEWSPRINT_CURVE_POINTS },
+  exportFiles: () => (lastExport?.slides ?? []).map((sl) => ({ name: sl.filename, type: sl.blob.type, size: sl.blob.size })),
+  /** Decodes exported file `i` (JPEG or TIFF) into a canvas -- browsers can't show TIFF themselves. */
+  decodeExport: async (i: number) => {
+    const blob = lastExport!.slides[i].blob;
+    const c = document.createElement('canvas');
+    if (blob.type !== 'image/tiff') {
+      const bmp = await createImageBitmap(blob);
+      c.width = bmp.width; c.height = bmp.height; c.getContext('2d')!.drawImage(bmp, 0, 0);
+      return c;
+    }
+    const buf = await blob.arrayBuffer();
+    const ifds = UTIF.decode(buf); UTIF.decodeImage(buf, ifds[0]);
+    c.width = ifds[0].width; c.height = ifds[0].height;
+    c.getContext('2d')!.putImageData(new ImageData(new Uint8ClampedArray(UTIF.toRGBA8(ifds[0]).buffer as ArrayBuffer), c.width, c.height), 0, 0);
+    return c;
+  },
+  tiffInfo: async (i: number) => {
+    const ifd = UTIF.decode(await lastExport!.slides[i].blob.arrayBuffer())[0] as unknown as Record<string, number[]>;
+    return { width: ifd.t256[0], height: ifd.t257[0], bitsPerSample: ifd.t258, samplesPerPixel: ifd.t277[0], compression: ifd.t259[0], photometric: ifd.t262[0] };
+  },
+  setExportBandRows: (n: number | null) => { debugBandRows = n ?? undefined; },
   preview: () => {
     const lut = S().tone.lut;
     const filmReady = !isFilm(lut) || (!toneRunning && !!filmCache && filmCache.film === lut && filmCache.base === baseCanvas && previewSource !== null);
@@ -997,6 +1020,7 @@ DOM.btnExport.addEventListener('click', async () => {
       typo: { ...s.typo, text: s.typo.text.trim() },
       logo: { image: logoObj, enabled: !!logoObj && s.logo.enabled, scale: s.logo.scale, opacity: s.logo.opacity, pos: s.logo.pos },
       appWatermark: s.appWatermark,
+      bandRows: debugBandRows,
     };
 
     const result = await runExport(request, updateLoadingText);
@@ -1010,11 +1034,21 @@ DOM.btnExport.addEventListener('click', async () => {
       note.classList.add('hidden');
     }
     const gCon = el('export-gallery-container'); gCon.innerHTML = '';
+    lastExport = result;
     for (const slide of result.slides) {
       const imgEl = document.createElement('img');
-      imgEl.src = URL.createObjectURL(slide.blob);
+      imgEl.src = URL.createObjectURL(slide.preview ?? slide.blob); // TIFF isn't displayable: show its preview
       imgEl.className = 'export-img-item';
       gCon.appendChild(imgEl);
+      if (slide.preview) {
+        // Long-press would save the preview JPEG, so offer the real file explicitly.
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(slide.blob);
+        a.download = slide.filename;
+        a.className = 'text-[10px] font-bold uppercase tracking-widest text-white bg-coral-600 px-4 py-2 rounded-full -mt-5';
+        a.textContent = `Save ${slide.filename} (${(slide.blob.size / 1048576).toFixed(0)} MB)`;
+        gCon.appendChild(a);
+      }
     }
 
     const outcome = await packageAndDeliver(result, isMobile, updateLoadingText);

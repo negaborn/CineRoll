@@ -104,6 +104,8 @@ export function renderCroppedRegionFromOriginal(
   fineDeg: number,
   crop: CropRect,
   targetWidth: number,
+  /** Exact output height (a band of a larger render); defaults to the crop's own aspect. */
+  targetHeight?: number,
 ): HTMLCanvasElement {
   const sf = squeezePct / 100;
   const frame = getCropFrameSize(original, squeezePct, baseRotation, fineDeg);
@@ -114,7 +116,7 @@ export function renderCroppedRegionFromOriginal(
 
   const out = document.createElement('canvas');
   out.width = Math.max(1, Math.round(targetWidth));
-  out.height = Math.max(1, Math.round(targetWidth * (sh / sw)));
+  out.height = Math.max(1, Math.round(targetHeight ?? targetWidth * (sh / sw)));
   const ctx = out.getContext('2d')!;
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';

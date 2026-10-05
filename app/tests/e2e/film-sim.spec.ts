@@ -1,5 +1,5 @@
 import { test, expect, type Page, type Browser } from '@playwright/test';
-import { previewStats, exportStats, runExport, closeExport, meanDiff, setControl } from './fixtures/pixels';
+import { previewStats, exportStats, runExport, closeExport, meanDiff, setControl, exportedDims } from './fixtures/pixels';
 
 // Film simulations (Classic Pan 400, Newsprint 400, Vivid Slide 50 Velvia/Provia),
 // ported from the verified prototypes in reference/film-sim/.
@@ -328,9 +328,9 @@ test.describe('integration: Tone tab film selector', () => {
       });
       expect(pixelChange, 'the film changes the look (mean per-pixel change)').toBeGreaterThan(3);
       if (film.includes('pan') || film.includes('news')) expect(p.sat, 'B&W').toBeLessThan(8);
-      await runExport(page, 'png');
+      await runExport(page, 'tiff');
       const e = await exportStats(page);
-      const dims = await page.$eval('.export-img-item', (i) => [(i as HTMLImageElement).naturalWidth, (i as HTMLImageElement).naturalHeight]);
+      const dims = (await exportedDims(page))[0];
       expect(Math.max(...dims), 'export at full resolution').toBeGreaterThan(5000);
       console.log(`${film}: preview ${info.w}x${info.h} mean=${p.mean.map((v) => v.toFixed(1))} sat=${p.sat.toFixed(1)} std=${p.lumaStd.toFixed(1)} | export ${dims.join('x')} mean=${e.mean.map((v) => v.toFixed(1))} sat=${e.sat.toFixed(1)} std=${e.lumaStd.toFixed(1)}`);
       expect(meanDiff(p, e), 'preview colour == export colour').toBeLessThan(3);
@@ -360,8 +360,8 @@ test.describe('integration: Tone tab film selector', () => {
     await selectFilm(page, 'velvia-50');
     const info = await page.evaluate(() => (window.__CINEROLL_DEBUG__ as unknown as { preview(): { w: number; h: number } }).preview());
     expect(info.w / info.h).toBeCloseTo(2.4, 2);
-    expect(await runExport(page, 'png')).toBe(3);
-    const dims = await page.$$eval('.export-img-item', (is) => is.map((i) => [(i as HTMLImageElement).naturalWidth, (i as HTMLImageElement).naturalHeight]));
+    expect(await runExport(page, 'tiff')).toBe(3);
+    const dims = await exportedDims(page);
     const totalW = dims.reduce((a, d) => a + d[0], 0);
     expect(totalW / dims[0][1], 'three slides together are still 2.4:1').toBeCloseTo(2.4, 1);
   });
@@ -394,7 +394,7 @@ test.describe('categories the prototypes barely covered', () => {
         await page.waitForSelector('.preview-slide-canvas');
         await selectFilm(page, film);
         const p = await previewStats(page);
-        await runExport(page, 'png');
+        await runExport(page, 'tiff');
         const e = await exportStats(page);
         console.log(`${variant}/${film}: mean=${p.mean.map((v) => v.toFixed(1))} std=${p.lumaStd.toFixed(1)} sat=${p.sat.toFixed(1)}`);
         expect(p.lumaStd, 'tonal variation kept').toBeGreaterThan(variant === 'night' ? 4 : 10);

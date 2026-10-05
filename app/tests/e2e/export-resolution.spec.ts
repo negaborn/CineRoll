@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { uploadTestImage } from './fixtures/generate-test-image';
+import { exportedDims } from './fixtures/pixels';
 import './fixtures/debug-types';
 
 test('6000x4000 @ 1.33x squeeze, Lossless export targets a 7980px-based width', async ({ page }) => {
@@ -17,11 +18,11 @@ test('6000x4000 @ 1.33x squeeze, Lossless export targets a 7980px-based width', 
   await page.click('#btn-apply-crop');
   await page.waitForSelector('#tab-frame:not(.hidden)');
 
-  await page.selectOption('#exportQuality', 'png');
+  await page.selectOption('#exportQuality', 'tiff');
   await page.click('#btn-export');
   await page.waitForSelector('.export-img-item', { timeout: 20000 });
 
-  const width = await page.locator('.export-img-item').first().evaluate((img: HTMLImageElement) => img.naturalWidth);
+  const width = (await exportedDims(page))[0][0];
   expect(width).toBeGreaterThanOrEqual(7978);
   expect(width).toBeLessThanOrEqual(7982);
 });

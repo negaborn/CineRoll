@@ -14,7 +14,7 @@ async function setup(page: Page, buf: Buffer) {
 }
 
 async function exportSample(page: Page) {
-  await page.selectOption('#exportQuality', 'png');
+  await page.selectOption('#exportQuality', 'tiff');
   await page.click('#btn-export');
   await page.waitForSelector('#export-modal.show', { timeout: 30000 });
   return sampleExport(page);

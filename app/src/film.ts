@@ -547,6 +547,20 @@ export interface ApplyFilmOptions {
   stripPixels?: number;
   /** Called between strips; awaiting it lets the page stay responsive. */
   onStrip?: (done: number, total: number) => void | Promise<void>;
+  /**
+   * When `src` is a band of a larger image: the full image's long side (sets the
+   * spatial scale) and the band's first row in it (keeps grain/dither in place).
+   * Pass `stats` from the whole image too, and give the band enough extra rows
+   * (filmReach) above and below for the blurs.
+   */
+  longSide?: number;
+  yOffset?: number;
+}
+
+/** Rows of context a band needs above and below so its blurs match the whole frame. */
+export function filmReach(film: FilmId, longSide: number): number {
+  const spec = FILM_SPECS[film];
+  return radii(spec, longSide / spec.refLongSide).reach;
 }
 
 /**
@@ -558,7 +572,8 @@ export async function applyFilm(src: HTMLCanvasElement, film: FilmId, opts: Appl
   const W = src.width;
   const H = src.height;
   const stats = opts.stats ?? analyzeFilm(src, film);
-  const k = Math.max(W, H) / spec.refLongSide;
+  const k = (opts.longSide ?? Math.max(W, H)) / spec.refLongSide;
+  const yOffset = opts.yOffset ?? 0;
   const { reach } = radii(spec, k);
   const sctx = src.getContext('2d', { willReadFrequently: true })!;
 
@@ -578,7 +593,7 @@ export async function applyFilm(src: HTMLCanvasElement, film: FilmId, opts: Appl
     const y1 = Math.min(H, y0 + rows);
     const top = Math.max(0, y0 - reach);
     const bottom = Math.min(H, y1 + reach);
-    const reg: Region = { data: sctx.getImageData(0, top, W, bottom - top).data, w: W, h: bottom - top, top };
+    const reg: Region = { data: sctx.getImageData(0, top, W, bottom - top).data, w: W, h: bottom - top, top: top + yOffset };
     const od = spec.kind === 'bw' ? processBw(spec, stats, k, reg) : processColor(spec, stats, k, reg);
     const keep = new ImageData(od.subarray((y0 - top) * W * 4, (y1 - top) * W * 4).slice(), W, y1 - y0);
     octx.putImageData(keep, 0, y0);

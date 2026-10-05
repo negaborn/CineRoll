@@ -35,7 +35,7 @@ async function runPipeline(page: Page, buf: Buffer, rot90: number, squeeze: stri
   await page.waitForSelector('#tab-frame:not(.hidden)');
   await page.waitForTimeout(300);
   const preview = await samplePreview(page);
-  await page.selectOption('#exportQuality', 'png');
+  await page.selectOption('#exportQuality', 'tiff');
   await page.click('#btn-export');
   await page.waitForSelector('#export-modal.show', { timeout: 30000 });
   const exported = await sampleExport(page);

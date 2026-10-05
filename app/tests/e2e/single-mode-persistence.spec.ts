@@ -27,7 +27,7 @@ async function exportGeo(page: Page): Promise<Geo> {
   await page.selectOption('#exportQuality', 'ig');
   await page.click('#btn-export');
   await page.waitForSelector('#export-modal.show', { timeout: 30000 });
-  const g = await page.evaluate(`(async () => { const img = document.querySelector('.export-img-item'); await img.decode(); const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight; const x = c.getContext('2d'); x.drawImage(img,0,0); return (${CLASSIFY})(x.getImageData(0,0,c.width,c.height).data, c.width, c.height); })()`) as Geo;
+  const g = await page.evaluate(`(async () => { const c = await window.__CINEROLL_DEBUG__.decodeExport(0); const x = c.getContext('2d'); return (${CLASSIFY})(x.getImageData(0,0,c.width,c.height).data, c.width, c.height); })()`) as Geo;
   await page.click('#btn-close-export');
   await page.waitForTimeout(350);
   return g;

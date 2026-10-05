@@ -80,11 +80,11 @@ async function once(page: Page, target: Target, buf: Buffer, scenario: Scenario)
   await page.waitForSelector('#tab-frame:not(.hidden)', { timeout: 10000 });
   await page.waitForTimeout(400);
   const pv = await page.evaluate(`${MEASURE}(${JSON.stringify(await previewSrc(page, target))}, ${W * sf}, ${H})`) as number | null;
-  await page.selectOption('#exportQuality', 'png');
+  await page.selectOption('#exportQuality', 'tiff');
   await page.click('#btn-export');
   await page.waitForSelector('.export-img-item', { timeout: 30000 });
   await page.waitForTimeout(300);
-  const exSrc = await page.evaluate(() => (document.querySelector('.export-img-item') as HTMLImageElement).src);
+  const exSrc = await page.evaluate(async () => (await (window.__CINEROLL_DEBUG__ as unknown as { decodeExport(i: number): Promise<HTMLCanvasElement> }).decodeExport(0)).toDataURL('image/png'));
   const ex = await page.evaluate(`${MEASURE}(${JSON.stringify(exSrc)}, ${W * sf}, ${H})`) as number | null;
   return { preview: pv, export: ex, errors };
 }
