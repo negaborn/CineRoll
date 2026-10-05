@@ -12,6 +12,7 @@ import { CropController, getCropFrameSize, renderCroppedRegionFromOriginal } fro
 import { applyFilm, analyzeFilm, mixFilmInPlace, FILM_IDS, FILM_SPECS, classicToneCurve, newsprintToneCurve, NEWSPRINT_CURVE_POINTS, type FilmId } from './film';
 import { createGrainTile, Engine3D, colorAdjustFromTone, isNeutralColor } from './compose';
 import { renderSlideBase, computeFontSizePx, computeGlowPx, drawWatermarkText, drawLogo, drawAppWatermark } from './render';
+import { decodeRaw, RAW_EXT, RawDecodeError } from './raw';
 import { runExport, packageAndDeliver, type ExportRequest, type ExportQuality, type ExportResult } from './export';
 
 function el<T extends HTMLElement = HTMLElement>(id: string): T {
@@ -116,6 +117,7 @@ installDebugHook((rect) => cropCtrl.setCropForTest(rect), {
     return { width: ifd.t256[0], height: ifd.t257[0], bitsPerSample: ifd.t258, samplesPerPixel: ifd.t277[0], compression: ifd.t259[0], photometric: ifd.t262[0] };
   },
   setExportBandRows: (n: number | null) => { debugBandRows = n ?? undefined; },
+  originalSize: () => (originalImg ? [originalImg.naturalWidth, originalImg.naturalHeight] : null),
   preview: () => {
     const lut = S().tone.lut;
     const filmReady = !isFilm(lut) || (!toneRunning && !!filmCache && filmCache.film === lut && filmCache.base === baseCanvas && previewSource !== null);
@@ -662,6 +664,10 @@ function loadImage(url: string): Promise<HTMLImageElement> {
 }
 
 async function decodePhoto(file: File): Promise<HTMLImageElement> {
+  if (RAW_EXT.test(file.name)) {
+    DOM.upText.innerText = 'RAW 디코딩 중... (최대 10초 소요될 수 있음)';
+    return decodeRaw(file);
+  }
   if (!file.name.match(/\.tiff?$/i)) return loadImage(URL.createObjectURL(file));
   const arrayBuffer = await file.arrayBuffer();
   const ifds = UTIF.decode(arrayBuffer); UTIF.decodeImage(arrayBuffer, ifds[0]);
@@ -710,7 +716,15 @@ async function handleFile(file: File) {
   if (!file.type.startsWith('image/') && !file.name.match(validExts)) { alert('지원하지 않는 이미지 형식입니다.'); return; }
   DOM.upText.innerText = 'Processing...';
   let img: HTMLImageElement;
-  try { img = await decodePhoto(file); } catch (_err) { alert('이미지 처리 오류.'); DOM.upText.innerText = 'Import Resource'; return; }
+  try {
+    img = await decodePhoto(file);
+  } catch (err) {
+    alert(err instanceof RawDecodeError
+      ? '이 RAW 파일을 처리할 수 없습니다. Lightroom/Capture One에서 TIFF로 내보내 다시 시도해주세요.'
+      : '이미지 처리 오류.');
+    DOM.upText.innerText = 'Import Resource';
+    return;
+  }
   if (await hasAppleAuxRotation(file)) showOrientationWarning(); else hideOrientationWarning();
 
   // A new photo replaces everything tied to the old one -- including a Cropper
