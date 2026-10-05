@@ -74,6 +74,16 @@ export function drawGrainOverlay(ctx: CanvasRenderingContext2D, tile: HTMLCanvas
   ctx.restore();
 }
 
+/**
+ * Largest size (per side) a texture may have on this GPU, and the scale that fits
+ * width x height into it (technical plan v2, P1-3).
+ */
+export function getSafeTextureSize(maxSize: number, width: number, height: number): { width: number; height: number; scale: number } {
+  if (width <= maxSize && height <= maxSize) return { width, height, scale: 1 };
+  const scale = maxSize / Math.max(width, height);
+  return { width: Math.floor(width * scale), height: Math.floor(height * scale), scale };
+}
+
 // --- Engine3D: WebGL 3D-LUT + highlight/shadow tone engine (moved from legacy.ts, unchanged) ---
 
 export const Engine3D = {
@@ -83,6 +93,26 @@ export const Engine3D = {
   posBuf: null as WebGLBuffer | null,
   lutData: null as { size: number; data: Uint8Array } | null,
   identityLut: null as { size: number; data: Uint8Array } | null,
+  maxTex: 0,
+
+  /**
+   * What this GPU can take per side: the smallest of its texture, renderbuffer
+   * and viewport limits (mobile GPUs differ). Larger images are tiled to it --
+   * the tone pass is per pixel, so tiles join exactly.
+   */
+  maxTextureSize: function (): number {
+    if (!this.gl) {
+      this.gl = this.canvas.getContext('webgl2', { preserveDrawingBuffer: true });
+      if (this.gl) this.initIdentityLut();
+    }
+    const gl = this.gl;
+    if (!gl) return 0;
+    if (!this.maxTex) {
+      const vp = gl.getParameter(gl.MAX_VIEWPORT_DIMS) as Int32Array;
+      this.maxTex = Math.min(gl.getParameter(gl.MAX_TEXTURE_SIZE), gl.getParameter(gl.MAX_RENDERBUFFER_SIZE), vp[0], vp[1]);
+    }
+    return this.maxTex;
+  },
 
   initIdentityLut: function () {
     const size = 16;
@@ -132,12 +162,9 @@ export const Engine3D = {
    * the canvas ctx.filter, which WebKit (iPhone Safari) ignores.
    */
   apply: async function (sourceCanvas: HTMLCanvasElement, intensity: number, hl: number, sh: number, hasCustomLut: boolean, color: ColorAdjust = NEUTRAL_COLOR): Promise<HTMLCanvasElement> {
-    if (!this.gl) {
-      this.gl = this.canvas.getContext('webgl2', { preserveDrawingBuffer: true });
-      this.initIdentityLut();
-    }
+    const maxTex = this.maxTextureSize();
     const gl = this.gl;
-    if (!gl) return toneCpu(sourceCanvas, hl, sh, color);
+    if (!gl || !maxTex) return toneCpu(sourceCanvas, hl, sh, color);
 
     if (!this.program) {
       const vsSource = `#version 300 es\n in vec2 a_position; out vec2 v_texCoord; void main() { gl_Position = vec4(a_position, 0.0, 1.0); v_texCoord = vec2((a_position.x + 1.0) / 2.0, 1.0 - (a_position.y + 1.0) / 2.0); }`;
@@ -183,7 +210,7 @@ export const Engine3D = {
     gl.uniform1f(gl.getUniformLocation(this.program, 'u_co'), color.contrast);
     gl.uniform1f(gl.getUniformLocation(this.program, 'u_sa'), color.saturation);
 
-    const isHuge = sourceCanvas.width > 4096 || sourceCanvas.height > 4096;
+    const isHuge = sourceCanvas.width > maxTex || sourceCanvas.height > maxTex;
 
     if (!isHuge) {
       this.canvas.width = sourceCanvas.width;
@@ -215,7 +242,7 @@ export const Engine3D = {
       outCvs.width = sourceCanvas.width;
       outCvs.height = sourceCanvas.height;
       const outCtx = outCvs.getContext('2d')!;
-      const TILE_SIZE = 2048;
+      const TILE_SIZE = Math.min(2048, maxTex);
 
       for (let y = 0; y < sourceCanvas.height; y += TILE_SIZE) {
         for (let x = 0; x < sourceCanvas.width; x += TILE_SIZE) {
