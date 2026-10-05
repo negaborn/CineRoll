@@ -12,7 +12,7 @@ import { CropController, getCropFrameSize, renderCroppedRegionFromOriginal } fro
 import { applyFilm, analyzeFilm, mixFilmInPlace, FILM_IDS, FILM_SPECS, classicToneCurve, newsprintToneCurve, NEWSPRINT_CURVE_POINTS, type FilmId } from './film';
 import { createGrainTile, Engine3D, colorAdjustFromTone, isNeutralColor } from './compose';
 import { renderSlideBase, computeFontSizePx, computeGlowPx, drawWatermarkText, drawLogo, drawAppWatermark } from './render';
-import { decodeRaw, RAW_EXT, RawDecodeError } from './raw';
+import { decodeRaw, decodeRaw16, RAW_EXT, RawDecodeError } from './raw';
 import { runExport, packageAndDeliver, type ExportRequest, type ExportQuality, type ExportResult } from './export';
 
 function el<T extends HTMLElement = HTMLElement>(id: string): T {
@@ -54,6 +54,8 @@ const DOM = {
 
 // --- Runtime assets and view state (not edit settings) ---
 let originalImg: HTMLImageElement | null = null;
+/** The uploaded file when it is a camera RAW (re-decoded at 16 bits for the TIFF master). */
+let originalRaw: File | null = null;
 let baseCanvas: HTMLCanvasElement | null = null; // applied framing, before the WebGL tone pass
 let baseUrl: string | null = null; // baseCanvas as an image URL, made lazily for the Split View "before" layer
 /** What the preview canvases draw: baseCanvas, or the WebGL tone pass's output canvas. */
@@ -118,6 +120,7 @@ installDebugHook((rect) => cropCtrl.setCropForTest(rect), {
   },
   setExportBandRows: (n: number | null) => { debugBandRows = n ?? undefined; },
   originalSize: () => (originalImg ? [originalImg.naturalWidth, originalImg.naturalHeight] : null),
+  exportBlob: (i: number) => lastExport!.slides[i].blob,
   preview: () => {
     const lut = S().tone.lut;
     const filmReady = !isFilm(lut) || (!toneRunning && !!filmCache && filmCache.film === lut && filmCache.base === baseCanvas && previewSource !== null);
@@ -732,6 +735,11 @@ async function handleFile(file: File) {
   cropCtrl.destroy(); isCropperReady = false;
   pendingMount = null; // destroy() already cancelled any in-flight mount of the old photo
   originalImg = img;
+  originalRaw = RAW_EXT.test(file.name) ? file : null;
+  // The 16-bit master needs RAW data; other sources can't offer it.
+  const opt16 = DOM.exportQuality.querySelector<HTMLOptionElement>('option[value="tiff16"]')!;
+  opt16.disabled = !originalRaw;
+  if (!originalRaw && DOM.exportQuality.value === 'tiff16') DOM.exportQuality.value = 'tiff';
   releaseApplied(); lastAppliedKey = null;
   DOM.previewInner.innerHTML = '';
   DOM.upZone.classList.add('hidden');
@@ -1035,18 +1043,22 @@ DOM.btnExport.addEventListener('click', async () => {
       logo: { image: logoObj, enabled: !!logoObj && s.logo.enabled, scale: s.logo.scale, opacity: s.logo.opacity, pos: s.logo.pos },
       appWatermark: s.appWatermark,
       bandRows: debugBandRows,
+      raw16: originalRaw ? (() => { const f = originalRaw!; return () => decodeRaw16(f); })() : undefined,
     };
 
     const result = await runExport(request, updateLoadingText);
     const note = el('export-note');
+    const notes: string[] = [];
     if (result.sourceLimited) {
       const l = result.sourceLimited;
       const per = result.slides.length > 1 ? '슬라이드당 ' : '';
-      note.textContent = `크롭 원본이 ${per}${l.slideWidth}px라서 업스케일하지 않고 ${l.slideWidth}×${l.slideHeight}px로 저장했습니다 (이 모드 기본 ${per}${l.modeSlideWidth}px).`;
-      note.classList.remove('hidden');
-    } else {
-      note.classList.add('hidden');
+      notes.push(`크롭 원본이 ${per}${l.slideWidth}px라서 업스케일하지 않고 ${l.slideWidth}×${l.slideHeight}px로 저장했습니다 (이 모드 기본 ${per}${l.modeSlideWidth}px).`);
     }
+    if (result.geometryOnly16) {
+      notes.push('16비트 TIFF 마스터: 디스퀴즈·회전·기울기·크롭·분할만 반영했습니다. 필름·톤·컬러·프레임·텍스트·로고는 포함되지 않습니다.');
+    }
+    note.textContent = notes.join(' ');
+    note.classList.toggle('hidden', notes.length === 0);
     const gCon = el('export-gallery-container'); gCon.innerHTML = '';
     lastExport = result;
     for (const slide of result.slides) {

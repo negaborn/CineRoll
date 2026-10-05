@@ -65,3 +65,29 @@ export async function decodeRaw(file: File): Promise<HTMLImageElement> {
     lr.dispose();
   }
 }
+
+export interface Raw16 {
+  width: number;
+  height: number;
+  /** Packed RGB, 3 samples per pixel, 16 bits each (same curve as the 8-bit decode). */
+  data: Uint16Array;
+}
+
+/**
+ * The same decode as decodeRaw() (camera WB, sRGB, orientation) at 16 bits per
+ * channel, for the 16-bit TIFF master. Done on demand at export time rather than
+ * kept: a 24 MP frame is 138 MB at 16 bits.
+ */
+export async function decodeRaw16(file: Blob): Promise<Raw16> {
+  const lr = new LibRaw();
+  try {
+    await lr.open(new Uint8Array(await file.arrayBuffer()), { useCameraWb: true, outputBps: 16 });
+    const img = await lr.imageData();
+    if (!img || img.colors !== 3 || img.bits !== 16) throw new RawDecodeError('unsupported 16-bit RAW output');
+    return { width: img.width, height: img.height, data: img.data as Uint16Array };
+  } catch (e) {
+    throw e instanceof RawDecodeError ? e : new RawDecodeError((e as Error)?.message ?? String(e));
+  } finally {
+    lr.dispose();
+  }
+}

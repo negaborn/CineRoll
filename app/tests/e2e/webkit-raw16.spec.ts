@@ -41,27 +41,33 @@ async function exportAs(page: Page, q: 'tiff' | 'tiff16') {
 test.describe('16-bit TIFF from RAW', () => {
   test.skip(!have, 'RW2 sample not on this machine');
 
-  test('full frame: a 16-bit RGB TIFF equal to LibRaw\'s 16-bit decode, with a geometry-only notice', async ({ page }) => {
+  // A 4800x3200 crop at whole-pixel offsets (600, 400): a 92 MB file. (WebKit can't read
+  // back a Blob of >= 128 MB at all -- see the report; a full 24 MP 16-bit TIFF is 144 MB.)
+  test('crop at whole pixels: a 16-bit RGB TIFF equal to LibRaw\'s 16-bit decode, with a geometry-only notice', async ({ page }) => {
     test.setTimeout(300_000);
     await page.route('**/__file/**', (r) => r.fulfill({ status: 200, body: fs.readFileSync(RW2) }));
     await openRaw(page);
     expect(await page.locator('#exportQuality option[value="tiff16"]').isDisabled()).toBe(false);
     await page.click('#strategy-btns [data-val="single"]');
-    await page.evaluate(() => window.__CINEROLL_DEBUG__!.setCropForTest({ x: 0, y: 0, width: 1, height: 1 }));
+    await page.evaluate(() => window.__CINEROLL_DEBUG__!.setCropForTest({ x: 600 / 6008, y: 400 / 4008, width: 4800 / 6008, height: 3200 / 4008 }));
     await page.click('#btn-apply-crop');
     await page.waitForSelector('.preview-slide-canvas');
     await exportAs(page, 'tiff16');
     const info = await page.evaluate(() => (window.__CINEROLL_DEBUG__ as unknown as Dbg).tiffInfo(0));
-    expect(info).toMatchObject({ width: 6008, height: 4008, bitsPerSample: [16, 16, 16], samplesPerPixel: 3 });
-    expect(await page.evaluate(`(${KEEP_TIFF})(0, '__t16')`)).toEqual([6008, 4008, 16]);
+    expect(info).toMatchObject({ width: 4800, height: 3200, bitsPerSample: [16, 16, 16], samplesPerPixel: 3 });
+    expect(await page.evaluate(`(${KEEP_TIFF})(0, '__t16')`)).toEqual([4800, 3200, 16]);
     const r = await page.evaluate(async () => {
       const LibRaw = (await import('/node_modules/libraw-wasm/dist/index.js')).default;
       const lr = new LibRaw();
       await lr.open(new Uint8Array(await (await fetch('/__file/x')).arrayBuffer()), { useCameraWb: true, outputBps: 16 });
       const ref = await lr.imageData(); lr.dispose();
       const t = (window as unknown as { __t16: { data: Uint16Array } }).__t16;
-      let max = 0; let distinct = new Set<number>();
-      for (let i = 0; i < t.data.length; i++) { const e = Math.abs(t.data[i] - (ref!.data as Uint16Array)[i]); if (e > max) max = e; if (i % 101 === 0 && distinct.size < 5000) distinct.add(t.data[i]); }
+      const R = ref!.data as Uint16Array; const RW = ref!.width;
+      let max = 0; const distinct = new Set<number>();
+      for (let y = 0; y < 3200; y++) for (let x = 0; x < 4800; x++) for (let c = 0; c < 3; c++) {
+        const i = (y * 4800 + x) * 3 + c; const e = Math.abs(t.data[i] - R[((y + 400) * RW + x + 600) * 3 + c]);
+        if (e > max) max = e; if (i % 101 === 0 && distinct.size < 5000) distinct.add(t.data[i]);
+      }
       return { max, distinct: distinct.size };
     });
     expect(r.max, 'identical to LibRaw 16-bit').toBe(0);

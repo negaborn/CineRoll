@@ -6,9 +6,10 @@ import { applyFilm, analyzeFilm, filmReach, mixFilmInPlace, FILM_IDS, type FilmI
 import { areaResampleBand } from './resample';
 import { renderSlideBase, slideImageRectPx, computeFontSizePx, computeGlowPx, drawWatermarkText, drawLogo, drawAppWatermark } from './render';
 import { createTiff, type TiffWriter } from './tiff';
+import type { Raw16 } from './raw';
 
 /** 'tiff' = Lossless: the crop's full resolution as an uncompressed TIFF, on every device. */
-export type ExportQuality = 'ig' | 'web' | 'tiff';
+export type ExportQuality = 'ig' | 'web' | 'tiff' | 'tiff16';
 
 export interface ExportRequest {
   originalImg: HTMLImageElement;
@@ -49,6 +50,8 @@ export interface ExportRequest {
   appWatermark: boolean;
   /** Lossless: rows per band (testing only; default fits a band in ~4 MP). */
   bandRows?: number;
+  /** RAW sources: the 16-bit decode, fetched on demand for the 16-bit TIFF master. */
+  raw16?: () => Promise<Raw16>;
 }
 
 export interface ExportedSlide {
@@ -63,6 +66,8 @@ export interface ExportResult {
   mimeType: string;
   /** Set when the output is smaller than the mode's size because the crop has fewer pixels (never upscaled). */
   sourceLimited?: { slideWidth: number; slideHeight: number; modeSlideWidth: number };
+  /** 16-bit TIFF master: geometry only (no looks / frame / caption / logo). */
+  geometryOnly16?: boolean;
 }
 
 const SAFE_MAX_DIM = 16000;
@@ -108,7 +113,7 @@ function computeTargetDimensions(req: ExportRequest, cropPxW: number, cropPxH: n
   }
   // Lossless is written band by band (no whole-image canvas), so the per-canvas
   // area limit doesn't apply to it.
-  if (req.qualityMode !== 'tiff' && targetW * targetH > MAX_AREA) {
+  if (req.qualityMode !== 'tiff' && req.qualityMode !== 'tiff16' && targetW * targetH > MAX_AREA) {
     const s = Math.sqrt(MAX_AREA / (targetW * targetH));
     targetW *= s;
     targetH *= s;
@@ -126,6 +131,7 @@ function computeTargetDimensions(req: ExportRequest, cropPxW: number, cropPxH: n
  */
 export async function runExport(req: ExportRequest, onProgress: (msg: string) => void): Promise<ExportResult> {
   if (req.qualityMode === 'tiff') return runLosslessExport(req, onProgress);
+  if (req.qualityMode === 'tiff16') return runRaw16Export(req, onProgress);
   const frame = getCropFrameSize(req.originalImg, req.squeeze, req.baseRotation, req.fineRotation);
   const cropPxW = req.crop.width * frame.width;
   const cropPxH = req.crop.height * frame.height;
@@ -359,6 +365,108 @@ async function runLosslessExport(req: ExportRequest, onProgress: (msg: string) =
     slides.push({ filename: isPanned ? `cineRoll_pan_${i + 1}.tif` : 'cineRoll_output.tif', blob: tiffs[i].blob(), preview: preview ?? undefined });
   }
   return { slides, mimeType: 'image/tiff' };
+}
+
+/**
+ * 16-bit TIFF master from a RAW source (geometry only): LibRaw's 16-bit decode
+ * put through the same desqueeze / base rotation / straighten / crop / slide
+ * split as every other export -- computed directly on the 16-bit samples
+ * (bilinear), no canvas, written band by band. Looks, frames, caption and logo
+ * are 8-bit canvas work and are deliberately not applied.
+ */
+async function runRaw16Export(req: ExportRequest, onProgress: (msg: string) => void): Promise<ExportResult> {
+  if (!req.raw16) throw new Error('16-bit TIFF needs a RAW source');
+  onProgress('Decoding RAW (16-bit)...');
+  const src = await req.raw16();
+  const W = src.width;
+  const H = src.height;
+  const S = src.data;
+  if (W !== req.originalImg.naturalWidth || H !== req.originalImg.naturalHeight) throw new Error('16-bit decode does not match the photo');
+
+  const frame = getCropFrameSize(req.originalImg, req.squeeze, req.baseRotation, req.fineRotation);
+  const sxF = req.crop.x * frame.width;
+  const syF = req.crop.y * frame.height;
+  const swF = req.crop.width * frame.width;
+  const shF = req.crop.height * frame.height;
+  const { targetW: CW, targetH: CH } = computeTargetDimensions(req, swF, shF);
+  const isPanned = req.strategy === 'seamless' || req.strategy === 'triptych';
+  const slides = isPanned ? req.slides : 1;
+  const slideW = isPanned ? Math.floor(CW / slides) : CW;
+  const sliceW = CW / slides;
+  const sf = req.squeeze / 100;
+  const th = ((req.baseRotation + req.fineRotation) * Math.PI) / 180;
+  const cos = Math.cos(th);
+  const sin = Math.sin(th);
+
+  // Output pixel (X, Y) of slide i -> source sample position (u, v): the inverse of
+  // renderCroppedRegionFromOriginal's transform, evaluated at pixel centres.
+  const mapper = (i: number) => (X: number, Y: number): [number, number] => {
+    const cx = i * sliceW + (X + 0.5) * (sliceW / slideW);
+    const fx = sxF + cx * (swF / CW) - frame.width / 2;
+    const fy = syF + (Y + 0.5) * (shF / CH) - frame.height / 2;
+    const qx = cos * fx + sin * fy;
+    const qy = -sin * fx + cos * fy;
+    return [(qx + (W * sf) / 2) / sf - 0.5, qy + H / 2 - 0.5];
+  };
+
+  const sample = (u: number, v: number, out: Uint16Array, o: number) => {
+    if (u < -0.5 || v < -0.5 || u > W - 0.5 || v > H - 0.5) { out[o] = 0; out[o + 1] = 0; out[o + 2] = 0; return; }
+    const x0 = Math.min(W - 1, Math.max(0, Math.floor(u)));
+    const y0 = Math.min(H - 1, Math.max(0, Math.floor(v)));
+    const x1 = Math.min(W - 1, x0 + 1);
+    const y1 = Math.min(H - 1, y0 + 1);
+    const tx = Math.min(1, Math.max(0, u - x0));
+    const ty = Math.min(1, Math.max(0, v - y0));
+    const i00 = (y0 * W + x0) * 3; const i10 = (y0 * W + x1) * 3; const i01 = (y1 * W + x0) * 3; const i11 = (y1 * W + x1) * 3;
+    for (let c = 0; c < 3; c++) {
+      const top = S[i00 + c] + (S[i10 + c] - S[i00 + c]) * tx;
+      const bot = S[i01 + c] + (S[i11 + c] - S[i01 + c]) * tx;
+      out[o + c] = Math.round(top + (bot - top) * ty);
+    }
+  };
+
+  const slidesOut: ExportedSlide[] = [];
+  const BAND = 256;
+  const pvScale = Math.min(1, 1600 / Math.max(slideW, CH));
+  for (let i = 0; i < slides; i++) {
+    const map = mapper(i);
+    // The map is affine: origin + per-X and per-Y steps.
+    const [u0, v0] = map(0, 0);
+    const [uX, vX] = map(1, 0);
+    const [uY, vY] = map(0, 1);
+    const du = [uX - u0, uY - u0];
+    const dv = [vX - v0, vY - v0];
+    const tiff = createTiff(slideW, CH, 16);
+    const band = new Uint16Array(slideW * BAND * 3);
+    for (let y0 = 0; y0 < CH; y0 += BAND) {
+      onProgress(`Writing 16-bit TIFF ${i + 1}/${slides} -- ${Math.round((y0 / CH) * 100)}%`);
+      await new Promise((r) => setTimeout(r, 0));
+      const rows = Math.min(BAND, CH - y0);
+      for (let r = 0; r < rows; r++) {
+        const Y = y0 + r;
+        let u = u0 + du[1] * Y;
+        let v = v0 + dv[1] * Y;
+        let o = r * slideW * 3;
+        for (let X = 0; X < slideW; X++, o += 3, u += du[0], v += dv[0]) sample(u, v, band, o);
+      }
+      tiff.writeRgb16Rows(y0, band, rows);
+    }
+    // Small 8-bit preview for the gallery (TIFF isn't displayable).
+    const pw = Math.max(1, Math.round(slideW * pvScale));
+    const ph = Math.max(1, Math.round(CH * pvScale));
+    const pv = new ImageData(pw, ph);
+    const px = new Uint16Array(3);
+    for (let y = 0; y < ph; y++) for (let x = 0; x < pw; x++) {
+      const [u, v] = map((x + 0.5) / pvScale - 0.5, (y + 0.5) / pvScale - 0.5);
+      sample(u, v, px, 0);
+      const j = (y * pw + x) * 4; pv.data[j] = px[0] >> 8; pv.data[j + 1] = px[1] >> 8; pv.data[j + 2] = px[2] >> 8; pv.data[j + 3] = 255;
+    }
+    const pc = document.createElement('canvas'); pc.width = pw; pc.height = ph; pc.getContext('2d')!.putImageData(pv, 0, 0);
+    const preview: Blob | null = await new Promise((r) => pc.toBlob(r, 'image/jpeg', 0.85));
+    pc.width = 0;
+    slidesOut.push({ filename: isPanned ? `cineRoll_pan_${i + 1}_16bit.tif` : 'cineRoll_output_16bit.tif', blob: tiff.blob(), preview: preview ?? undefined });
+  }
+  return { slides: slidesOut, mimeType: 'image/tiff', geometryOnly16: true };
 }
 
 export type DeliveryOutcome = 'downloaded-single' | 'downloaded-zip' | 'shared' | 'share-fallback';
