@@ -20,8 +20,10 @@ test('every edit control is reflected in EditState immediately', async ({ page, 
   await start(page, browser);
   const tick = () => page.waitForTimeout(60);
 
-  await page.click('#strategy-btns [data-val="triptych"]'); await tick();
-  expect((await state(page)).strategy).toBe('triptych');
+  // (Triptych is hidden for the MVP.)
+  await page.click('#strategy-btns [data-val="single"]'); await tick();
+  await page.click('#strategy-btns [data-val="seamless"]'); await tick();
+  expect((await state(page)).strategy).toBe('seamless');
   await setControl(page, '#select-ratio', '1.5', ['change']); await tick();
   expect((await state(page)).baseRatio).toBe(1.5);
   await setControl(page, '#select-slides', '4', ['change']); await tick();

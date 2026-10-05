@@ -98,7 +98,9 @@
                         <label class="min-label"><span>Strategy</span></label>
                         <div class="grid grid-cols-3 gap-1.5" id="strategy-btns">
                             <button class="min-btn active" data-val="seamless">Seamless</button>
-                            <button class="min-btn" data-val="triptych">Triptych</button>
+                            <!-- Hidden for the MVP (2026-10-05, P2-3): it slices a 4:5 crop into 4:15 strips that
+                                 Instagram's feed would crop. The strategy code stays for a later redesign. -->
+                            <button class="min-btn hidden" data-val="triptych">Triptych</button>
                             <button class="min-btn" data-val="single">Single</button>
                         </div>
                     </div>

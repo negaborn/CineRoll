@@ -73,7 +73,7 @@ test('grain appears in both preview and export', async ({ page, browser }) => {
   expect((await exportStats(page)).lumaStd, 'grainy export').toBeGreaterThan(8);
 });
 
-for (const strategy of ['seamless', 'triptych'] as const) {
+for (const strategy of ['seamless'] as const) { // Triptych hidden for the MVP
   test(`${strategy}: margin + border on every slide, caption only on the targeted slide`, async ({ page, browser }) => {
     await start(page, browser, await makeSolidPng(browser, 2400, 1000, '#404040'), strategy);
     expect(await previewCount(page)).toBe(3);

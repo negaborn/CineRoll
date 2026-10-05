@@ -71,9 +71,9 @@ test.describe('Single mode switches to Free (Smart Snap)', () => {
     expect(await page.inputValue('#select-ratio')).toBe('NaN');
   });
 
-  test('tapping Single from Triptych with a fixed ratio also selects Free', async ({ page, browser }) => {
+  test('tapping Single from Seamless with a fixed ratio also selects Free', async ({ page, browser }) => {
     await start(page, browser);
-    await page.locator('#strategy-btns [data-val="triptych"]').tap();
+    await page.locator('#strategy-btns [data-val="seamless"]').tap(); // (Triptych hidden for the MVP)
     await page.selectOption('#select-ratio', '1.5');
     await page.waitForTimeout(200);
     await page.locator('#strategy-btns [data-val="single"]').tap();
