@@ -1000,6 +1000,15 @@ DOM.btnExport.addEventListener('click', async () => {
     };
 
     const result = await runExport(request, updateLoadingText);
+    const note = el('export-note');
+    if (result.sourceLimited) {
+      const l = result.sourceLimited;
+      const per = result.slides.length > 1 ? '슬라이드당 ' : '';
+      note.textContent = `크롭 원본이 ${per}${l.slideWidth}px라서 업스케일하지 않고 ${l.slideWidth}×${l.slideHeight}px로 저장했습니다 (이 모드 기본 ${per}${l.modeSlideWidth}px).`;
+      note.classList.remove('hidden');
+    } else {
+      note.classList.add('hidden');
+    }
     const gCon = el('export-gallery-container'); gCon.innerHTML = '';
     for (const slide of result.slides) {
       const imgEl = document.createElement('img');

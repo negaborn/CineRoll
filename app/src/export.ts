@@ -54,32 +54,41 @@ export interface ExportedSlide {
 export interface ExportResult {
   slides: ExportedSlide[];
   mimeType: string;
+  /** Set when the output is smaller than the mode's size because the crop has fewer pixels (never upscaled). */
+  sourceLimited?: { slideWidth: number; slideHeight: number; modeSlideWidth: number };
 }
 
 const SAFE_MAX_DIM = 16000;
 
-/** Computes the composite's target width/height for the given quality mode, capped by the true source resolution (Lossless) and hard safety limits. */
-function computeTargetDimensions(req: ExportRequest, cropPxW: number, cropPxH: number): { targetW: number; targetH: number; mimeType: string; encQual: number } {
+/**
+ * The composite's target width/height for the quality mode. The crop's own
+ * (desqueezed) pixels are always the ceiling: IG/Web downscale to their size
+ * but never upscale a smaller crop (that would invent pixels); Lossless is
+ * exactly the crop. Hard safety limits apply on top.
+ */
+function computeTargetDimensions(req: ExportRequest, cropPxW: number, cropPxH: number): { targetW: number; targetH: number; mimeType: string; encQual: number; sourceLimited?: ExportResult['sourceLimited'] } {
   const activeRatio = cropPxW && cropPxH ? cropPxW / cropPxH : 1;
   const MAX_AREA = req.isMobile ? 16777216 : 67108864;
+  // Float crop fractions put a full-frame crop at e.g. 6007.9999px: snap to whole pixels.
+  const srcW = Math.max(1, Math.round(cropPxW));
 
   let mimeType = 'image/jpeg';
   let encQual = 0.9;
   let targetW = 0;
+  let sourceLimited: ExportResult['sourceLimited'];
 
-  if (req.qualityMode === 'web') {
-    const bW = req.isMobile ? 3000 : 6000;
-    encQual = 1.0;
-    targetW = req.strategy === 'seamless' ? bW * req.slides : bW;
-  } else if (req.qualityMode === 'ig') {
-    const bW = 2160;
-    targetW = req.strategy === 'seamless' ? bW * req.slides : bW;
+  if (req.qualityMode === 'web' || req.qualityMode === 'ig') {
+    const bW = req.qualityMode === 'web' ? (req.isMobile ? 3000 : 6000) : 2160;
+    if (req.qualityMode === 'web') encQual = 1.0;
+    const modeW = req.strategy === 'seamless' ? bW * req.slides : bW;
+    targetW = Math.min(modeW, srcW);
+    if (srcW < modeW) {
+      const slideW = Math.floor(srcW / req.slides);
+      sourceLimited = { slideWidth: slideW, slideHeight: Math.round(srcW / activeRatio), modeSlideWidth: Math.floor(modeW / req.slides) };
+    }
   } else {
     mimeType = 'image/png';
-    // Lossless means "the true native resolution of the crop", not an
-    // arbitrary upscale target -- cap by the actual desqueezed source
-    // pixels rather than always reaching for SAFE_MAX_DIM.
-    targetW = Math.min(cropPxW, SAFE_MAX_DIM);
+    targetW = Math.min(srcW, SAFE_MAX_DIM);
   }
 
   let targetH = targetW / activeRatio;
@@ -95,9 +104,9 @@ function computeTargetDimensions(req: ExportRequest, cropPxW: number, cropPxH: n
     targetH *= s;
   }
 
-  targetW = Math.floor(targetW);
-  targetH = Math.floor(targetW / activeRatio);
-  return { targetW, targetH, mimeType, encQual };
+  targetW = Math.floor(targetW + 1e-6);
+  targetH = Math.round(targetW / activeRatio);
+  return { targetW, targetH, mimeType, encQual, sourceLimited };
 }
 
 /**
@@ -110,7 +119,7 @@ export async function runExport(req: ExportRequest, onProgress: (msg: string) =>
   const cropPxW = req.crop.width * frame.width;
   const cropPxH = req.crop.height * frame.height;
 
-  const { targetW, mimeType, encQual } = computeTargetDimensions(req, cropPxW, cropPxH);
+  const { targetW, mimeType, encQual, sourceLimited } = computeTargetDimensions(req, cropPxW, cropPxH);
 
   await new Promise((r) => setTimeout(r, 50));
   let mCvs: HTMLCanvasElement = renderCroppedRegionFromOriginal(req.originalImg, req.squeeze, req.baseRotation, req.fineRotation, req.crop, targetW);
@@ -196,7 +205,7 @@ export async function runExport(req: ExportRequest, onProgress: (msg: string) =>
 
   mCvs.width = 0;
   mCvs.height = 0;
-  return { slides, mimeType };
+  return { slides, mimeType, sourceLimited };
 }
 
 export type DeliveryOutcome = 'downloaded-single' | 'downloaded-zip' | 'shared' | 'share-fallback';
