@@ -44,3 +44,20 @@ test('the before/after split can be dragged with a finger, even grabbed slightly
   await touchDrag(cdp, { x: hx, y }, s1.parent.x + s1.parent.w * 0.8);
   expect((await split(page)).pct).toBeGreaterThan(72);
 });
+
+test('a mouse still drags it', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto('/');
+  const jpg = await page.evaluate(() => { const c = document.createElement('canvas'); c.width = 2000; c.height = 1500; const x = c.getContext('2d')!; x.fillStyle = '#48c'; x.fillRect(0, 0, 2000, 1500); return c.toDataURL('image/jpeg').split(',')[1]; });
+  await page.setInputFiles('#upload-input', { name: 'p.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(jpg, 'base64') });
+  await page.waitForSelector('.cropper-container');
+  await page.click('#strategy-btns [data-val="single"]');
+  await page.click('#btn-apply-crop');
+  await page.waitForSelector('.preview-slide-canvas');
+  await page.click('#btn-split-view');
+  const s0 = await split(page);
+  const y = s0.parent.y + s0.parent.h / 2;
+  await page.mouse.move(s0.parent.x + s0.parent.w / 2, y); await page.mouse.down();
+  await page.mouse.move(s0.parent.x + s0.parent.w * 0.3, y, { steps: 8 }); await page.mouse.up();
+  expect((await split(page)).pct).toBeCloseTo(30, 0);
+});

@@ -447,20 +447,17 @@ function toggleZenMode() {
 
 window.addEventListener('mousemove', () => { if (document.body.classList.contains('zen-mode')) flashExitZen(el('btn-exit-zen')); });
 
-let isDraggingSplit = false;
-window.addEventListener('mousemove', (e) => {
-  if (!isDraggingSplit || !isSplitView) return;
-  e.preventDefault();
+/** Moves the before/after split to the pointer's x. */
+function moveSplitTo(clientX: number) {
   const parentWrapper = document.getElementById('preview-wrapper-parent');
   const layerImagesBefore = document.getElementById('layer-images-before');
   const handle = document.getElementById('split-handle');
   if (!parentWrapper || !layerImagesBefore || !handle) return;
   const rect = parentWrapper.getBoundingClientRect();
-  splitPos = clamp(((e.clientX - rect.left) / rect.width) * 100, 0, 100);
+  splitPos = clamp(((clientX - rect.left) / rect.width) * 100, 0, 100);
   layerImagesBefore.style.clipPath = `polygon(0 0, ${splitPos}% 0, ${splitPos}% 100%, 0 100%)`;
   handle.style.left = `${splitPos}%`;
-});
-window.addEventListener('mouseup', () => { isDraggingSplit = false; });
+}
 
 // ============================================================================
 // Caption/logo positioning (drag + arrow keys write typo.pos / logo.pos)
@@ -913,9 +910,21 @@ const ModuleFrame = {
     if (isSplitView) {
       const before = this.createBeforeLayer(slides, panned); before.id = 'layer-images-before';
       before.style.clipPath = `polygon(0 0, ${splitPos}% 0, ${splitPos}% 100%, 0 100%)`; before.style.zIndex = '20'; p.appendChild(before);
-      const handle = document.createElement('div'); handle.id = 'split-handle'; handle.className = 'absolute top-0 bottom-0 cursor-ew-resize border-r-[3px] border-white shadow-[0_0_10px_rgba(0,0,0,0.5)]'; handle.style.zIndex = '60'; handle.style.left = `${splitPos}%`; handle.style.transform = 'translateX(-1.5px)';
+      // A 44px-wide (invisible) grab area around the 3px line, so a fingertip can take it.
+      const handle = document.createElement('div'); handle.id = 'split-handle'; handle.className = 'absolute top-0 bottom-0 cursor-ew-resize'; handle.style.zIndex = '60'; handle.style.left = `${splitPos}%`; handle.style.width = '44px'; handle.style.transform = 'translateX(-50%)'; handle.style.touchAction = 'none';
+      const line = document.createElement('div'); line.className = 'absolute top-0 bottom-0 left-1/2 w-[3px] -translate-x-1/2 bg-white shadow-[0_0_10px_rgba(0,0,0,0.5)] pointer-events-none'; handle.appendChild(line);
       const handleCircle = document.createElement('div'); handleCircle.className = 'absolute top-1/2 left-1/2 w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-lg transform -translate-x-1/2 -translate-y-1/2'; handleCircle.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2"><path d="M13 5l7 7-7 7M11 5l-7 7 7 7"/></svg>`; handle.appendChild(handleCircle);
-      handle.addEventListener('mousedown', (e) => { isDraggingSplit = true; e.preventDefault(); e.stopPropagation(); }); p.appendChild(handle);
+      // Pointer events: mouse, touch and pen alike (it used to listen to the mouse only).
+      // Keep the finger's offset from the line, so the split doesn't jump when grabbed off-centre.
+      let grabOffset = 0;
+      handle.addEventListener('pointerdown', (e) => {
+        const r = handle.getBoundingClientRect(); grabOffset = e.clientX - (r.left + r.width / 2);
+        handle.setPointerCapture(e.pointerId); e.preventDefault(); e.stopPropagation();
+      });
+      handle.addEventListener('pointermove', (e) => { if (handle.hasPointerCapture(e.pointerId)) { e.preventDefault(); moveSplitTo(e.clientX - grabOffset); } });
+      const release = (e: PointerEvent) => { if (handle.hasPointerCapture(e.pointerId)) handle.releasePointerCapture(e.pointerId); };
+      handle.addEventListener('pointerup', release); handle.addEventListener('pointercancel', release);
+      p.appendChild(handle);
     }
 
     redrawSlides(); applyZoom();
