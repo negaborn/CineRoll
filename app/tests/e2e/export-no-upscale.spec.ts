@@ -80,8 +80,8 @@ test('Seamless: each slide is capped by its share of the crop (no upscale per sl
   const ig = await exportDims(page, 'ig');
   const web = await exportDims(page, 'web');
   expect(lossless.dims.length).toBe(3);
-  // Each slide's share of this crop is ~1702px wide: below IG's 2160 and Web's 6000.
+  // Each slide's share of this crop (the photo covering 2.4:1) is ~2002px wide: below IG's 2160 and Web's 6000.
   expect(ig.dims, 'IG slides = the crop\'s own pixels').toEqual(lossless.dims);
   expect(web.dims, 'Web slides = the crop\'s own pixels').toEqual(lossless.dims);
-  expect(ig.note).toContain('1702');
+  expect(ig.note).toContain(String(lossless.dims[0][0]));
 });

@@ -117,79 +117,9 @@ test.describe('Single mode switches to Free (Smart Snap)', () => {
   });
 });
 
-test.describe('the photo never zooms behind the crop box', () => {
-  for (const strategy of ['single', 'seamless'] as const) {
-    test(`${strategy}: two-finger pinch (in and out) on the crop box`, async ({ page, browser }) => {
-      const cdp = await start(page, browser);
-      if (strategy === 'single') { await page.locator('#strategy-btns [data-val="single"]').tap(); await page.waitForTimeout(300); }
-      const before = await view(page);
-      const crop0 = (await state(page)).crop;
-      await pinch(cdp, center(before.box), 70, 25);
-      await page.waitForTimeout(250);
-      await pinch(cdp, center(before.box), 25, 90);
-      await page.waitForTimeout(250);
-      const after = await view(page);
-      expect(after.image.w, 'photo width on screen unchanged').toBeCloseTo(before.image.w, 0);
-      expect(after.image.h, 'photo height on screen unchanged').toBeCloseTo(before.image.h, 0);
-      const crop1 = (await state(page)).crop;
-      for (const k of ['x', 'y', 'width', 'height'] as const) expect(crop1[k], `crop.${k} unchanged`).toBeCloseTo(crop0[k], 3);
-    });
-  }
-
-  test('a second finger landing mid-drag puts the box back and ignores the rest of the gesture', async ({ page, browser }) => {
-    const cdp = await start(page, browser);
-    await page.locator('#strategy-btns [data-val="single"]').tap();
-    await page.waitForTimeout(300);
-    const before = await view(page);
-    const crop0 = (await state(page)).crop;
-    const a = center(before.box);
-    await touch(cdp, 'touchStart', [a]);
-    for (let i = 1; i <= 6; i++) await touch(cdp, 'touchMove', [{ x: a.x + 5 * i, y: a.y }]); // box moves 30px
-    const b = { x: a.x + 30, y: a.y };
-    await touch(cdp, 'touchStart', [b, { x: b.x + 60, y: b.y + 40 }]);
-    for (let i = 1; i <= 8; i++) await touch(cdp, 'touchMove', [{ x: b.x - 4 * i, y: b.y }, { x: b.x + 60 + 6 * i, y: b.y + 40 }]);
-    await touch(cdp, 'touchEnd', []);
-    await page.waitForTimeout(250);
-    const after = await view(page);
-    expect(after.image.w).toBeCloseTo(before.image.w, 0);
-    const crop1 = (await state(page)).crop;
-    for (const k of ['x', 'y', 'width', 'height'] as const) expect(crop1[k], `crop.${k} back to the gesture start`).toBeCloseTo(crop0[k], 3);
-  });
-
-  test('wheel / trackpad scroll over the crop area', async ({ page, browser }) => {
-    await start(page, browser);
-    await page.locator('#strategy-btns [data-val="single"]').tap();
-    await page.waitForTimeout(300);
-    const before = await view(page);
-    const crop0 = (await state(page)).crop;
-    await page.mouse.move(before.box.x + 10, before.box.y + 10);
-    for (let i = 0; i < 5; i++) await page.mouse.wheel(0, 120);
-    for (let i = 0; i < 3; i++) await page.mouse.wheel(0, -120);
-    await page.waitForTimeout(250);
-    const after = await view(page);
-    expect(after.image.w).toBeCloseTo(before.image.w, 0);
-    const crop1 = (await state(page)).crop;
-    for (const k of ['x', 'y', 'width', 'height'] as const) expect(crop1[k], `crop.${k} unchanged`).toBeCloseTo(crop0[k], 3);
-  });
-
-  test('one-finger crop edits still work: resize a corner, move the box', async ({ page, browser }) => {
-    const cdp = await start(page, browser);
-    const v0 = await view(page);
-    const c0 = (await state(page)).crop;
-    const se = await handle(page, 'se');
-    await touchDrag(cdp, se, { x: se.x - 60, y: se.y - 20 });
-    await page.waitForTimeout(200);
-    const c1 = (await state(page)).crop;
-    expect(c1.width, 'corner drag shrinks the box').toBeLessThan(c0.width - 0.05);
-    const v1 = await view(page);
-    await touchDrag(cdp, center(v1.box), { x: center(v1.box).x + 30, y: center(v1.box).y });
-    await page.waitForTimeout(200);
-    const c2 = (await state(page)).crop;
-    expect(c2.x, 'box moved right').toBeGreaterThan(c1.x + 0.03);
-    expect(c2.width).toBeCloseTo(c1.width, 3);
-    expect((await view(page)).image.w, 'photo never zoomed').toBeCloseTo(v0.image.w, 0);
-  });
-});
+// (The "photo never zooms behind the crop box" tests are gone: since 2026-10-05
+// cropping is Instagram-style -- the frame stays fixed and pinch / wheel zoom
+// the photo on purpose. See crop-ig.spec.)
 
 // Intended behavior (confirmed): in Seamless, smart snap targets the ratio of the
 // whole panorama (the cinema look across all slides), not a single slide.

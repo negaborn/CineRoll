@@ -169,41 +169,12 @@ export class CropController {
   private mountSeq = 0;
   /** Settles the in-flight mount's promise (with false) if it gets superseded before Cropper is ready. */
   private settlePendingMount: ((ok: boolean) => void) | null = null;
-  /** Touch pointers currently down (tracked in the capture phase, ahead of Cropper's own handlers). */
-  private activeTouches = new Set<number>();
-  /** True once a second finger joined the current touch gesture; cleared when the next gesture starts. */
-  private multiTouch = false;
-  /** Crop box when the current touch gesture began -- restored if it turns into a multi-finger gesture. */
-  private gestureStartBox: { left: number; top: number; width: number; height: number } | null = null;
+  /** While true, Cropper's own 'crop' events don't write EditState (a programmatic re-layout is in progress). */
+  private suspendSync = false;
 
   constructor(container: HTMLElement, options: CropControllerOptions = {}) {
     this.container = container;
     this.options = options;
-    window.addEventListener('pointerdown', (e) => { if (e.pointerType === 'touch') this.activeTouches.add(e.pointerId); }, true);
-    const lift = (e: PointerEvent) => { if (e.pointerType === 'touch') this.activeTouches.delete(e.pointerId); };
-    window.addEventListener('pointerup', lift, true);
-    window.addEventListener('pointercancel', lift, true);
-  }
-
-  /**
-   * Cropper's cropstart. A pinch must not edit the crop (photo zoom is off, and
-   * Cropper would otherwise drag the box with one of the fingers): when a second
-   * finger lands, put the box back where the gesture started and ignore the
-   * gesture until every finger is lifted.
-   */
-  private onCropStart(e: CustomEvent): void {
-    const pe = e.detail?.originalEvent as PointerEvent | undefined;
-    if (!this.cropper || !pe || pe.pointerType !== 'touch') return;
-    if (this.activeTouches.size > 1) {
-      if (!this.multiTouch) {
-        this.multiTouch = true;
-        if (this.gestureStartBox) this.cropper.setCropBoxData(this.gestureStartBox);
-      }
-      e.preventDefault();
-      return;
-    }
-    this.multiTouch = false;
-    this.gestureStartBox = this.cropper.getCropBoxData();
   }
 
   get isReady(): boolean {
@@ -241,11 +212,18 @@ export class CropController {
       requestAnimationFrame(() => {
         if (stale()) return; // destroy() already settled this promise
         this.cropper = new Cropper(proxy, {
+          // Instagram-style: the frame stays put and the PHOTO moves -- one finger
+          // (or mouse) pans it, two fingers / wheel zoom it. viewMode 1 keeps the
+          // photo covering the frame (never smaller than it, never dragged off it).
           viewMode: 1,
-          dragMode: 'none',
-          // No photo zoom: a pinch or wheel/trackpad scroll would scale the photo
-          // behind a fixed crop box and silently change the crop.
-          zoomable: false,
+          dragMode: 'move',
+          cropBoxMovable: false,
+          cropBoxResizable: true, // edge handles only in Free ratio (smart snap) -- see applyInteractionMode()
+          toggleDragModeOnDblclick: false,
+          zoomable: true,
+          zoomOnTouch: true,
+          zoomOnWheel: true,
+          wheelZoomRatio: 0.1,
           autoCrop: false,
           background: false,
           checkOrientation: true,
@@ -263,25 +241,20 @@ export class CropController {
             // the straightened frame, which only exists once Cropper has rotated.
             this.cropper.rotateTo(editState.get().rotation.fine);
 
-            if (isFresh) {
-              this.centerDefaultCropBox();
-            } else {
-              this.restoreFromState(wanted);
-            }
+            this.showRect(isFresh ? this.coverRect() : wanted);
 
             this.ready = true;
             this.settlePendingMount = null;
             resolve(true);
           },
           crop: () => {
+            if (this.suspendSync) return;
             this.onCropBoxChange();
             this.updateSmartSnapBadge();
           },
-          cropstart: (e: CustomEvent) => this.onCropStart(e),
-          cropmove: (e: CustomEvent) => { if (this.multiTouch) e.preventDefault(); },
           // Fires only on pointer release (never for programmatic setData/setCropBoxData).
           cropend: () => {
-            if (stale() || this.multiTouch) return;
+            if (stale()) return;
             this.snapOnRelease();
           },
         });
@@ -314,11 +287,10 @@ export class CropController {
     if (this.cropper) this.cropper.rotateTo(editState.get().rotation.fine);
   }
 
-  /** Re-applies the target aspect and centers a fresh default crop box (used by Reset framing). */
+  /** Re-applies the target aspect and fills the frame with the photo again (used by Reset framing). */
   resetCropBox(): void {
     if (!this.cropper) return;
-    this.applyAspectFromState();
-    this.centerDefaultCropBox();
+    this.showRect(this.coverRect());
   }
 
   /** The straightened proxy's bounding box, in proxy pixels -- the space getData()/setData() work in. */
@@ -378,14 +350,7 @@ export class CropController {
     const rect: CropRect = { x, y, width: w, height: h };
     editState.update((prev) => ({ ...prev, crop: rect }));
 
-    if (this.cropper) {
-      // setAspectRatio() synchronously resets Cropper's own crop box (firing a
-      // 'crop' event that would clobber editState.crop via onCropBoxChange),
-      // so pass `rect` explicitly rather than letting restoreFromState() re-read
-      // editState after that reset has already happened.
-      this.cropper.setAspectRatio(newAspect);
-      this.restoreFromState(rect);
-    }
+    if (this.cropper) this.showRect(rect);
   }
 
   /**
@@ -408,37 +373,69 @@ export class CropController {
     this.cropper.setAspectRatio(this.computeTargetAspect());
   }
 
-  private centerDefaultCropBox(): void {
-    if (!this.cropper) return;
-    const cd = this.cropper.getCanvasData();
-    // NOTE: this.cropper.options.aspectRatio reflects only the constructor-time
-    // option, not a later setAspectRatio() call -- recompute instead of reading it.
+  /**
+   * The crop a fresh photo gets: the largest rect of the target ratio, centred --
+   * the photo "covers" the frame (Free ratio: the whole photo).
+   */
+  private coverRect(): CropRect {
     const fr = this.computeTargetAspect();
-    let bw = cd.width * 0.85;
-    let bh = cd.height * 0.85;
-    if (!isNaN(fr)) {
-      const cr = cd.width / cd.height;
-      if (fr > cr) {
-        bw = cd.width * 0.85;
-        bh = bw / fr;
-      } else {
-        bh = cd.height * 0.85;
-        bw = bh * fr;
-      }
+    if (isNaN(fr)) return { x: 0, y: 0, width: 1, height: 1 };
+    const f = this.frameSize();
+    const imageAspect = f.width / f.height;
+    const w = fr > imageAspect ? 1 : fr / imageAspect;
+    const h = fr > imageAspect ? imageAspect / fr : 1;
+    return { x: (1 - w) / 2, y: (1 - h) / 2, width: w, height: h };
+  }
+
+  /** Fraction of the stage the frame fills. */
+  private static readonly FILL = 0.92;
+
+  /**
+   * Shows `rect` (normalized to the straightened frame) Instagram-style: the
+   * crop frame centred in the stage and as large as it allows, the photo scaled
+   * and placed so exactly `rect` sits inside the frame. EditState gets `rect`
+   * itself (not a value read back from Cropper), so no float drift creeps in.
+   */
+  private showRect(rect: CropRect): void {
+    if (!this.cropper || !this.proxyNaturalWidth) return;
+    const c = this.cropper;
+    const f = this.frameSize();
+    const rw = rect.width * f.width;
+    const rh = rect.height * f.height;
+    if (!(rw > 0 && rh > 0)) return;
+    this.suspendSync = true;
+    try {
+      this.applyAspectFromState();
+      const cont = c.getContainerData();
+      const ar = rw / rh;
+      let bw = cont.width * CropController.FILL;
+      let bh = bw / ar;
+      if (bh > cont.height * CropController.FILL) { bh = cont.height * CropController.FILL; bw = bh * ar; }
+      const z = bw / rw; // display px per proxy px
+      const left = (cont.width - bw) / 2;
+      const top = (cont.height - bh) / 2;
+      // Lay the photo out with no crop box (nothing limits the canvas), then put the
+      // box over it: the box is inside the photo by construction.
+      c.clear();
+      c.setCanvasData({ left: left - rect.x * f.width * z, top: top - rect.y * f.height * z, width: f.width * z, height: f.height * z });
+      c.crop();
+      c.setCropBoxData({ left, top, width: bw, height: bh });
+      this.applyInteractionMode();
+    } finally {
+      this.suspendSync = false;
     }
-    this.cropper.setCropBoxData({ left: cd.left + (cd.width - bw) / 2, top: cd.top + (cd.height - bh) / 2, width: bw, height: bh });
+    editState.update((s) => ({ ...s, crop: { ...rect } }));
+    this.updateSmartSnapBadge();
+  }
+
+  /** Free ratio keeps the frame's edge handles (smart snap); a fixed ratio's frame is fixed. */
+  private applyInteractionMode(): void {
+    const free = this.isFreeRatio();
+    this.container.querySelectorAll<HTMLElement>('.cropper-line, .cropper-point').forEach((e) => e.classList.toggle('cropper-hidden', !free));
   }
 
   private restoreFromState(rect?: CropRect): void {
-    if (!this.cropper || !this.proxyNaturalWidth) return;
-    const crop = rect ?? editState.get().crop;
-    const f = this.frameSize();
-    this.cropper.setData({
-      x: crop.x * f.width,
-      y: crop.y * f.height,
-      width: crop.width * f.width,
-      height: crop.height * f.height,
-    });
+    this.showRect(rect ?? editState.get().crop);
   }
 
   private onCropBoxChange(): void {

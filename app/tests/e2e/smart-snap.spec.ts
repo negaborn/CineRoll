@@ -60,19 +60,25 @@ test('every target ratio shows the green frame and its label; others do not', as
   expect(off.badge).toBeNull();
 });
 
-/** Drags the crop box's bottom-right handle so the box becomes `ratio`, keeping its current height. Returns state mid-drag and after release. */
+/**
+ * Drags the crop frame's bottom edge so the frame becomes `ratio`, keeping its width.
+ * (The frame is shown large -- Instagram-style -- so it is narrowed by its height,
+ * not widened.) Returns state mid-drag and after release.
+ */
 async function dragToRatio(page: Page, ratio: number) {
-  await page.evaluate(() => window.__CINEROLL_DEBUG__!.setCropForTest({ x: 0.3, y: 0.35, width: 0.15, height: 0.2 }));
+  // A large square-ish crop (960x960 source px), so the snapped export is big enough
+  // that whole-pixel rounding doesn't blur the ratio check.
+  await page.evaluate(() => window.__CINEROLL_DEBUG__!.setCropForTest({ x: 0.1, y: 0.1, width: 0.6, height: 0.8 }));
   await page.waitForTimeout(150);
   const start = await frameState(page);
-  const handle = (await page.locator('#image-container .cropper-point.point-se').boundingBox())!;
+  const handle = (await page.locator('#image-container .cropper-point.point-s').boundingBox())!;
   const hx = handle.x + handle.width / 2;
   const hy = handle.y + handle.height / 2;
-  const left = start.box.cx - start.box.w / 2;
-  const targetX = left + start.box.h * ratio;
+  const top = start.box.cy - start.box.h / 2;
+  const targetY = top + start.box.w / ratio;
   await page.mouse.move(hx, hy);
   await page.mouse.down();
-  await page.mouse.move(targetX, hy, { steps: 12 });
+  await page.mouse.move(hx, targetY, { steps: 12 });
   const mid = await frameState(page);
   await page.mouse.up();
   await page.waitForTimeout(150);

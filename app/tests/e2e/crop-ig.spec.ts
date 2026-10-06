@@ -115,3 +115,18 @@ test('a stored crop is shown in the fixed, centred frame (state stays as stored)
   const { box, stage } = await rects(page);
   expect(Math.max(box.w / stage.w, box.h / stage.h), 'shown large, not as a small box').toBeGreaterThan(0.88);
 });
+
+test('a wheel / trackpad scroll zooms the photo too, the frame stays put', async ({ page }) => {
+  await start(page);
+  await page.locator('#strategy-btns [data-val="single"]').tap();
+  await page.selectOption('#select-ratio', '1');
+  await page.waitForTimeout(400);
+  const b0 = (await rects(page)).box;
+  const c0 = (await st(page)).crop;
+  await page.mouse.move(center(b0).x, center(b0).y);
+  for (let i = 0; i < 4; i++) await page.mouse.wheel(0, -120); // scroll up = zoom in
+  await page.waitForTimeout(300);
+  const b1 = (await rects(page)).box;
+  expect(Math.abs(b1.w - b0.w) + Math.abs(b1.x - b0.x)).toBeLessThan(1.5);
+  expect((await st(page)).crop.width).toBeLessThan(c0.width * 0.9);
+});
