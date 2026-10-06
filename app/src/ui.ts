@@ -1169,3 +1169,18 @@ renderPresetChips();
 initGlobalDrag();
 syncControls(S());
 void offerDraft();
+
+// Collapsible settings groups: closed by default, each remembers being opened
+// (a per-viewer convenience, so plain localStorage; storage may be unavailable).
+const SECTIONS_KEY = 'cineroll_open_sections';
+let openSections: string[] = [];
+try { openSections = JSON.parse(localStorage.getItem(SECTIONS_KEY) ?? '[]'); } catch { openSections = []; }
+document.querySelectorAll<HTMLDetailsElement>('details[data-section]').forEach((d) => {
+  if (openSections.includes(d.dataset.section!)) d.open = true;
+  d.addEventListener('toggle', () => {
+    const set = new Set(openSections);
+    if (d.open) set.add(d.dataset.section!); else set.delete(d.dataset.section!);
+    openSections = [...set];
+    try { localStorage.setItem(SECTIONS_KEY, JSON.stringify(openSections)); } catch { /* not stored */ }
+  });
+});

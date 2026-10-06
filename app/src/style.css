@@ -95,3 +95,10 @@ body.zen-mode #zoom-controls { display: none !important; }
 #export-modal { opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
 #export-modal.show { opacity: 1; pointer-events: auto; }
 .export-img-item { box-shadow: 0 20px 50px rgba(0,0,0,0.5); max-width: 100%; height: auto; border-radius: 2px; }
+
+/* Collapsible settings groups (secondary settings start closed) */
+details.section > summary { list-style: none; cursor: pointer; user-select: none; align-items: center; margin-bottom: 0; padding: 2px 0; }
+details.section > summary::-webkit-details-marker { display: none; }
+details.section > summary::after { content: '›'; font-size: 13px; line-height: 1; color: #a1a1aa; transition: transform 0.15s; }
+details.section[open] > summary { margin-bottom: 8px; }
+details.section[open] > summary::after { transform: rotate(90deg); }

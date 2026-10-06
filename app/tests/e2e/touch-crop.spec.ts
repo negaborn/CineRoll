@@ -50,7 +50,7 @@ async function pinch(cdp: CDPSession, c: P, d0: number, d1: number) {
 }
 
 const center = (r: Rect): P => ({ x: r.x + r.w / 2, y: r.y + r.h / 2 });
-const handle = async (page: Page, dir: 'e' | 'se') => center(await page.locator(`#image-container .cropper-point.point-${dir}`).boundingBox().then((b) => ({ x: b!.x, y: b!.y, w: b!.width, h: b!.height })));
+const handle = async (page: Page, dir: 'e' | 'se' | 's') => center(await page.locator(`#image-container .cropper-point.point-${dir}`).boundingBox().then((b) => ({ x: b!.x, y: b!.y, w: b!.width, h: b!.height })));
 const srcRatio = (c: { width: number; height: number }) => (c.width * IMG_W) / (c.height * IMG_H);
 
 async function start(page: Page, browser: Browser) {
@@ -86,16 +86,17 @@ test.describe('Single mode switches to Free (Smart Snap)', () => {
     const cdp = await start(page, browser);
     await page.locator('#strategy-btns [data-val="single"]').tap();
     await page.waitForTimeout(300);
-    const e = await handle(page, 'e');
-    // Single starts as a 4:5 box; walk the east edge out until it is ~1:1
-    // (within snap tolerance, not exact) -- the finger is still down.
+    const e = await handle(page, 's');
+    // Single starts as a 4:5 frame filling the stage's width (Instagram-style), so
+    // walk the bottom edge UP until it is ~1:1 (within snap tolerance, not exact)
+    // -- the finger is still down.
     expect((await view(page)).box.w / (await view(page)).box.h).toBeCloseTo(0.8, 1);
     await touch(cdp, 'touchStart', [e]);
-    let x = e.x;
+    let y = e.y;
     let mid = await view(page);
     for (let i = 0; i < 200 && mid.box.w / mid.box.h < 0.988; i++) {
-      x += 2;
-      await touch(cdp, 'touchMove', [{ x, y: e.y }]);
+      y -= 2;
+      await touch(cdp, 'touchMove', [{ x: e.x, y }]);
       mid = await view(page);
     }
     expect(mid.box.w / mid.box.h).toBeLessThan(0.998); // near, not already exact

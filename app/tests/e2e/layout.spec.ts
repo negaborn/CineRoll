@@ -42,6 +42,8 @@ test('on a phone the photo area takes most of the screen, and secondary groups s
 test('an opened group stays open after a reload', async ({ page }) => {
   await page.goto('/');
   await page.locator('details[data-section="rotate"] > summary').tap();
+  await expect(page.locator('details[data-section="rotate"]')).toHaveAttribute('open', '');
+  await page.waitForTimeout(100); // the 'toggle' event (which saves it) is queued after the change
   await page.reload();
   expect(await page.$eval('details[data-section="rotate"]', (d) => (d as HTMLDetailsElement).open)).toBe(true);
 });

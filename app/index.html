@@ -61,7 +61,7 @@
     </header>
 
     <div class="flex-1 flex flex-col md:flex-row overflow-hidden w-full relative">
-        <main id="main-stage" class="w-full h-[40%] md:h-full md:flex-1 relative flex bg-background overflow-hidden select-none transition-colors duration-300 shrink-0">
+        <main id="main-stage" class="w-full h-[60%] md:h-full md:flex-1 relative flex bg-background overflow-hidden select-none transition-colors duration-300 shrink-0">
             <div id="upload-zone" class="absolute inset-0 flex flex-col items-center justify-center z-50 bg-background transition-opacity duration-300">
                 <label class="relative w-[240px] md:w-[280px] h-[140px] md:h-[160px] border border-dashed border-zinc-800 rounded-xl flex flex-col items-center justify-center text-zinc-500 hover:border-coral-500 hover:text-coral-400 transition-colors bg-[#111] cursor-pointer">
                     <input type="file" id="upload-input" accept="image/*,.tif,.tiff,.rw2,.cr2,.cr3,.nef,.arw,.dng" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
@@ -143,8 +143,8 @@
                         </select>
                     </div>
 
-                    <div class="pt-3 border-t border-border">
-                        <label class="min-label mb-1.5"><span>Rotate &amp; Straighten</span></label>
+                    <details data-section="rotate" class="section pt-3 border-t border-border">
+                        <summary class="min-label section-summary"><span>Rotate &amp; Straighten</span></summary>
                         <div class="flex gap-1.5 mb-2">
                             <button id="btn-rotate-90" class="flex-1 bg-background border border-border hover:border-coral-500 text-zinc-400 hover:text-white py-1.5 rounded transition-colors text-[10px] font-bold flex items-center justify-center gap-1">
                                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg> 90°
@@ -157,7 +157,7 @@
                             <input type="range" id="slider-angle" min="-45" max="45" value="0" step="0.5" class="flex-1">
                             <div class="flex items-center"><input type="number" id="in-angle" class="bg-transparent text-right outline-none w-8 text-white text-[10px] font-mono" value="0"><span>°</span></div>
                         </div>
-                    </div>
+                    </details>
 
                     <button id="btn-apply-crop" class="w-full text-[10px] font-bold text-white bg-transparent border border-coral-500 hover:bg-coral-500/20 py-2.5 rounded mt-2 transition-colors uppercase tracking-widest">
                         Apply Crop
@@ -178,14 +178,14 @@
                         <label class="min-label mb-1.5"><span>Padding</span><div class="flex items-center"><input type="number" id="in-margin-scale" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="85"><span>%</span></div></label>
                         <input type="range" id="slider-margin-scale" min="50" max="100" value="85">
 
-                        <div class="mt-4 border-t border-border pt-3">
-                            <label class="min-label mb-1.5"><span class="text-coral-400">Film Borders</span></label>
+                        <details data-section="borders" class="section mt-4 border-t border-border pt-3">
+                            <summary class="min-label section-summary"><span>Film Borders</span></summary>
                             <select id="select-border" class="min-select"><option value="none">None (Clean)</option><option value="fineart">Fine-Art Line</option><option value="vnotch">120mm V-Notch</option><option value="instant">Type-100</option></select>
                             <div id="border-weight-wrapper" class="mt-2 hidden">
                                 <label class="min-label mb-1"><span>Weight</span><div class="flex items-center"><input type="number" id="in-borderWeight" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="3"></div></label>
                                 <input type="range" id="slider-borderWeight" min="1" max="10" value="3" step="0.5">
                             </div>
-                        </div>
+                        </details>
                     </div>
                 </div>
 
@@ -210,8 +210,8 @@
                         </div>
                     </div>
 
-                    <div class="space-y-3">
-                        <label class="min-label mb-0"><span class="text-coral-400">Advanced Tone (Pro)</span></label>
+                    <details data-section="advanced-tone" class="section space-y-3">
+                        <summary class="min-label section-summary"><span>Highlights &amp; Shadows</span></summary>
                         <div>
                             <label class="min-label mb-1"><span class="text-[9px] text-zinc-400">Highlights</span><div class="flex items-center"><input type="number" id="in-hl" class="bg-transparent text-right outline-none w-8 text-white font-mono text-[10px]" value="0"></div></label>
                             <input type="range" id="slider-hl" min="-100" max="100" value="0">
@@ -220,7 +220,7 @@
                             <label class="min-label mb-1"><span class="text-[9px] text-zinc-400">Shadows</span><div class="flex items-center"><input type="number" id="in-sh" class="bg-transparent text-right outline-none w-8 text-white font-mono text-[10px]" value="0"></div></label>
                             <input type="range" id="slider-sh" min="-100" max="100" value="0">
                         </div>
-                    </div>
+                    </details>
                     <button id="btn-reset-tone" class="w-full text-[9px] text-zinc-500 hover:text-white py-1.5 border border-border rounded mt-3 transition-colors uppercase tracking-widest">Reset Tone</button>
                 </div>
 
@@ -228,23 +228,16 @@
                     <div><label class="min-label mb-1.5"><span>Brightness</span><div class="flex items-center"><input type="number" id="in-br" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="100"><span>%</span></div></label><input type="range" id="slider-br" min="50" max="150" value="100"></div>
                     <div><label class="min-label mb-1.5"><span>Contrast</span><div class="flex items-center"><input type="number" id="in-co" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="100"><span>%</span></div></label><input type="range" id="slider-co" min="50" max="150" value="100"></div>
                     <div><label class="min-label mb-1.5"><span>Saturation</span><div class="flex items-center"><input type="number" id="in-sa" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="100"><span>%</span></div></label><input type="range" id="slider-sa" min="0" max="200" value="100"></div>
-                    <div class="pt-3 border-t border-border"><label class="min-label mb-1.5"><span>Film Grain</span><div class="flex items-center"><input type="number" id="in-grain" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="0"><span>%</span></div></label><input type="range" id="slider-grain" min="0" max="100" value="0"></div>
+                    <details data-section="grain" class="section pt-3 border-t border-border">
+                        <summary class="min-label section-summary"><span>Film Grain</span></summary>
+                        <label class="min-label mb-1.5"><span>Amount</span><div class="flex items-center"><input type="number" id="in-grain" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="0"><span>%</span></div></label><input type="range" id="slider-grain" min="0" max="100" value="0">
+                    </details>
                     <button id="btn-reset-color" class="w-full text-[9px] text-zinc-500 hover:text-white py-1.5 border border-border rounded mt-3 transition-colors uppercase tracking-widest">Reset Basic</button>
                 </div>
 
                 <div id="tab-typo" class="tab-content space-y-5 hidden">
                     <div class="space-y-3">
-                        <div class="flex flex-col gap-1.5">
-                            <div class="flex items-center justify-between">
-                                <label class="min-label mb-0"><span>Style</span></label>
-                                <button id="btn-save-preset" class="text-[8px] font-bold text-coral-400 hover:text-coral-300 transition-colors uppercase tracking-widest">SAVE PRESET</button>
-                            </div>
-                            <div class="flex gap-1">
-                                <button class="preset-pill" id="btn-preset-gold">GOLD</button>
-                                <button class="preset-pill" id="btn-preset-silver">SILVER</button>
-                            </div>
-                        </div>
-
+                        <div class="flex items-center gap-1.5"><input type="text" id="watermarkText" placeholder="Caption or Signature..." class="min-input flex-1"></div>
                         <div class="flex items-center gap-2 bg-background p-1.5 rounded border border-border">
                             <input type="color" id="textColorPicker" value="#FFFFFF">
                             <div class="w-px h-3 bg-border mx-1"></div>
@@ -262,20 +255,31 @@
                                 </optgroup>
                             </select>
                         </div>
-
-                        <div class="pt-1"><label class="min-label mb-1"><span>Font Scale</span><div class="flex items-center"><input type="number" id="in-fontScale" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="100"><span>%</span></div></label><input type="range" id="slider-fontScale" min="30" max="200" value="100"></div>
-                        <div id="glow-slider-wrapper" class="pt-1"><label class="min-label mb-1"><span class="text-[9px] text-zinc-500">Glow Intensity</span></label><input type="range" id="slider-glow-amount" min="1" max="50" value="15"></div>
-
-                        <div class="flex items-center gap-1.5"><input type="text" id="watermarkText" placeholder="Caption or Signature..." class="min-input flex-1"></div>
-
                         <div id="custom-presets-container" class="flex flex-wrap gap-1 pt-1 empty:hidden"></div>
 
-                        <div id="target-display-wrapper" class="pt-3 border-t border-border space-y-2">
+                        <details data-section="typo-style" class="section pt-3 border-t border-border space-y-3">
+                            <summary class="min-label section-summary"><span>Style &amp; Size</span></summary>
+                        <div class="flex flex-col gap-1.5">
+                            <div class="flex items-center justify-between">
+                                <label class="min-label mb-0"><span>Style</span></label>
+                                <button id="btn-save-preset" class="text-[8px] font-bold text-coral-400 hover:text-coral-300 transition-colors uppercase tracking-widest">SAVE PRESET</button>
+                            </div>
+                            <div class="flex gap-1">
+                                <button class="preset-pill" id="btn-preset-gold">GOLD</button>
+                                <button class="preset-pill" id="btn-preset-silver">SILVER</button>
+                            </div>
+                        </div>
+                        <div class="pt-1"><label class="min-label mb-1"><span>Font Scale</span><div class="flex items-center"><input type="number" id="in-fontScale" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="100"><span>%</span></div></label><input type="range" id="slider-fontScale" min="30" max="200" value="100"></div>
+                        <div id="glow-slider-wrapper" class="pt-1"><label class="min-label mb-1"><span class="text-[9px] text-zinc-500">Glow Intensity</span></label><input type="range" id="slider-glow-amount" min="1" max="50" value="15"></div>
+                        <div id="target-display-wrapper" class="space-y-2">
                             <label class="min-label mb-0"><span>Target Display</span></label>
                             <select id="watermarkTarget" class="min-select"><option value="all">Apply to All Slides</option><option value="1">Slide 1 (Cover)</option><option value="2">Slide 2 Only</option><option value="3">Slide 3 Only</option><option value="4">Slide 4 Only</option></select>
                         </div>
+                        </details>
 
-                        <div class="pt-3 border-t border-border space-y-2">
+                        <details data-section="typo-logo" class="section pt-3 border-t border-border space-y-2">
+                            <summary class="min-label section-summary"><span>Logo &amp; Watermark</span></summary>
+                        <div class="space-y-2">
                             <div class="flex justify-between items-center mb-1">
                                 <label class="min-label mb-0 flex items-center gap-2 cursor-pointer hover:text-white transition-colors">
                                     <input type="checkbox" id="toggle-logo" class="w-3 h-3 accent-coral-500 cursor-pointer">
@@ -292,8 +296,7 @@
                                 <div><label class="min-label mb-1"><span>Opacity</span><div class="flex items-center"><input type="number" id="in-logoOp" class="bg-transparent text-right outline-none w-8 text-white font-mono hover:bg-[#222] px-1 rounded" value="100"><span>%</span></div></label><input type="range" id="sliderLogoOp" min="10" max="100" value="100"></div>
                             </div>
                         </div>
-
-                        <div class="flex items-center justify-between pt-3 border-t border-border mt-2">
+                        <div class="flex items-center justify-between pt-2">
                             <label class="min-label mb-0 flex items-center gap-1.5">
                                 <span>App Watermark</span>
                             </label>
@@ -302,6 +305,7 @@
                                 <div class="w-7 h-4 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-coral-500"></div>
                             </label>
                         </div>
+                        </details>
                     </div>
                 </div>
             </div>
