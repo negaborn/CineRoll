@@ -1,4 +1,4 @@
-import { test, type Page } from '@playwright/test';
+import { test, type Page } from './fixtures/test';
 import path from 'path';
 import { makePositionImage } from './fixtures/position-image';
 

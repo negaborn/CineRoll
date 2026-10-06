@@ -1,4 +1,4 @@
-import { test, expect, type Page, type Browser } from '@playwright/test';
+import { test, expect, type Page, type Browser } from './fixtures/test';
 import { makePositionImage, makeSolidPng } from './fixtures/position-image';
 import { previewStats, exportStats, previewCount, runExport, closeExport, meanDiff, setControl } from './fixtures/pixels';
 

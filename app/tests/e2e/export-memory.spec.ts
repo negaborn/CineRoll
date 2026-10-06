@@ -1,5 +1,5 @@
 import { exportedDims } from './fixtures/pixels';
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/test';
 import { createTestImageBuffer } from './fixtures/generate-test-image';
 
 // iOS Safari caps a single canvas at 16,777,216 px (4096²); anything larger

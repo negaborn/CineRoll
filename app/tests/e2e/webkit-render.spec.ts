@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures/test';
 import { previewStats, exportStats, runExport, closeExport, meanDiff, setControl } from './fixtures/pixels';
 
 // Runs on Chromium AND WebKit (iPhone Safari's engine) -- the three real-device

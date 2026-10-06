@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/test';
 import { uploadTestImage } from './fixtures/generate-test-image';
 import { exportedDims } from './fixtures/pixels';
 import './fixtures/debug-types';

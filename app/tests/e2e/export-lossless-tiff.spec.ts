@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures/test';
 
 // Technical plan v2, P0-1 (decided 2026-10-05: Lossless = TIFF).
 // Lossless used to be one PNG canvas: on iOS (16.7 MP per-canvas limit) a 24 MP

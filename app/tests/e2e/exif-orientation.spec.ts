@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/test';
 import { makePositionImage, sampleExport, samplePreview, maxPositionError, withExifOrientation } from './fixtures/position-image';
 
 // Phone photos store pixels in sensor orientation plus an EXIF Orientation tag.

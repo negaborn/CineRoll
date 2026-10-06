@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures/test';
 import { makePositionImage, sampleExport, samplePreview, maxPositionError } from './fixtures/position-image';
 
 // Leaving the Format tab must apply the current framing automatically, so the

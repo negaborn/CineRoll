@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures/test';
 import fs from 'node:fs';
 
 // Technical plan v2, P0-2 (decided 2026-10-05: geometry only).

@@ -1,4 +1,4 @@
-import { test, expect, type Page, type Browser } from '@playwright/test';
+import { test, expect, type Page, type Browser } from './fixtures/test';
 import { previewStats, exportStats, runExport, closeExport, meanDiff, setControl, exportedDims } from './fixtures/pixels';
 
 // Film simulations (Classic Pan 400, Newsprint 400, Vivid Slide 50 Velvia/Provia),

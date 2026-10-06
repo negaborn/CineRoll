@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures/test';
 import { previewStats, exportStats, runExport, meanDiff, setControl } from './fixtures/pixels';
 
 // Technical plan v2, P1-3: never hand the GPU a texture larger than it supports.

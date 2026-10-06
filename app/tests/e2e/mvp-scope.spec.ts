@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/test';
 
 // MVP scope (decided 2026-10-05, P2-3): Triptych is hidden for the MVP. It
 // sliced a 4:5 crop into three 4:15 strips (same as v150), which Instagram's

@@ -1,4 +1,4 @@
-import { test, expect, type Page, type Browser, type CDPSession } from '@playwright/test';
+import { test, expect, type Page, type Browser, type CDPSession } from './fixtures/test';
 import { makePositionImage } from './fixtures/position-image';
 
 // Found on a real iPhone, missed by the desktop-mouse-only suite:

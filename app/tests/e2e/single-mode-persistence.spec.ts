@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures/test';
 import { makePositionImage, makeSolidPng } from './fixtures/position-image';
 
 type Box = { x0: number; y0: number; x1: number; y1: number; cx: number; cy: number; w: number; h: number } | null;

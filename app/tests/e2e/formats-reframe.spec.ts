@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures/test';
 import { makePositionImage, sampleExport, samplePreview, maxPositionError } from './fixtures/position-image';
 
 // Every source aspect ratio x base rotation x desqueeze: the crop must land on

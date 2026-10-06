@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/test';
 import { makePositionImage } from './fixtures/position-image';
 
 // The caption is painted on a canvas, which (unlike DOM text) doesn't reflow

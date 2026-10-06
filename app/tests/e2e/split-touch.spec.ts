@@ -1,4 +1,4 @@
-import { test, expect, type CDPSession, type Page } from '@playwright/test';
+import { test, expect, type CDPSession, type Page } from './fixtures/test';
 
 // The before/after split slider only listened to mouse events (and was a 3px
 // line), so on a phone it could not be dragged. Real touch input here

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/test';
 import { SNAP_TARGETS, SNAP_TOLERANCE, findSnapTarget, findSnapOverlaps } from '../../src/snap';
 
 // Pure data checks for the smart-snap target table (no browser needed).

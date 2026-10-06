@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/test';
 import { makePositionImage } from './fixtures/position-image';
 
 // Current (v150) behavior: in Free ratio mode, a crop box near a known ratio

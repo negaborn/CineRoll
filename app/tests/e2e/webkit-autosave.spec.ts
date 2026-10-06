@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures/test';
 import fs from 'node:fs';
 import { previewStats, meanDiff } from './fixtures/pixels';
 

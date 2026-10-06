@@ -1,4 +1,4 @@
-import { test, expect, type CDPSession, type Page } from '@playwright/test';
+import { test, expect, type CDPSession, type Page } from './fixtures/test';
 
 // Instagram-style cropping (2026-10-05): with a fixed ratio the crop frame is
 // fixed (centred, as large as the stage allows), the photo fills it on upload

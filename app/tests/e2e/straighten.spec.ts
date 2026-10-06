@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/test';
 import { makePositionImage, sampleExport, samplePreview, maxPositionErrorStraightened } from './fixtures/position-image';
 
 // The Straighten slider must affect preview and export identically, and both

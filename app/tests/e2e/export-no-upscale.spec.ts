@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures/test';
 import { exportedDims } from './fixtures/pixels';
 
 // Technical plan v2, P0-3: IG/Web exports used fixed canvas sizes, so a small

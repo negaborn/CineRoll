@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/test';
 import { createTestImageBuffer } from './fixtures/generate-test-image';
 
 // Every squeeze change schedules its own async Cropper rebuild. Changing it
