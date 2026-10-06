@@ -3,7 +3,7 @@ import { test, expect } from './fixtures/test';
 // Film looks are shown by their own preset names only; the real films they were
 // modelled on stay in code/comments (reference/film-sim, film.ts), never in the UI.
 
-const BRANDS = /velvia|provia|fuji|kodak|ilford|hp5|tri-?x|portra|ektar|cinestill|agfa/i;
+const BRANDS = /\b(velvia|provia|fuji(film)?|kodak|ilford|hp5|tri-?x|portra|ektar|cinestill|agfa)\b/i; // whole words ("Portrait" is fine)
 
 test('no real film brand or model name appears in the UI', async ({ page }) => {
   await page.goto('/');

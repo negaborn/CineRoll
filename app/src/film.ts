@@ -22,11 +22,16 @@ export type FilmId = 'classic-pan-400' | 'newsprint-400' | 'velvia-50' | 'provia
 
 export const FILM_IDS: FilmId[] = ['classic-pan-400', 'newsprint-400', 'velvia-50', 'provia-100f'];
 
+/**
+ * User-facing preset names. Real film names stay out of the UI; for reference:
+ * velvia-50 is modelled on Velvia 50 and provia-100f on Provia 100F
+ * (vivid-slide-50-FINAL.html), the B&W presets on HP5- / Tri-X-class film.
+ */
 export const FILM_LABELS: Record<FilmId, string> = {
   'classic-pan-400': 'Classic Pan 400',
   'newsprint-400': 'Newsprint 400',
-  'velvia-50': 'Vivid Slide 50 · Velvia 50',
-  'provia-100f': 'Vivid Slide 50 · Provia 100F',
+  'velvia-50': 'Vivid Slide 50',
+  'provia-100f': 'Natural Slide 100',
 };
 
 type Curve = [number, number][];
